@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <title>JuBa-Kasse</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            /* Remove tap highlight on mobile and focus outlines */
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Remove focus outlines for mouse users, keep for keyboard users */
+        *:focus {
+            outline: none;
+        }
+        
+        /* Re-enable focus for keyboard navigation (accessibility) */
+        *:focus-visible {
+            outline: 2px solid rgba(37, 99, 235, 0.6);
+            outline-offset: 2px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 428px;
+            margin: 0 auto;
+            background: #f8fafc;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            height: 32px;
+            width: auto;
+            filter: brightness(0) invert(1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            padding: 16px 20px 20px;
+            background: #f8fafc;
+            position: relative;
+        }
+
+        .tab-nav-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 4px;
+            display: flex;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .tab-btn {
+            padding: 8px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 20px;
+            min-width: 80px;
+            position: relative;
+            z-index: 2;
+            /* Remove tap highlights and focus outlines */
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .tab-btn.active {
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .tab-indicator {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            border-radius: 20px;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            z-index: 1;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 8px 20px 20px;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .tab-content.slide-out-left {
+            opacity: 0;
+            transform: translateX(-40px);
+            transition: all 0.4s cubic-bezier(0.55, 0, 0.55, 0.2);
+        }
+
+        .tab-content.slide-out-right {
+            opacity: 0;
+            transform: translateX(40px);
+            transition: all 0.4s cubic-bezier(0.55, 0, 0.55, 0.2);
+        }
+
+        .tab-content.slide-in-left {
+            opacity: 1;
+            transform: translateX(0);
+            animation: slideInFromRight 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .tab-content.slide-in-right {
+            opacity: 1;
+            transform: translateX(0);
+            animation: slideInFromLeft 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        @keyframes slideInFromLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 14px;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            letter-spacing: 0.02em;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: rgba(37, 99, 235, 0.6);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: rgba(37, 99, 235, 0.6);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            /* Remove tap highlights and focus outlines */
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(255, 255, 255, 0.05) 50%, 
+                rgba(255, 255, 255, 0) 100%);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+        }
+
+
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        .person-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08),
+                        0 1px 3px rgba(0, 0, 0, 0.12),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .person-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(37, 99, 235, 0.02) 25%, 
+                rgba(59, 130, 246, 0.05) 50%, 
+                rgba(147, 197, 253, 0.03) 75%,
+                rgba(255, 255, 255, 0.05) 100%);
+            pointer-events: none;
+            z-index: 1;
+            border-radius: 16px;
+        }
+
+
+
+        .person-item > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .person-details {
+            display: none;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .person-details.active {
+            display: block;
+        }
+
+        .detail-section {
+            margin-bottom: 16px;
+        }
+
+        .detail-section h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .status-change-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .member-since {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .member-since-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .member-since-date {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .delete-button-container {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .delete-button {
+            padding: 12px 24px;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
+        .confirm-delete {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .confirm-delete.show {
+            display: block;
+        }
+
+        .person-pill {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .person-left {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .person-name {
+            font-weight: 700;
+            font-size: 18px;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .person-status {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            width: fit-content;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .person-right {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .payment-date {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .time-remaining {
+            font-size: 12px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .status-vollverdiener {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .status-geringverdiener {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .status-keinverdiener {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .paid-until {
+            color: #059669;
+        }
+
+        .overdue {
+            color: #dc2626;
+        }
+
+        .soon-due {
+            color: #ea580c;
+        }
+
+        .payment-history {
+            margin-top: 8px;
+        }
+
+        .payment-entry {
+            font-size: 12px;
+            color: #6b7280;
+            padding: 4px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .floating-add {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #64748b;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 1100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            /* Remove tap highlights and focus outlines */
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .floating-add::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(255, 255, 255, 0.05) 50%, 
+                rgba(255, 255, 255, 0) 100%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+
+
+        .floating-add.active {
+            transform: rotate(45deg) scale(1.08);
+            background: rgba(255, 255, 255, 0.2);
+            color: #64748b;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .floating-menu {
+            position: fixed;
+            bottom: 88px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1099;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px) scale(0.8);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .floating-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .floating-menu-item {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 16px;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                        opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        background 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        box-shadow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 160px;
+            transform: translateX(50px) translateY(20px) scale(0.3) rotate(45deg);
+            opacity: 0;
+            transform-origin: right center;
+            overflow: hidden;
+            /* Remove tap highlights and focus outlines */
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .floating-menu-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(255, 255, 255, 0.05) 50%, 
+                rgba(255, 255, 255, 0) 100%);
+            border-radius: 16px;
+            pointer-events: none;
+        }
+
+        .floating-menu.show .floating-menu-item {
+            transform: translateX(0) translateY(0) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+
+        .floating-menu.show .floating-menu-item:nth-child(1) {
+            transition-delay: 0.1s;
+        }
+
+        .floating-menu.show .floating-menu-item:nth-child(2) {
+            transition-delay: 0.2s;
+        }
+
+        .floating-menu.show .floating-menu-item:nth-child(3) {
+            transition-delay: 0.3s;
+        }
+
+
+
+        .floating-menu-item .icon {
+            font-size: 16px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (max-width: 428px) {
+            .container {
+                max-width: 100%;
+            }
+            
+            .floating-add {
+                right: 16px;
+                bottom: 16px;
+                width: 52px;
+                height: 52px;
+                font-size: 22px;
+            }
+
+            .floating-menu {
+                right: 16px;
+                bottom: 80px;
+            }
+
+            .floating-menu-item {
+                min-width: 140px;
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            .modal-content {
+                margin: 16px;
+                padding: 24px;
+                max-width: calc(100vw - 32px);
+                border-radius: 20px;
+            }
+
+            .modal-header {
+                font-size: 20px;
+                margin-bottom: 20px;
+                padding-bottom: 12px;
+            }
+
+            .modal-icon {
+                font-size: 24px;
+            }
+
+            .close-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+
+            .form-input, .form-select {
+                padding: 12px 14px;
+                font-size: 16px;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            margin: 20px;
+            max-width: 420px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15),
+                        0 10px 25px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(255, 255, 255, 0.05) 50%, 
+                rgba(255, 255, 255, 0) 100%);
+            border-radius: 24px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .modal-content > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .modal-header {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .modal-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-icon {
+            font-size: 28px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .close-btn {
+            background: rgba(148, 163, 184, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+
+
+        /* Kassenstand Styles */
+        .kassenstand-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 30%, #f7fee7 70%, #ffffff 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #dcfce7;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kassenstand-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(5, 150, 105, 0.02) 0%, 
+                rgba(16, 185, 129, 0.03) 25%, 
+                rgba(34, 197, 94, 0.02) 50%, 
+                rgba(5, 150, 105, 0.01) 100%);
+            border-radius: 16px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .kassenstand-item > * {
+            position: relative;
+            z-index: 2;
+        }
+
+
+
+        .kassenstand-content {
+            text-align: center;
+        }
+
+        .kassenstand-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .kassenstand-amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: #059669;
+            margin-bottom: 4px;
+        }
+
+        .kassenstand-subtitle {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .transaction-details {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .transaction-details.active {
+            display: block;
+        }
+
+        #transaction-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        #transaction-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #transaction-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        #transaction-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .transaction-item {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 4px solid #2563eb;
+        }
+
+        .transaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .transaction-person {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .transaction-amount {
+            font-weight: 600;
+            color: #059669;
+        }
+
+        .transaction-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <img src="https://www.ev-bg.de/wp-content/uploads/2021/03/Logo_blau_Serifen.svg" alt="EV-BG Logo" class="header-logo">
+                <h1>JuBa-Kasse</h1>
+            </div>
+        </div>
+
+        <div class="tab-nav">
+            <div class="tab-nav-container">
+                <button class="tab-btn active" onclick="showTab('overview')">Übersicht</button>
+                <button class="tab-btn" onclick="showTab('settings')">Einstellungen</button>
+            </div>
+        </div>
+
+        <!-- Übersicht Tab -->
+        <div id="overview" class="tab-content active">
+            <!-- Kassenstand -->
+            <div id="kassenstand" class="kassenstand-item" onclick="toggleKassenstandDetails()">
+                <div class="kassenstand-content">
+                    <div class="kassenstand-title">Kassenstand</div>
+                    <div id="kassenstand-amount" class="kassenstand-amount">0,00 €</div>
+                    <div class="kassenstand-subtitle">Gesamter Kontostand</div>
+                </div>
+                
+                <div id="transaction-details" class="transaction-details" onclick="event.stopPropagation()">
+                    <h4 style="margin-bottom: 16px; color: #374151;">Alle Transaktionen</h4>
+                    <div id="transaction-list">
+                        <!-- Transaktionen werden hier dynamisch eingefügt -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="people-list">
+                <!-- Personen werden hier dynamisch eingefügt -->
+            </div>
+            
+            <div id="empty-state" class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <h3>Keine Personen hinzugefügt</h3>
+                <p>Klicke auf das + um eine Person hinzuzufügen</p>
+            </div>
+        </div>
+
+        <!-- Einstellungen Tab -->
+        <div id="settings" class="tab-content">
+            <div class="card">
+                <div class="card-header">Monatliche Beiträge</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Vollverdiener (€)</label>
+                        <input type="number" id="rate-vollverdiener" class="form-input" value="50" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Geringverdiener (€)</label>
+                        <input type="number" id="rate-geringverdiener" class="form-input" value="25" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Keinverdiener (€)</label>
+                        <input type="number" id="rate-keinverdiener" class="form-input" value="10" step="0.01">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveSettings()">Einstellungen speichern</button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">Passwort ändern</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Neues Passwort</label>
+                        <input type="password" id="new-password" class="form-input" placeholder="Neues Passwort eingeben">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Passwort bestätigen</label>
+                        <input type="password" id="confirm-password" class="form-input" placeholder="Passwort wiederholen">
+                    </div>
+                    <button class="btn btn-primary" onclick="changePassword()">Passwort ändern</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Add Button -->
+        <button class="floating-add" onclick="toggleFloatingMenu()">+</button>
+        
+        <!-- Floating Menu -->
+        <div id="floating-menu" class="floating-menu">
+            <button class="floating-menu-item" onclick="showAddPersonModal(); hideFloatingMenu()">
+                <span class="icon">👤</span>
+                Person
+            </button>
+            <button class="floating-menu-item" onclick="showAddDonationModal(); hideFloatingMenu()">
+                <span class="icon">💝</span>
+                Spende
+            </button>
+            <button class="floating-menu-item" onclick="showAddExpenseModal(); hideFloatingMenu()">
+                <span class="icon">💸</span>
+                Ausgaben
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Person Modal -->
+    <div id="add-person-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">👤</span>
+                    Person hinzufügen
+                </div>
+                <button class="close-btn" onclick="hideAddPersonModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" id="new-person-name" class="form-input" placeholder="Name eingeben">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select id="new-person-status" class="form-select">
+                    <option value="vollverdiener">Vollverdiener</option>
+                    <option value="geringverdiener">Geringverdiener</option>
+                    <option value="keinverdiener">Keinverdiener</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="addPerson()" style="width: 100%;">Person hinzufügen</button>
+        </div>
+    </div>
+
+    <!-- Add Payment Modal -->
+    <div id="add-payment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">💳</span>
+                    Zahlung hinzufügen
+                </div>
+                <button class="close-btn" onclick="hideAddPaymentModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Betrag (€)</label>
+                <input type="number" id="payment-amount" class="form-input" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Datum</label>
+                <input type="date" id="payment-date" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Beschreibung (optional)</label>
+                <input type="text" id="payment-description" class="form-input" placeholder="z.B. Januar 2025">
+            </div>
+            <button class="btn btn-primary" onclick="addPayment()" style="width: 100%;">Zahlung hinzufügen</button>
+        </div>
+    </div>
+
+    <!-- Add Donation Modal -->
+    <div id="add-donation-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">💝</span>
+                    Spende hinzufügen
+                </div>
+                <button class="close-btn" onclick="hideAddDonationModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Betrag (€)</label>
+                <input type="number" id="donation-amount" class="form-input" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Datum</label>
+                <input type="date" id="donation-date" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Name (optional)</label>
+                <input type="text" id="donation-name" class="form-input" placeholder="Name des Spenders">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Beschreibung (optional)</label>
+                <input type="text" id="donation-description" class="form-input" placeholder="z.B. Sonderspende für...">
+            </div>
+            <button class="btn btn-primary" onclick="addDonation()" style="width: 100%;">Spende hinzufügen</button>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div id="add-expense-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">💸</span>
+                    Ausgabe hinzufügen
+                </div>
+                <button class="close-btn" onclick="hideAddExpenseModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Betrag (€)</label>
+                <input type="number" id="expense-amount" class="form-input" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Datum</label>
+                <input type="date" id="expense-date" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Ausgeber *</label>
+                <input type="text" id="expense-issuer" class="form-input" placeholder="Wer hat die Ausgabe getätigt?" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Beschreibung *</label>
+                <input type="text" id="expense-description" class="form-input" placeholder="Wofür wurde das Geld ausgegeben?" required>
+            </div>
+            <button class="btn btn-primary" onclick="addExpense()" style="width: 100%;">Ausgabe hinzufügen</button>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">🔐</span>
+                    JuBa-Kasse Login
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Passwort</label>
+                <input type="password" id="login-password" class="form-input" placeholder="Passwort eingeben">
+            </div>
+            <button class="btn btn-primary" onclick="attemptLogin()" style="width: 100%;">Anmelden</button>
+            <div id="login-error" style="color: #dc2626; margin-top: 12px; font-size: 14px; display: none;">
+                Falsches Passwort. Bitte versuchen Sie es erneut.
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
+        import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD5z2-ND8Ukx46wDhYJlUQhiUqHITrLxy0",
+            authDomain: "juba-kasse.firebaseapp.com",
+            databaseURL: "https://juba-kasse-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "juba-kasse",
+            storageBucket: "juba-kasse.firebasestorage.app",
+            messagingSenderId: "522007065248",
+            appId: "1:522007065248:web:1c2490e03cd40c25e58fc5"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Global variables
+        let people = [];
+        let settings = {"vollverdiener": 50, "geringverdiener": 25, "keinverdiener": 10};
+        let currentPersonId = null;
+        let isLoading = true;
+        let isAuthenticated = false;
+        let donations = [];
+        let expenses = [];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize tab indicator
+            updateTabIndicator('overview');
+            
+            // Check authentication on startup
+            await checkAuthentication();
+            
+            // Render initial kassenstand even without authentication
+            renderKassenstand();
+        });
+
+        // Authentication functions
+        async function checkAuthentication() {
+            const loginExpiry = localStorage.getItem('juba-login-expiry');
+            const storedPasswordHash = localStorage.getItem('juba-password-hash');
+            
+            // Ensure default password exists in Firebase
+            await ensureDefaultPassword();
+            
+            // Check if user has a valid login session
+            if (loginExpiry && new Date().getTime() < parseInt(loginExpiry)) {
+                // Additional check: verify if stored password still matches Firebase
+                const currentPassword = await getPasswordFromFirebase();
+                const currentPasswordHash = await hashPassword(currentPassword);
+                
+                if (storedPasswordHash === currentPasswordHash) {
+                    // Password still matches, login is valid
+                    isAuthenticated = true;
+                    loadDataFromFirebase().then(() => {
+                        // Set default payment date only if the element exists
+                        const paymentDateEl = document.getElementById('payment-date');
+                        if (paymentDateEl) {
+                            paymentDateEl.value = new Date().toISOString().split('T')[0];
+                        }
+                    });
+                } else {
+                    // Password has been changed, force re-login
+                    localStorage.removeItem('juba-login-expiry');
+                    localStorage.removeItem('juba-password-hash');
+                    showLoginModal();
+                    renderKassenstand();
+                }
+            } else {
+                // Clear expired session
+                localStorage.removeItem('juba-login-expiry');
+                localStorage.removeItem('juba-password-hash');
+                showLoginModal();
+                // Show initial kassenstand with 0
+                renderKassenstand();
+            }
+        }
+
+        // Simple hash function to store password hash locally
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password + 'juba-salt-2025');
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function ensureDefaultPassword() {
+            try {
+                const passwordRef = ref(database, 'auth/password');
+                const passwordSnapshot = await get(passwordRef);
+                
+                // Set default password if none exists in Firebase
+                if (!passwordSnapshot.exists()) {
+                    await set(passwordRef, 'admin123');
+                }
+            } catch (error) {
+                console.error('Fehler beim Überprüfen des Passworts:', error);
+            }
+        }
+
+        async function getPasswordFromFirebase() {
+            try {
+                const passwordRef = ref(database, 'auth/password');
+                const passwordSnapshot = await get(passwordRef);
+                return passwordSnapshot.exists() ? passwordSnapshot.val() : 'admin123';
+            } catch (error) {
+                console.error('Fehler beim Laden des Passworts:', error);
+                return 'admin123'; // Fallback
+            }
+        }
+
+        function showLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('login-password').focus();
+            // Add enter key listener
+            document.getElementById('login-password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    attemptLogin();
+                }
+            });
+        }
+
+        function hideLoginModal() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('login-error').style.display = 'none';
+        }
+
+        window.attemptLogin = async function() {
+            const enteredPassword = document.getElementById('login-password').value;
+            const storedPassword = await getPasswordFromFirebase();
+            
+            if (enteredPassword === storedPassword) {
+                isAuthenticated = true;
+                
+                // Set login expiry to 24 hours from now
+                const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000);
+                localStorage.setItem('juba-login-expiry', expiryTime.toString());
+                
+                // Store password hash for future verification
+                const passwordHash = await hashPassword(storedPassword);
+                localStorage.setItem('juba-password-hash', passwordHash);
+                
+                hideLoginModal();
+                
+                // Load data after successful login
+                loadDataFromFirebase().then(() => {
+                    // Set default payment date only if the element exists
+                    const paymentDateEl = document.getElementById('payment-date');
+                    if (paymentDateEl) {
+                        paymentDateEl.value = new Date().toISOString().split('T')[0];
+                    }
+                });
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+                document.getElementById('login-password').value = '';
+            }
+        };
+
+        window.changePassword = async function() {
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (!newPassword || newPassword.length < 4) {
+                alert('Das Passwort muss mindestens 4 Zeichen lang sein.');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('Die Passwörter stimmen nicht überein.');
+                return;
+            }
+            
+            try {
+                // Save new password to Firebase
+                await set(ref(database, 'auth/password'), newPassword);
+                
+                // Clear local session data to force re-login
+                localStorage.removeItem('juba-login-expiry');
+                localStorage.removeItem('juba-password-hash');
+                
+                document.getElementById('new-password').value = '';
+                document.getElementById('confirm-password').value = '';
+                
+                alert('Passwort erfolgreich geändert! Sie werden automatisch abgemeldet und müssen sich mit dem neuen Passwort anmelden.');
+                
+                // Force logout and show login modal
+                isAuthenticated = false;
+                showLoginModal();
+            } catch (error) {
+                console.error('Fehler beim Speichern des Passworts:', error);
+                alert('Fehler beim Speichern des neuen Passworts in Firebase');
+            }
+        };
+
+        // Firebase data loading and saving functions
+        async function loadDataFromFirebase() {
+            try {
+                const dbRef = ref(database);
+                
+                // Load settings
+                const settingsSnapshot = await get(child(dbRef, 'settings'));
+                if (settingsSnapshot.exists()) {
+                    settings = settingsSnapshot.val();
+                }
+                
+                // Load people
+                const peopleSnapshot = await get(child(dbRef, 'people'));
+                if (peopleSnapshot.exists()) {
+                    people = Object.values(peopleSnapshot.val());
+                } else {
+                    people = [];
+                }
+                
+                // Load donations
+                const donationsSnapshot = await get(child(dbRef, 'donations'));
+                if (donationsSnapshot.exists()) {
+                    donations = Object.values(donationsSnapshot.val());
+                } else {
+                    donations = [];
+                }
+                
+                // Load expenses
+                const expensesSnapshot = await get(child(dbRef, 'expenses'));
+                if (expensesSnapshot.exists()) {
+                    expenses = Object.values(expensesSnapshot.val());
+                } else {
+                    expenses = [];
+                }
+                
+                // Update existing people with memberSince if not present
+                people.forEach(person => {
+                    if (!person.memberSince) {
+                        person.memberSince = new Date().toISOString().split('T')[0];
+                    }
+                });
+                
+                isLoading = false;
+                loadSettings();
+                renderPeople();
+                renderKassenstand(); // Ensure kassenstand is updated
+            } catch (error) {
+                console.error('Fehler beim Laden der Daten:', error);
+                alert('Fehler beim Laden der Daten aus Firebase');
+                isLoading = false;
+            }
+        }
+
+        async function savePeople() {
+            if (isLoading || !isAuthenticated) return;
+            
+            try {
+                // Convert array to object with person IDs as keys
+                const peopleObject = {};
+                people.forEach(person => {
+                    peopleObject[person.id] = person;
+                });
+                
+                await set(ref(database, 'people'), peopleObject);
+                renderKassenstand(); // Update kassenstand after saving
+            } catch (error) {
+                console.error('Fehler beim Speichern der Personen:', error);
+                alert('Fehler beim Speichern in Firebase');
+                throw error; // Re-throw to handle in calling functions
+            }
+        }
+
+        async function saveTransactions() {
+            if (isLoading || !isAuthenticated) return;
+            
+            try {
+                // Convert arrays to objects with IDs as keys
+                const donationsObject = {};
+                donations.forEach(donation => {
+                    donationsObject[donation.id] = donation;
+                });
+                
+                const expensesObject = {};
+                expenses.forEach(expense => {
+                    expensesObject[expense.id] = expense;
+                });
+                
+                await set(ref(database, 'donations'), donationsObject);
+                await set(ref(database, 'expenses'), expensesObject);
+                renderKassenstand(); // Update kassenstand after saving
+            } catch (error) {
+                console.error('Fehler beim Speichern der Transaktionen:', error);
+                alert('Fehler beim Speichern der Transaktionen in Firebase');
+                throw error; // Re-throw to handle in calling functions
+            }
+        }
+
+        async function saveSettings() {
+            settings.vollverdiener = parseFloat(document.getElementById('rate-vollverdiener').value);
+            settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value);
+            settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value);
+
+            try {
+                await set(ref(database, 'settings'), settings);
+                renderPeople(); // Re-render to update calculations
+                alert('Einstellungen gespeichert!');
+            } catch (error) {
+                console.error('Fehler beim Speichern der Einstellungen:', error);
+                alert('Fehler beim Speichern der Einstellungen in Firebase');
+            }
+        }
+
+        // Track current tab for animation direction
+        let currentTab = 'overview';
+
+        // Make functions globally available for onclick handlers
+        window.showTab = function(tabName) {
+            if (tabName === currentTab) return; // Don't animate if same tab
+
+            const tabs = ['overview', 'settings'];
+            const currentIndex = tabs.indexOf(currentTab);
+            const newIndex = tabs.indexOf(tabName);
+            const isMovingRight = newIndex > currentIndex; // overview -> settings
+            const isMovingLeft = newIndex < currentIndex; // settings -> overview
+
+            // Get current and new tab elements
+            const currentTabElement = document.getElementById(currentTab);
+            const newTabElement = document.getElementById(tabName);
+
+            // Remove active classes from all tabs and buttons
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active', 'slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Update tab indicator position with smooth animation
+            updateTabIndicator(tabName);
+
+            // Animate current tab out
+            if (isMovingRight) {
+                currentTabElement.classList.add('slide-out-left');
+            } else if (isMovingLeft) {
+                currentTabElement.classList.add('slide-out-right');
+            }
+
+            // After slide-out animation starts, prepare new tab
+            setTimeout(() => {
+                // Hide current tab completely
+                currentTabElement.style.display = 'none';
+                
+                // Prepare new tab for animation
+                newTabElement.style.display = 'block';
+                newTabElement.style.opacity = '0';
+                
+                if (isMovingRight) {
+                    newTabElement.style.transform = 'translateX(30px)';
+                    newTabElement.classList.add('slide-in-left');
+                } else if (isMovingLeft) {
+                    newTabElement.style.transform = 'translateX(-30px)';
+                    newTabElement.classList.add('slide-in-right');
+                }
+
+                // Trigger animation
+                requestAnimationFrame(() => {
+                    newTabElement.classList.add('active');
+                    newTabElement.style.opacity = '1';
+                    newTabElement.style.transform = 'translateX(0)';
+                });
+            }, 100); // Small delay to ensure smooth transition
+
+            // Update button states
+            event.target.classList.add('active');
+            
+            // Update current tab
+            currentTab = tabName;
+        };
+
+        // Update tab indicator position
+        function updateTabIndicator(tabName) {
+            const tabContainer = document.querySelector('.tab-nav-container');
+            const activeButton = document.querySelector(`.tab-btn[onclick="showTab('${tabName}')"]`);
+            
+            if (!activeButton) return;
+
+            // Create indicator if it doesn't exist
+            let indicator = document.querySelector('.tab-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.className = 'tab-indicator';
+                tabContainer.appendChild(indicator);
+            }
+
+            // Calculate position and size
+            const containerRect = tabContainer.getBoundingClientRect();
+            const buttonRect = activeButton.getBoundingClientRect();
+            
+            const left = buttonRect.left - containerRect.left;
+            const width = buttonRect.width;
+
+            // Apply smooth animation
+            indicator.style.left = left + 'px';
+            indicator.style.width = width + 'px';
+        }
+
+        window.showAddPersonModal = function() {
+            document.getElementById('add-person-modal').classList.add('show');
+        };
+
+        window.hideAddPersonModal = function() {
+            document.getElementById('add-person-modal').classList.remove('show');
+            document.getElementById('new-person-name').value = '';
+            document.getElementById('new-person-status').value = 'vollverdiener';
+        };
+
+        window.showAddPaymentModal = function(personId) {
+            currentPersonId = personId;
+            // Set current date as default only if the element exists
+            const paymentDateEl = document.getElementById('payment-date');
+            if (paymentDateEl) {
+                paymentDateEl.value = new Date().toISOString().split('T')[0];
+            }
+            document.getElementById('add-payment-modal').classList.add('show');
+        };
+
+        window.hideAddPaymentModal = function() {
+            document.getElementById('add-payment-modal').classList.remove('show');
+            document.getElementById('payment-amount').value = '';
+            document.getElementById('payment-description').value = '';
+            currentPersonId = null;
+        };
+
+        // Floating menu functions
+        window.toggleFloatingMenu = function() {
+            const menu = document.getElementById('floating-menu');
+            const button = document.querySelector('.floating-add');
+            
+            if (menu.classList.contains('show')) {
+                hideFloatingMenu();
+            } else {
+                showFloatingMenu();
+            }
+        };
+
+        function showFloatingMenu() {
+            const menu = document.getElementById('floating-menu');
+            const button = document.querySelector('.floating-add');
+            
+            menu.classList.add('show');
+            button.classList.add('active');
+            
+            // Reset menu items for liquid animation from the button
+            const items = menu.querySelectorAll('.floating-menu-item');
+            items.forEach((item, index) => {
+                // Ensure backdrop-filter is preserved during animation
+                item.style.backdropFilter = 'blur(10px)';
+                item.style.webkitBackdropFilter = 'blur(10px)';
+                item.style.transform = 'translateX(50px) translateY(20px) scale(0.3) rotate(45deg)';
+                item.style.opacity = '0';
+                
+                // Liquid staggered animation - items flow out from the plus button
+                setTimeout(() => {
+                    item.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    // Keep backdrop-filter during animation
+                    item.style.backdropFilter = 'blur(10px)';
+                    item.style.webkitBackdropFilter = 'blur(10px)';
+                    item.style.transform = 'translateX(0) translateY(0) scale(1) rotate(0deg)';
+                    item.style.opacity = '1';
+                }, 50 + (index * 100));
+            });
+        }
+
+        window.hideFloatingMenu = function() {
+            const menu = document.getElementById('floating-menu');
+            const button = document.querySelector('.floating-add');
+            const items = menu.querySelectorAll('.floating-menu-item');
+            
+            // Animate items back into the button in reverse order with liquid effect
+            items.forEach((item, index) => {
+                const reverseIndex = items.length - 1 - index;
+                setTimeout(() => {
+                    item.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.6, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.6, 1)';
+                    // Keep backdrop-filter during hide animation
+                    item.style.backdropFilter = 'blur(10px)';
+                    item.style.webkitBackdropFilter = 'blur(10px)';
+                    item.style.transform = 'translateX(60px) translateY(30px) scale(0.2) rotate(90deg)';
+                    item.style.opacity = '0';
+                }, reverseIndex * 60);
+            });
+            
+            // Hide menu after animation completes
+            setTimeout(() => {
+                menu.classList.remove('show');
+                button.classList.remove('active');
+                
+                // Reset transforms for next time
+                items.forEach(item => {
+                    item.style.transition = '';
+                    // Ensure backdrop-filter is preserved when resetting
+                    item.style.backdropFilter = 'blur(10px)';
+                    item.style.webkitBackdropFilter = 'blur(10px)';
+                    item.style.transform = 'translateX(50px) translateY(20px) scale(0.3) rotate(45deg)';
+                    item.style.opacity = '0';
+                });
+            }, (items.length * 60) + 300);
+        };
+
+        // Donation modal functions
+        window.showAddDonationModal = function() {
+            document.getElementById('donation-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('add-donation-modal').classList.add('show');
+        };
+
+        window.hideAddDonationModal = function() {
+            document.getElementById('add-donation-modal').classList.remove('show');
+            document.getElementById('donation-amount').value = '';
+            document.getElementById('donation-name').value = '';
+            document.getElementById('donation-description').value = '';
+        };
+
+        // Expense modal functions
+        window.showAddExpenseModal = function() {
+            document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('add-expense-modal').classList.add('show');
+        };
+
+        window.hideAddExpenseModal = function() {
+            document.getElementById('add-expense-modal').classList.remove('show');
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-issuer').value = '';
+            document.getElementById('expense-description').value = '';
+        };
+
+        window.addPerson = async function() {
+            if (isLoading || !isAuthenticated) return;
+            
+            const name = document.getElementById('new-person-name').value.trim();
+            const status = document.getElementById('new-person-status').value;
+
+            if (!name) {
+                alert('Bitte einen Namen eingeben');
+                return;
+            }
+
+            try {
+                const person = {
+                    id: Date.now().toString(),
+                    name: name,
+                    status: status,
+                    payments: [],
+                    totalPaid: 0,
+                    memberSince: new Date().toISOString().split('T')[0] // Heute als Startdatum
+                };
+
+                // Automatically add a 0€ "Nutzerbestätigung" payment
+                const confirmationPayment = {
+                    id: (Date.now() + 1).toString(), // Ensure unique ID
+                    amount: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    description: "Nutzerbestätigung"
+                };
+
+                person.payments.push(confirmationPayment);
+                person.totalPaid = 0; // 0€ payment doesn't affect total
+
+                people.push(person);
+                await savePeople();
+                renderPeople();
+                window.hideAddPersonModal();
+            } catch (error) {
+                console.error('Fehler beim Hinzufügen der Person:', error);
+                alert('Fehler beim Speichern der neuen Person in Firebase');
+            }
+        };
+
+        window.addPayment = async function() {
+            if (isLoading || !isAuthenticated) return;
+            
+            const amount = parseFloat(document.getElementById('payment-amount').value);
+            const paymentDateEl = document.getElementById('payment-date');
+            const date = paymentDateEl ? paymentDateEl.value : new Date().toISOString().split('T')[0];
+            const description = document.getElementById('payment-description').value;
+
+            if (!amount || amount <= 0) {
+                alert('Bitte einen gültigen Betrag eingeben');
+                return;
+            }
+
+            if (!date) {
+                alert('Bitte ein Datum auswählen');
+                return;
+            }
+
+            try {
+                const person = people.find(p => p.id === currentPersonId);
+                if (!person) return;
+
+                const payment = {
+                    id: Date.now().toString(),
+                    amount: amount,
+                    date: date,
+                    description: description || `Zahlung ${new Date(date).toLocaleDateString('de-DE')}`
+                };
+
+                person.payments.push(payment);
+                person.totalPaid += amount;
+
+                await savePeople();
+                renderPeople();
+                window.hideAddPaymentModal();
+            } catch (error) {
+                console.error('Fehler beim Hinzufügen der Zahlung:', error);
+                alert('Fehler beim Speichern der Zahlung in Firebase');
+            }
+        };
+
+        window.addDonation = function() {
+            const amount = parseFloat(document.getElementById('donation-amount').value);
+            const date = document.getElementById('donation-date').value;
+            const name = document.getElementById('donation-name').value.trim();
+            const description = document.getElementById('donation-description').value.trim();
+
+            if (!amount || amount <= 0) {
+                alert('Bitte einen gültigen Betrag eingeben');
+                return;
+            }
+
+            if (!date) {
+                alert('Bitte ein Datum auswählen');
+                return;
+            }
+
+            const donation = {
+                id: Date.now().toString(),
+                amount: amount,
+                date: date,
+                name: name || 'Anonyme Spende',
+                description: description || `Spende vom ${new Date(date).toLocaleDateString('de-DE')}`,
+                type: 'donation'
+            };
+
+            donations.push(donation);
+            saveTransactions();
+            renderPeople();
+            window.hideAddDonationModal();
+        };
+
+        window.addExpense = function() {
+            const amount = parseFloat(document.getElementById('expense-amount').value);
+            const date = document.getElementById('expense-date').value;
+            const issuer = document.getElementById('expense-issuer').value.trim();
+            const description = document.getElementById('expense-description').value.trim();
+
+            if (!amount || amount <= 0) {
+                alert('Bitte einen gültigen Betrag eingeben');
+                return;
+            }
+
+            if (!date) {
+                alert('Bitte ein Datum auswählen');
+                return;
+            }
+
+            if (!issuer) {
+                alert('Bitte den Ausgeber angeben');
+                return;
+            }
+
+            if (!description) {
+                alert('Bitte eine Beschreibung angeben');
+                return;
+            }
+
+            const expense = {
+                id: Date.now().toString(),
+                amount: amount,
+                date: date,
+                issuer: issuer,
+                description: description,
+                type: 'expense'
+            };
+
+            expenses.push(expense);
+            saveTransactions();
+            renderPeople();
+            window.hideAddExpenseModal();
+        };
+
+        window.saveSettings = async function() {
+            settings.vollverdiener = parseFloat(document.getElementById('rate-vollverdiener').value);
+            settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value);
+            settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value);
+
+            try {
+                await set(ref(database, 'settings'), settings);
+                renderPeople(); // Re-render to update calculations
+                alert('Einstellungen gespeichert!');
+            } catch (error) {
+                console.error('Fehler beim Speichern der Einstellungen:', error);
+                alert('Fehler beim Speichern der Einstellungen in Firebase');
+            }
+        };
+
+        window.togglePersonDetails = function(personId) {
+            const detailsElement = document.getElementById(`details-${personId}`);
+            const isVisible = detailsElement.classList.contains('active');
+            
+            // Alle anderen Details schließen
+            document.querySelectorAll('.person-details').forEach(detail => {
+                detail.classList.remove('active');
+            });
+            
+            // Aktuelles Element umschalten (nur öffnen wenn es geschlossen war)
+            if (!isVisible) {
+                detailsElement.classList.add('active');
+            }
+        };
+
+        window.changePersonStatus = async function(personId) {
+            if (isLoading || !isAuthenticated) return;
+            
+            const newStatus = document.getElementById(`status-select-${personId}`).value;
+            const newMemberSince = document.getElementById(`member-since-${personId}`).value;
+            
+            try {
+                const person = people.find(p => p.id === personId);
+                if (!person) return;
+                
+                // Status und Startdatum aktualisieren
+                person.status = newStatus;
+                person.memberSince = newMemberSince;
+                
+                await savePeople();
+                renderPeople();
+                alert('Status und Startdatum aktualisiert!');
+            } catch (error) {
+                console.error('Fehler beim Aktualisieren des Status:', error);
+                alert('Fehler beim Speichern der Änderungen in Firebase');
+            }
+        };
+
+        window.showDeleteConfirm = function(personId) {
+            const confirmElement = document.getElementById(`confirm-delete-${personId}`);
+            confirmElement.classList.add('show');
+        };
+
+        window.hideDeleteConfirm = function(personId) {
+            const confirmElement = document.getElementById(`confirm-delete-${personId}`);
+            confirmElement.classList.remove('show');
+        };
+
+        window.toggleKassenstandDetails = function() {
+            const detailsElement = document.getElementById('transaction-details');
+            const isVisible = detailsElement.classList.contains('active');
+            
+            if (!isVisible) {
+                renderTransactionHistory();
+                detailsElement.classList.add('active');
+            } else {
+                detailsElement.classList.remove('active');
+            }
+        };
+
+        window.confirmDeletePerson = async function(personId) {
+            if (isLoading || !isAuthenticated) return;
+            
+            if (confirm('Person wirklich endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
+                try {
+                    people = people.filter(p => p.id !== personId);
+                    await savePeople();
+                    renderPeople();
+                } catch (error) {
+                    console.error('Fehler beim Löschen der Person:', error);
+                    alert('Fehler beim Löschen der Person in Firebase');
+                }
+            }
+        };
+
+        function calculatePaidUntil(person) {
+            const monthlyRate = settings[person.status];
+            if (!monthlyRate || person.totalPaid === 0) {
+                return null;
+            }
+
+            // Berechnung ab memberSince Datum oder heute, falls nicht vorhanden
+            const startDate = person.memberSince ? new Date(person.memberSince) : new Date();
+            const monthsPaid = Math.floor(person.totalPaid / monthlyRate);
+            const paidUntil = new Date(startDate.getFullYear(), startDate.getMonth() + monthsPaid, startDate.getDate());
+            
+            return paidUntil;
+        }
+
+        function calculateTimeRemaining(person) {
+            const paidUntil = calculatePaidUntil(person);
+            if (!paidUntil) {
+                return { text: 'Keine Zahlungen', isOverdue: true, isSoonDue: false };
+            }
+
+            const today = new Date();
+            const diffTime = paidUntil.getTime() - today.getTime();
+            const isOverdue = diffTime < 0;
+            
+            if (isOverdue) {
+                const overdueDays = Math.abs(Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+                if (overdueDays < 60) {
+                    return { text: `${overdueDays} Tag${overdueDays !== 1 ? 'e' : ''} überfällig`, isOverdue: true, isSoonDue: false };
+                } else {
+                    const overdueMonths = Math.floor(overdueDays / 30);
+                    return { text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`, isOverdue: true, isSoonDue: false };
+                }
+            }
+
+            const remainingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const remainingWeeks = Math.floor(remainingDays / 7);
+            const remainingMonths = Math.floor(remainingDays / 30);
+
+            // Check if payment is due within 30 days
+            const isSoonDue = remainingDays <= 30;
+
+            if (remainingDays < 14) {
+                return { text: `noch ${remainingDays} Tag${remainingDays !== 1 ? 'e' : ''}`, isOverdue: false, isSoonDue: isSoonDue };
+            } else if (remainingDays < 60) {
+                return { text: `noch ${remainingWeeks} Woche${remainingWeeks !== 1 ? 'n' : ''}`, isOverdue: false, isSoonDue: isSoonDue };
+            } else {
+                return { text: `noch ${remainingMonths} Monat${remainingMonths !== 1 ? 'e' : ''}`, isOverdue: false, isSoonDue: false };
+            }
+        }
+
+        function formatPaidUntilStatus(person) {
+            const paidUntil = calculatePaidUntil(person);
+            if (!paidUntil) {
+                return { date: 'Keine Zahlungen', className: 'overdue' };
+            }
+
+            const today = new Date();
+            const isOverdue = paidUntil < today;
+            const className = isOverdue ? 'overdue' : 'paid-until';
+            
+            return { 
+                date: paidUntil.toLocaleDateString('de-DE'),
+                className: className
+            };
+        }
+
+        function calculateTotalAmount() {
+            let total = 0;
+            
+            // Add payments from people
+            people.forEach(person => {
+                total += person.totalPaid || 0;
+            });
+            
+            // Add donations
+            donations.forEach(donation => {
+                total += donation.amount || 0;
+            });
+            
+            // Subtract expenses
+            expenses.forEach(expense => {
+                total -= expense.amount || 0;
+            });
+            
+            return total;
+        }
+
+        function renderKassenstand() {
+            const total = calculateTotalAmount();
+            const amountElement = document.getElementById('kassenstand-amount');
+            amountElement.textContent = total.toLocaleString('de-DE', { 
+                style: 'currency', 
+                currency: 'EUR' 
+            });
+            
+            // Change color based on positive/negative amount
+            if (total < 0) {
+                amountElement.style.color = '#dc2626'; // Red for negative amounts
+            } else {
+                amountElement.style.color = '#059669'; // Green for positive amounts
+            }
+        }
+
+        function renderTransactionHistory() {
+            const transactionList = document.getElementById('transaction-list');
+            
+            // Sammle alle Transaktionen von allen Personen
+            const allTransactions = [];
+            
+            // Add payments from people
+            people.forEach(person => {
+                if (person.payments && person.payments.length > 0) {
+                    person.payments.forEach(payment => {
+                        allTransactions.push({
+                            ...payment,
+                            personName: person.name,
+                            type: 'payment'
+                        });
+                    });
+                }
+            });
+            
+            // Add donations
+            donations.forEach(donation => {
+                allTransactions.push({
+                    ...donation,
+                    personName: donation.name,
+                    type: 'donation'
+                });
+            });
+            
+            // Add expenses
+            expenses.forEach(expense => {
+                allTransactions.push({
+                    ...expense,
+                    personName: expense.issuer,
+                    type: 'expense'
+                });
+            });
+            
+            // Sortiere nach Datum (neueste zuerst), dann nach ID/Timestamp für gleiche Tage
+            allTransactions.sort((a, b) => {
+                const dateComparison = new Date(b.date) - new Date(a.date);
+                if (dateComparison !== 0) {
+                    return dateComparison; // Different dates, sort by date
+                }
+                // Same date, sort by ID (which contains timestamp) - newer first
+                return parseInt(b.id) - parseInt(a.id);
+            });
+            
+            if (allTransactions.length === 0) {
+                transactionList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Noch keine Transaktionen vorhanden</div>';
+                return;
+            }
+            
+            const transactionsHTML = allTransactions.map(transaction => {
+                let borderColor = '#2563eb'; // Default blue for payments
+                let amountColor = '#059669'; // Default green for income
+                let typeIcon = '💳';
+                
+                if (transaction.type === 'donation') {
+                    borderColor = '#059669';
+                    amountColor = '#059669';
+                    typeIcon = '💝';
+                } else if (transaction.type === 'expense') {
+                    borderColor = '#dc2626';
+                    amountColor = '#dc2626';
+                    typeIcon = '💸';
+                }
+                
+                const amount = transaction.type === 'expense' 
+                    ? `-${transaction.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`
+                    : `+${transaction.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`;
+                
+                return `
+                    <div class="transaction-item" style="border-left-color: ${borderColor};">
+                        <div class="transaction-header">
+                            <span class="transaction-person">${typeIcon} ${transaction.personName}</span>
+                            <span class="transaction-amount" style="color: ${amountColor};">${amount}</span>
+                        </div>
+                        <div class="transaction-meta">
+                            <span>${transaction.description || 'Transaktion'}</span>
+                            <span>${new Date(transaction.date).toLocaleDateString('de-DE')}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            transactionList.innerHTML = transactionsHTML;
+        }
+
+        function renderPeople() {
+            const container = document.getElementById('people-list');
+            const emptyState = document.getElementById('empty-state');
+
+            // Kassenstand aktualisieren
+            renderKassenstand();
+
+            if (people.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Personen in überfällig und aktuell aufteilen
+            const overduePeople = [];
+            const currentPeople = [];
+
+            people.forEach(person => {
+                // Sicherstellen, dass memberSince existiert
+                if (!person.memberSince) {
+                    person.memberSince = new Date().toISOString().split('T')[0];
+                }
+                
+                const timeRemaining = calculateTimeRemaining(person);
+                if (timeRemaining.isOverdue) {
+                    overduePeople.push(person);
+                } else {
+                    currentPeople.push(person);
+                }
+            });
+
+            // Alphabetisch sortieren
+            overduePeople.sort((a, b) => a.name.localeCompare(b.name));
+            currentPeople.sort((a, b) => a.name.localeCompare(b.name));
+
+            // HTML für beide Bereiche generieren
+            let html = '';
+            
+            // Überfällige Personen Bereich
+            if (overduePeople.length > 0) {
+                html += `
+                    <div style="margin-bottom: 24px;">
+                        <h3 style="color: #dc2626; font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-left: 4px;">
+                            Überfällige Zahlungen (${overduePeople.length})
+                        </h3>
+                        ${overduePeople.map(person => generatePersonHTML(person)).join('')}
+                    </div>
+                `;
+            }
+
+            // Aktuelle Personen Bereich
+            if (currentPeople.length > 0) {
+                html += `
+                    <div>
+                        ${overduePeople.length > 0 ? `
+                            <h3 style="color: #059669; font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-left: 4px;">
+                                Aktuelle Mitglieder (${currentPeople.length})
+                            </h3>
+                        ` : ''}
+                        ${currentPeople.map(person => generatePersonHTML(person)).join('')}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function generatePersonHTML(person) {
+            const paymentStatus = formatPaidUntilStatus(person);
+            const timeRemaining = calculateTimeRemaining(person);
+            
+            return `
+                <div class="person-item" onclick="togglePersonDetails('${person.id}')">
+                    <div class="person-pill">
+                        <div class="person-left">
+                            <div class="person-name">${person.name}</div>
+                            <div class="person-status status-${person.status}">
+                                ${person.status === 'vollverdiener' ? 'Vollverdiener' : 
+                                  person.status === 'geringverdiener' ? 'Geringverdiener' : 'Keinverdiener'}
+                            </div>
+                        </div>
+                        <div class="person-right">
+                            <div class="payment-date ${paymentStatus.className}">
+                                ${paymentStatus.date}
+                            </div>
+                            <div class="time-remaining ${timeRemaining.isOverdue ? 'overdue' : timeRemaining.isSoonDue ? 'soon-due' : 'paid-until'}">
+                                ${timeRemaining.text}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="details-${person.id}" class="person-details" onclick="event.stopPropagation()">
+                        <div class="detail-section">
+                            <button class="btn btn-primary btn-small" onclick="showAddPaymentModal('${person.id}')" style="width: 100%;">
+                                💳 Zahlung hinzufügen
+                            </button>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4>Zahlt seit</h4>
+                            <input type="date" id="member-since-${person.id}" class="form-input" value="${person.memberSince}" style="margin-bottom: 12px;">
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4>Status ändern</h4>
+                            <div class="status-change-form">
+                                <select id="status-select-${person.id}" class="form-select" style="flex: 1; min-width: 120px;">
+                                    <option value="vollverdiener" ${person.status === 'vollverdiener' ? 'selected' : ''}>Vollverdiener</option>
+                                    <option value="geringverdiener" ${person.status === 'geringverdiener' ? 'selected' : ''}>Geringverdiener</option>
+                                    <option value="keinverdiener" ${person.status === 'keinverdiener' ? 'selected' : ''}>Keinverdiener</option>
+                                </select>
+                                <button class="btn btn-secondary btn-small" onclick="changePersonStatus('${person.id}')">
+                                    Ändern
+                                </button>
+                            </div>
+                        </div>
+                        
+                        ${person.payments.length > 0 ? `
+                            <div class="detail-section">
+                                <h4>Zahlungshistorie</h4>
+                                ${person.payments.slice().sort((a, b) => {
+                                    const dateComparison = new Date(b.date) - new Date(a.date);
+                                    if (dateComparison !== 0) {
+                                        return dateComparison; // Different dates, sort by date
+                                    }
+                                    // Same date, sort by ID (which contains timestamp) - newer first
+                                    return parseInt(b.id) - parseInt(a.id);
+                                }).map(payment => `
+                                    <div class="payment-entry">
+                                        ${new Date(payment.date).toLocaleDateString('de-DE')} - ${payment.amount.toFixed(2)}€ 
+                                        ${payment.description ? `(${payment.description})` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="delete-button-container">
+                            <button class="btn btn-danger delete-button" onclick="showDeleteConfirm('${person.id}')">
+                                🗑️ Person löschen
+                            </button>
+                            <div id="confirm-delete-${person.id}" class="confirm-delete">
+                                <p style="color: #dc2626; font-size: 14px; margin-bottom: 8px;">
+                                    ⚠️ Sind Sie sicher? Diese Aktion kann nicht rückgängig gemacht werden!
+                                </p>
+                                <button class="btn btn-danger btn-small" onclick="confirmDeletePerson('${person.id}')" style="margin-right: 8px;">
+                                    Ja, löschen
+                                </button>
+                                <button class="btn btn-secondary btn-small" onclick="hideDeleteConfirm('${person.id}')">
+                                    Abbrechen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadSettings() {
+            document.getElementById('rate-vollverdiener').value = settings.vollverdiener;
+            document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
+            document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+            
+            // Close floating menu when clicking outside
+            const floatingMenu = document.getElementById('floating-menu');
+            const floatingButton = document.querySelector('.floating-add');
+            
+            if (!floatingButton.contains(event.target) && !floatingMenu.contains(event.target)) {
+                hideFloatingMenu();
+            }
+        }
+    </script>
+</body>
+</html>
