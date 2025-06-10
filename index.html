@@ -11,6 +11,14 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            /* Suppress tap highlight on mobile devices */
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
 
         body {
@@ -61,10 +69,9 @@
         .tab-nav {
             display: flex;
             justify-content: center;
-            padding: 16px 20px 0;
+            padding: 16px 20px 12px;
             background: #f8fafc;
             position: relative;
-            overflow: hidden;
         }
 
         .tab-nav-container {
@@ -194,6 +201,66 @@
             padding: 16px;
         }
 
+        /* Specific styles for form elements within cards (settings tab and person details) */
+        .card .form-label {
+            color: #374151; /* Dark grey text for labels in cards */
+            font-weight: 500;
+        }
+
+        .card .form-input,
+        .card .form-select {
+            background: white; /* White background for input in cards */
+            color: #1e293b; /* Dark text for input content */
+            border: 2px solid #e5e7eb; /* Standard grey border */
+        }
+
+        .card .form-input::placeholder {
+            color: #9ca3af; /* Medium grey for placeholder in cards */
+        }
+
+        .card .form-input:focus,
+        .card .form-select:focus {
+            background: white; /* Keep white background on focus */
+            border-color: #2563eb; /* Brand blue for focus */
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); /* Focus ring */
+        }
+        
+        /* Ensure select options are readable in cards */
+        .card .form-select option {
+            background: white;
+            color: #1e293b;
+        }
+
+        /* Specific styles for form elements within person details */
+        .person-details .form-label {
+            color: #374151; /* Dark grey text for labels in person details */
+            font-weight: 500;
+        }
+
+        .person-details .form-input,
+        .person-details .form-select {
+            background: white; /* White background for input in person details */
+            color: #1e293b; /* Dark text for input content */
+            border: 2px solid #e5e7eb; /* Standard grey border */
+        }
+
+        .person-details .form-input::placeholder {
+            color: #9ca3af; /* Medium grey for placeholder in person details */
+        }
+
+        .person-details .form-input:focus,
+        .person-details .form-select:focus {
+            background: white; /* Keep white background on focus */
+            border-color: #2563eb; /* Brand blue for focus */
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); /* Focus ring */
+        }
+        
+        /* Ensure select options are readable in person details */
+        .person-details .form-select option {
+            background: white;
+            color: #1e293b;
+        }
+
         .form-group {
             margin-bottom: 16px;
         }
@@ -218,6 +285,11 @@
             background: rgba(255, 255, 255, 0.2); /* Default for non-modal contexts */
             color: #f0f0f0; /* Default for non-modal contexts */
             transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+            /* Re-enable text selection for input fields */
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
         
         .form-input::placeholder { /* General placeholder styling */
@@ -750,16 +822,72 @@
 
         /* Kassenstand Styles */
         .kassenstand-item {
-            background: white;
+            background: rgba(5, 150, 105, 0.08); /* Light green tint matching the amount color */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-radius: 16px;
             padding: 24px;
             margin-bottom: 20px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(5, 150, 105, 0.2); /* Green border */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
             overflow: hidden;
+        }
+
+        .kassenstand-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.15) 0%, 
+                rgba(251, 191, 36, 0.05) 25%, /* Subtle yellow tint */
+                rgba(5, 150, 105, 0.08) 50%, /* Green tint */
+                rgba(255, 255, 255, 0.05) 75%,
+                rgba(5, 150, 105, 0.03) 100%);
+            border-radius: 16px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .kassenstand-item::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                transparent 30%, 
+                rgba(255, 255, 255, 0.1) 50%, 
+                transparent 70%);
+            transform: rotate(-45deg);
+            pointer-events: none;
+            transition: all 0.6s ease;
+            opacity: 0;
+            z-index: 2;
+        }
+
+        .kassenstand-item:hover::after {
+            opacity: 1;
+            animation: mirror-sweep 2s ease-in-out infinite;
+        }
+
+        @keyframes mirror-sweep {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(-45deg); }
+            50% { transform: translateX(0%) translateY(0%) rotate(-45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(-45deg); }
+        }
+
+        .kassenstand-item > * {
+            position: relative;
+            z-index: 3;
         }
 
         .kassenstand-content {
@@ -778,6 +906,10 @@
             font-weight: 700;
             color: #059669;
             margin-bottom: 4px;
+        }
+
+        .kassenstand-amount.negative {
+            color: #dc2626; /* Red color for negative amounts */
         }
 
         .kassenstand-subtitle {
@@ -1657,7 +1789,8 @@
                     id: Date.now().toString(),
                     amount: amount,
                     date: date,
-                    description: description || `Zahlung ${new Date(date).toLocaleDateString('de-DE')}`
+                    description: description || `Zahlung ${new Date(date).toLocaleDateString('de-DE')}`,
+                    timestamp: Date.now() // Add timestamp for proper sorting
                 };
 
                 person.payments.push(payment);
@@ -1694,7 +1827,8 @@
                 date: date,
                 name: name || 'Anonyme Spende',
                 description: description || `Spende vom ${new Date(date).toLocaleDateString('de-DE')}`,
-                type: 'donation'
+                type: 'donation',
+                timestamp: Date.now() // Add timestamp for proper sorting
             };
 
             donations.push(donation);
@@ -1735,7 +1869,8 @@
                 date: date,
                 issuer: issuer,
                 description: description,
-                type: 'expense'
+                type: 'expense',
+                timestamp: Date.now() // Add timestamp for proper sorting
             };
 
             expenses.push(expense);
@@ -1928,6 +2063,13 @@
                 style: 'currency', 
                 currency: 'EUR' 
             });
+            
+            // Add or remove negative class based on amount
+            if (total < 0) {
+                amountElement.classList.add('negative');
+            } else {
+                amountElement.classList.remove('negative');
+            }
         }
 
         function renderTransactionHistory() {
@@ -1967,8 +2109,22 @@
                 });
             });
             
-            // Sortiere nach Datum (neueste zuerst)
-            allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            // Sortiere nach Datum (neueste zuerst), dann nach Zeitstempel (neueste zuerst)
+            allTransactions.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                
+                // Erst nach Datum sortieren
+                if (dateA.getTime() !== dateB.getTime()) {
+                    return dateB - dateA;
+                }
+                
+                // Bei gleichem Datum nach Zeitstempel sortieren (neueste zuerst)
+                // Fallback auf ID-Vergleich falls kein Zeitstempel vorhanden
+                const timestampA = a.timestamp || parseInt(a.id) || 0;
+                const timestampB = b.timestamp || parseInt(b.id) || 0;
+                return timestampB - timestampA;
+            });
             
             if (allTransactions.length === 0) {
                 transactionList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Noch keine Transaktionen vorhanden</div>';
