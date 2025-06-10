@@ -202,32 +202,43 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
-            color: #374151;
+            /* color: #374151; */ /* Original global style, might be overridden below for modals */
+            color: rgba(255, 255, 255, 0.9); /* Default for non-modal contexts if any */
             font-size: 14px;
         }
 
-        .form-input {
+        .form-input, .form-select { /* Combined for shared styling */
             width: 100%;
             padding: 12px;
-            border: 2px solid #e5e7eb;
+            /* border: 2px solid #e5e7eb; */ /* Original global style */
+            border: 1px solid rgba(255, 255, 255, 0.3); /* Default for non-modal contexts */
             border-radius: 8px;
             font-size: 16px;
-            transition: border-color 0.2s;
+            /* background: white; */ /* Original global style */
+            background: rgba(255, 255, 255, 0.2); /* Default for non-modal contexts */
+            color: #f0f0f0; /* Default for non-modal contexts */
+            transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-input::placeholder { /* General placeholder styling */
+            color: rgba(240, 240, 240, 0.6); /* Default for non-modal contexts */
         }
 
-        .form-input:focus {
+        .form-input:focus, .form-select:focus {
             outline: none;
-            border-color: #4f46e5;
+            /* border-color: #4f46e5; */ /* Original global style */
+            border-color: rgba(255, 255, 255, 0.7); /* Default for non-modal contexts */
+            background: rgba(255, 255, 255, 0.3); /* Default for non-modal contexts */
         }
 
-        .form-select {
+        /* .form-select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             font-size: 16px;
             background: white;
-        }
+        } */ /* Replaced by combined rule */
 
         .btn {
             padding: 12px 24px;
@@ -262,12 +273,19 @@
         }
 
         .person-item {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
+            /* background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%); */
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 16px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            /* border: 1px solid #e2e8f0; */
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
@@ -659,7 +677,9 @@
         }
 
         .modal-content {
-            background: white;
+            background: rgba(248, 250, 252, 0.85); /* Lighter, whiter glass */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border-radius: 12px;
             padding: 24px;
             margin: 20px;
@@ -667,21 +687,65 @@
             width: 100%;
             max-height: 80vh;
             overflow-y: auto;
+            border: 1px solid rgba(226, 232, 240, 0.7); /* Light grey border */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
         .modal-header {
             font-size: 18px;
             font-weight: 600;
-            margin-bottom: 16px;
+            margin-bottom: 20px; /* Increased margin for better spacing */
+            color: #1e293b; /* Dark text for modal header */
+            padding-bottom: 12px; /* Add some padding below header */
+            border-bottom: 1px solid rgba(203, 213, 225, 0.5); /* Subtle separator line */
+        }
+
+        /* Specific styles for form elements within modals */
+        .modal-content .form-label {
+            color: #374151; /* Dark grey text for labels in modals */
+            font-weight: 500;
+        }
+
+        .modal-content .form-input,
+        .modal-content .form-select {
+            background: rgba(255, 255, 255, 0.6); /* White glass for input background */
+            color: #1e293b; /* Dark text for input content */
+            border: 1px solid rgba(203, 213, 225, 0.7); /* Slightly visible light grey border */
+        }
+
+        .modal-content .form-input::placeholder {
+            color: #64748b; /* Medium grey for placeholder in modals */
+        }
+
+        .modal-content .form-input:focus,
+        .modal-content .form-select:focus {
+            background: rgba(255, 255, 255, 0.75); /* Slightly more opaque white glass on focus */
+            border-color: #2563eb; /* Brand blue for focus */
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); /* Focus ring */
+        }
+        
+        /* Ensure select options are readable if they inherit strange colors */
+        .modal-content .form-select option {
+            background: white; /* Or a light color */
+            color: #1e293b; /* Dark text for options */
         }
 
         .close-btn {
             float: right;
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 28px; /* Slightly larger for easier clicking */
+            line-height: 1;
             cursor: pointer;
-            color: #64748b;
+            color: #64748b; /* Medium-dark grey */
+            transition: color 0.2s ease, transform 0.2s ease;
+            padding: 0; /* Remove padding if any */
+            position: relative;
+            top: -4px; /* Adjust position to align better with header text */
+        }
+        .close-btn:hover {
+            color: #1e293b; /* Darker on hover */
+            transform: scale(1.1);
         }
 
         /* Kassenstand Styles */
