@@ -11,24 +11,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            /* Remove tap highlight on mobile and focus outlines */
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-        
-        /* Remove focus outlines for mouse users, keep for keyboard users */
-        *:focus {
-            outline: none;
-        }
-        
-        /* Re-enable focus for keyboard navigation (accessibility) */
-        *:focus-visible {
-            outline: 2px solid rgba(37, 99, 235, 0.6);
-            outline-offset: 2px;
         }
 
         body {
@@ -79,9 +61,10 @@
         .tab-nav {
             display: flex;
             justify-content: center;
-            padding: 16px 20px 20px;
+            padding: 16px 20px 0;
             background: #f8fafc;
             position: relative;
+            overflow: hidden;
         }
 
         .tab-nav-container {
@@ -111,12 +94,6 @@
             min-width: 80px;
             position: relative;
             z-index: 2;
-            /* Remove tap highlights and focus outlines */
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
         }
 
         .tab-btn.active {
@@ -138,7 +115,7 @@
 
         .tab-content {
             display: none;
-            padding: 8px 20px 20px;
+            padding: 20px;
             opacity: 0;
             transform: translateX(30px);
             transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -224,106 +201,50 @@
         .form-label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
-            color: #1e293b;
+            font-weight: 500;
+            color: #374151;
             font-size: 14px;
-            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-            letter-spacing: 0.02em;
         }
 
         .form-input {
             width: 100%;
-            padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(148, 163, 184, 0.3);
-            border-radius: 12px;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
             font-size: 16px;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transition: border-color 0.2s;
         }
 
         .form-input:focus {
             outline: none;
-            border-color: rgba(37, 99, 235, 0.6);
-            background: rgba(255, 255, 255, 0.85);
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-            transform: translateY(-1px);
+            border-color: #4f46e5;
         }
 
         .form-select {
             width: 100%;
-            padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(148, 163, 184, 0.3);
-            border-radius: 12px;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
             font-size: 16px;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-        }
-
-        .form-select:focus {
-            outline: none;
-            border-color: rgba(37, 99, 235, 0.6);
-            background: rgba(255, 255, 255, 0.85);
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-            transform: translateY(-1px);
+            background: white;
         }
 
         .btn {
-            padding: 14px 28px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.2s;
             text-align: center;
             display: inline-block;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            /* Remove tap highlights and focus outlines */
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
         }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(255, 255, 255, 0.05) 50%, 
-                rgba(255, 255, 255, 0) 100%);
-            border-radius: 12px;
-            pointer-events: none;
-        }
-
-
 
         .btn-primary {
-            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            background: #2563eb;
             color: white;
-            border: 1px solid rgba(37, 99, 235, 0.3);
         }
-
-
 
         .btn-secondary {
             background: #6b7280;
@@ -345,14 +266,9 @@
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08),
-                        0 1px 3px rgba(0, 0, 0, 0.12),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                        inset 0 -1px 0 rgba(255, 255, 255, 0.1);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
             overflow: hidden;
@@ -365,18 +281,10 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(37, 99, 235, 0.02) 25%, 
-                rgba(59, 130, 246, 0.05) 50%, 
-                rgba(147, 197, 253, 0.03) 75%,
-                rgba(255, 255, 255, 0.05) 100%);
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.02) 0%, rgba(59, 130, 246, 0.05) 50%, rgba(147, 197, 253, 0.03) 100%);
             pointer-events: none;
             z-index: 1;
-            border-radius: 16px;
         }
-
-
 
         .person-item > * {
             position: relative;
@@ -579,12 +487,6 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            /* Remove tap highlights and focus outlines */
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
         }
 
         .floating-add::before {
@@ -602,12 +504,19 @@
             pointer-events: none;
         }
 
-
+        .floating-add:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            transform: scale(1.08);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        }
 
         .floating-add.active {
             transform: rotate(45deg) scale(1.08);
             background: rgba(255, 255, 255, 0.2);
-            color: #64748b;
+            color: white;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 
                         inset 0 1px 0 rgba(255, 255, 255, 0.3),
                         inset 0 -1px 0 rgba(0, 0, 0, 0.1);
@@ -647,10 +556,7 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
                         inset 0 1px 0 rgba(255, 255, 255, 0.2),
                         inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
-                        opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        background 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        box-shadow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             white-space: nowrap;
             display: flex;
             align-items: center;
@@ -660,12 +566,6 @@
             opacity: 0;
             transform-origin: right center;
             overflow: hidden;
-            /* Remove tap highlights and focus outlines */
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
         }
 
         .floating-menu-item::before {
@@ -700,7 +600,14 @@
             transition-delay: 0.3s;
         }
 
-
+        .floating-menu-item:hover {
+            background: rgba(255, 255, 255, 0.22);
+            color: white;
+            transform: translateX(-8px) scale(1.05);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        }
 
         .floating-menu-item .icon {
             font-size: 16px;
@@ -732,39 +639,6 @@
                 padding: 10px 14px;
                 font-size: 13px;
             }
-
-            .modal-content {
-                margin: 16px;
-                padding: 24px;
-                max-width: calc(100vw - 32px);
-                border-radius: 20px;
-            }
-
-            .modal-header {
-                font-size: 20px;
-                margin-bottom: 20px;
-                padding-bottom: 12px;
-            }
-
-            .modal-icon {
-                font-size: 24px;
-            }
-
-            .close-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 18px;
-            }
-
-            .form-input, .form-select {
-                padding: 12px 14px;
-                font-size: 16px;
-            }
-
-            .btn {
-                padding: 12px 20px;
-                font-size: 14px;
-            }
         }
 
         .modal {
@@ -774,152 +648,55 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(0,0,0,0.5);
             z-index: 1000;
             align-items: center;
             justify-content: center;
-            opacity: 0;
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         .modal.show {
             display: flex;
-            opacity: 1;
         }
 
         .modal-content {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 32px;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
             margin: 20px;
-            max-width: 420px;
+            max-width: 400px;
             width: 100%;
-            max-height: 85vh;
+            max-height: 80vh;
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15),
-                        0 10px 25px rgba(0, 0, 0, 0.1),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                        inset 0 -1px 0 rgba(255, 255, 255, 0.1);
-            transform: scale(0.9) translateY(20px);
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .modal.show .modal-content {
-            transform: scale(1) translateY(0);
-        }
-
-        .modal-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(255, 255, 255, 0.05) 50%, 
-                rgba(255, 255, 255, 0) 100%);
-            border-radius: 24px;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .modal-content > * {
-            position: relative;
-            z-index: 2;
         }
 
         .modal-header {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 24px;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-bottom: 16px;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-        }
-
-        .modal-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 600;
-        }
-
-        .modal-icon {
-            font-size: 28px;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+            margin-bottom: 16px;
         }
 
         .close-btn {
-            background: rgba(148, 163, 184, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 12px;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
+            float: right;
+            background: none;
+            border: none;
+            font-size: 24px;
             cursor: pointer;
             color: #64748b;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
-
-
 
         /* Kassenstand Styles */
         .kassenstand-item {
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 30%, #f7fee7 70%, #ffffff 100%);
+            background: white;
             border-radius: 16px;
             padding: 24px;
             margin-bottom: 20px;
-            border: 1px solid #dcfce7;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
             overflow: hidden;
         }
-
-        .kassenstand-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(5, 150, 105, 0.02) 0%, 
-                rgba(16, 185, 129, 0.03) 25%, 
-                rgba(34, 197, 94, 0.02) 50%, 
-                rgba(5, 150, 105, 0.01) 100%);
-            border-radius: 16px;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .kassenstand-item > * {
-            position: relative;
-            z-index: 2;
-        }
-
-
 
         .kassenstand-content {
             text-align: center;
@@ -1114,11 +891,8 @@
     <div id="add-person-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">
-                    <span class="modal-icon">👤</span>
-                    Person hinzufügen
-                </div>
                 <button class="close-btn" onclick="hideAddPersonModal()">&times;</button>
+                Person hinzufügen
             </div>
             <div class="form-group">
                 <label class="form-label">Name</label>
@@ -1140,11 +914,8 @@
     <div id="add-payment-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">
-                    <span class="modal-icon">💳</span>
-                    Zahlung hinzufügen
-                </div>
                 <button class="close-btn" onclick="hideAddPaymentModal()">&times;</button>
+                Zahlung hinzufügen
             </div>
             <div class="form-group">
                 <label class="form-label">Betrag (€)</label>
@@ -1166,11 +937,8 @@
     <div id="add-donation-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">
-                    <span class="modal-icon">💝</span>
-                    Spende hinzufügen
-                </div>
                 <button class="close-btn" onclick="hideAddDonationModal()">&times;</button>
+                💝 Spende hinzufügen
             </div>
             <div class="form-group">
                 <label class="form-label">Betrag (€)</label>
@@ -1196,11 +964,8 @@
     <div id="add-expense-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">
-                    <span class="modal-icon">💸</span>
-                    Ausgabe hinzufügen
-                </div>
                 <button class="close-btn" onclick="hideAddExpenseModal()">&times;</button>
+                💸 Ausgabe hinzufügen
             </div>
             <div class="form-group">
                 <label class="form-label">Betrag (€)</label>
@@ -1226,10 +991,7 @@
     <div id="login-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">
-                    <span class="modal-icon">🔐</span>
-                    JuBa-Kasse Login
-                </div>
+                🔐 JuBa-Kasse Login
             </div>
             <div class="form-group">
                 <label class="form-label">Passwort</label>
@@ -1696,18 +1458,12 @@
             // Reset menu items for liquid animation from the button
             const items = menu.querySelectorAll('.floating-menu-item');
             items.forEach((item, index) => {
-                // Ensure backdrop-filter is preserved during animation
-                item.style.backdropFilter = 'blur(10px)';
-                item.style.webkitBackdropFilter = 'blur(10px)';
                 item.style.transform = 'translateX(50px) translateY(20px) scale(0.3) rotate(45deg)';
                 item.style.opacity = '0';
                 
                 // Liquid staggered animation - items flow out from the plus button
                 setTimeout(() => {
-                    item.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                    // Keep backdrop-filter during animation
-                    item.style.backdropFilter = 'blur(10px)';
-                    item.style.webkitBackdropFilter = 'blur(10px)';
+                    item.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
                     item.style.transform = 'translateX(0) translateY(0) scale(1) rotate(0deg)';
                     item.style.opacity = '1';
                 }, 50 + (index * 100));
@@ -1723,10 +1479,7 @@
             items.forEach((item, index) => {
                 const reverseIndex = items.length - 1 - index;
                 setTimeout(() => {
-                    item.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.6, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.6, 1)';
-                    // Keep backdrop-filter during hide animation
-                    item.style.backdropFilter = 'blur(10px)';
-                    item.style.webkitBackdropFilter = 'blur(10px)';
+                    item.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.6, 1)';
                     item.style.transform = 'translateX(60px) translateY(30px) scale(0.2) rotate(90deg)';
                     item.style.opacity = '0';
                 }, reverseIndex * 60);
@@ -1740,9 +1493,6 @@
                 // Reset transforms for next time
                 items.forEach(item => {
                     item.style.transition = '';
-                    // Ensure backdrop-filter is preserved when resetting
-                    item.style.backdropFilter = 'blur(10px)';
-                    item.style.webkitBackdropFilter = 'blur(10px)';
                     item.style.transform = 'translateX(50px) translateY(20px) scale(0.3) rotate(45deg)';
                     item.style.opacity = '0';
                 });
@@ -2114,13 +1864,6 @@
                 style: 'currency', 
                 currency: 'EUR' 
             });
-            
-            // Change color based on positive/negative amount
-            if (total < 0) {
-                amountElement.style.color = '#dc2626'; // Red for negative amounts
-            } else {
-                amountElement.style.color = '#059669'; // Green for positive amounts
-            }
         }
 
         function renderTransactionHistory() {
@@ -2160,15 +1903,8 @@
                 });
             });
             
-            // Sortiere nach Datum (neueste zuerst), dann nach ID/Timestamp für gleiche Tage
-            allTransactions.sort((a, b) => {
-                const dateComparison = new Date(b.date) - new Date(a.date);
-                if (dateComparison !== 0) {
-                    return dateComparison; // Different dates, sort by date
-                }
-                // Same date, sort by ID (which contains timestamp) - newer first
-                return parseInt(b.id) - parseInt(a.id);
-            });
+            // Sortiere nach Datum (neueste zuerst)
+            allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
             
             if (allTransactions.length === 0) {
                 transactionList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Noch keine Transaktionen vorhanden</div>';
@@ -2333,14 +2069,7 @@
                         ${person.payments.length > 0 ? `
                             <div class="detail-section">
                                 <h4>Zahlungshistorie</h4>
-                                ${person.payments.slice().sort((a, b) => {
-                                    const dateComparison = new Date(b.date) - new Date(a.date);
-                                    if (dateComparison !== 0) {
-                                        return dateComparison; // Different dates, sort by date
-                                    }
-                                    // Same date, sort by ID (which contains timestamp) - newer first
-                                    return parseInt(b.id) - parseInt(a.id);
-                                }).map(payment => `
+                                ${person.payments.slice().reverse().map(payment => `
                                     <div class="payment-entry">
                                         ${new Date(payment.date).toLocaleDateString('de-DE')} - ${payment.amount.toFixed(2)}€ 
                                         ${payment.description ? `(${payment.description})` : ''}
