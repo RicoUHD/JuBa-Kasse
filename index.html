@@ -182,6 +182,28 @@
             }
         }
 
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scaleY(0);
+                transform-origin: top;
+            }
+            60% {
+                opacity: 1;
+                transform: scaleY(1.1);
+                transform-origin: top;
+            }
+            80% {
+                transform: scaleY(0.95);
+                transform-origin: top;
+            }
+            100% {
+                opacity: 1;
+                transform: scaleY(1);
+                transform-origin: top;
+            }
+        }
+
         .card {
             background: white;
             border-radius: 12px;
@@ -386,10 +408,17 @@
             margin-top: 16px;
             padding-top: 16px;
             border-top: 1px solid #e2e8f0;
+            transform: scaleY(0);
+            transform-origin: top;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .person-details.active {
             display: block;
+            transform: scaleY(1);
+            opacity: 1;
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .detail-section {
@@ -922,10 +951,17 @@
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #e2e8f0;
+            transform: scaleY(0);
+            transform-origin: top;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .transaction-details.active {
             display: block;
+            transform: scaleY(1);
+            opacity: 1;
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         #transaction-list {
