@@ -1975,18 +1975,53 @@
                 const person = people.find(p => p.id === personId);
                 if (!person) return;
                 
-                // Status und Startdatum aktualisieren
-                person.status = newStatus;
-                person.memberSince = newMemberSince;
+                const today = new Date().toISOString().split('T')[0];
                 
-                await savePeople();
-                renderPeople();
-                alert('Status und Startdatum aktualisiert!');
+                // Check if status is actually changing
+                if (person.status !== newStatus) {
+                    // Initialize statusHistory if it doesn't exist
+                    if (!person.statusHistory) {
+                        person.statusHistory = [];
+                    }
+                    
+                    // Add current status to history (ends today)
+                    person.statusHistory.push({
+                        status: person.status,
+                        startDate: person.memberSince,
+                        endDate: today
+                    });
+                    
+                    // Set new status starting from today
+                    person.status = newStatus;
+                    person.memberSince = today;
+                    
+                    const message = `Status von ${getStatusDisplayName(person.statusHistory[person.statusHistory.length - 1].status)} zu ${getStatusDisplayName(newStatus)} geändert. Der neue Status gilt ab heute (${new Date(today).toLocaleDateString('de-DE')}).`;
+                    
+                    await savePeople();
+                    renderPeople();
+                    alert(message);
+                } else {
+                    // Only update memberSince if status hasn't changed
+                    person.memberSince = newMemberSince;
+                    
+                    await savePeople();
+                    renderPeople();
+                    alert('Startdatum aktualisiert!');
+                }
             } catch (error) {
                 console.error('Fehler beim Aktualisieren des Status:', error);
                 alert('Fehler beim Speichern der Änderungen in Firebase');
             }
         };
+
+        function getStatusDisplayName(status) {
+            switch(status) {
+                case 'vollverdiener': return 'Vollverdiener';
+                case 'geringverdiener': return 'Geringverdiener';
+                case 'keinverdiener': return 'Keinverdiener';
+                default: return status;
+            }
+        }
 
         window.showDeleteConfirm = function(personId) {
             const confirmElement = document.getElementById(`confirm-delete-${personId}`);
@@ -2026,17 +2061,64 @@
         };
 
         function calculatePaidUntil(person) {
-            const monthlyRate = settings[person.status];
-            if (!monthlyRate || person.totalPaid === 0) {
+            if (!person.totalPaid || person.totalPaid === 0) {
                 return null;
             }
 
-            // Berechnung ab memberSince Datum oder heute, falls nicht vorhanden
-            const startDate = person.memberSince ? new Date(person.memberSince) : new Date();
-            const monthsPaid = Math.floor(person.totalPaid / monthlyRate);
-            const paidUntil = new Date(startDate.getFullYear(), startDate.getMonth() + monthsPaid, startDate.getDate());
+            let remainingAmount = person.totalPaid;
+            let currentDate = person.memberSince ? new Date(person.memberSince) : new Date();
             
-            return paidUntil;
+            // Process status history chronologically
+            if (person.statusHistory && person.statusHistory.length > 0) {
+                for (let i = 0; i < person.statusHistory.length; i++) {
+                    const historyEntry = person.statusHistory[i];
+                    const startDate = new Date(historyEntry.startDate);
+                    const endDate = new Date(historyEntry.endDate);
+                    const monthlyRate = settings[historyEntry.status];
+                    
+                    if (!monthlyRate) continue;
+                    
+                    // Calculate months in this status period
+                    const monthsInPeriod = calculateMonthsBetween(startDate, endDate);
+                    const costForPeriod = monthsInPeriod * monthlyRate;
+                    
+                    if (remainingAmount >= costForPeriod) {
+                        // Can afford this entire period
+                        remainingAmount -= costForPeriod;
+                        currentDate = new Date(endDate);
+                    } else {
+                        // Can only afford part of this period
+                        const monthsAffordable = Math.floor(remainingAmount / monthlyRate);
+                        const finalDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthsAffordable, startDate.getDate());
+                        return finalDate;
+                    }
+                }
+            }
+            
+            // Process current status period
+            const currentMonthlyRate = settings[person.status];
+            if (currentMonthlyRate && remainingAmount > 0) {
+                const additionalMonths = Math.floor(remainingAmount / currentMonthlyRate);
+                const finalDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + additionalMonths, currentDate.getDate());
+                return finalDate;
+            }
+            
+            return currentDate;
+        }
+
+        function calculateMonthsBetween(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            let months = 0;
+            const current = new Date(start);
+            
+            while (current < end) {
+                months++;
+                current.setMonth(current.getMonth() + 1);
+            }
+            
+            return months;
         }
 
         function calculateTimeRemaining(person) {
@@ -2385,6 +2467,21 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        ${person.statusHistory && person.statusHistory.length > 0 ? `
+                            <div class="detail-section">
+                                <h4>Statushistorie</h4>
+                                <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Vergangene Status-Änderungen:</div>
+                                ${person.statusHistory.map(history => `
+                                    <div style="font-size: 12px; color: #6b7280; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
+                                        ${getStatusDisplayName(history.status)} vom ${new Date(history.startDate).toLocaleDateString('de-DE')} bis ${new Date(history.endDate).toLocaleDateString('de-DE')}
+                                    </div>
+                                `).join('')}
+                                <div style="font-size: 12px; color: #059669; padding: 4px 0; font-weight: 600;">
+                                    ${getStatusDisplayName(person.status)} seit ${new Date(person.memberSince).toLocaleDateString('de-DE')} (aktuell)
+                                </div>
+                            </div>
+                        ` : ''}
                         
                         ${person.payments.length > 0 ? `
                             <div class="detail-section">
