@@ -1036,6 +1036,18 @@
                 </div>
                 
                 <div id="transaction-details" class="transaction-details" onclick="event.stopPropagation()">
+                    <!-- Einnahmen/Ausgaben Summary -->
+                    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                        <div style="flex: 1; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #86efac; border-radius: 12px; padding: 16px; text-align: center;">
+                            <div style="font-size: 12px; color: #166534; font-weight: 600; margin-bottom: 4px;">EINNAHMEN</div>
+                            <div id="total-income" style="font-size: 18px; font-weight: 700; color: #059669;">0,00 €</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #f87171; border-radius: 12px; padding: 16px; text-align: center;">
+                            <div style="font-size: 12px; color: #991b1b; font-weight: 600; margin-bottom: 4px;">AUSGABEN</div>
+                            <div id="total-expenses" style="font-size: 18px; font-weight: 700; color: #dc2626;">0,00 €</div>
+                        </div>
+                    </div>
+                    
                     <h4 style="margin-bottom: 16px; color: #374151;">Alle Transaktionen</h4>
                     <div id="transaction-list">
                         <!-- Transaktionen werden hier dynamisch eingefügt -->
@@ -1070,6 +1082,20 @@
                     <div class="form-group">
                         <label class="form-label">Keinverdiener (€)</label>
                         <input type="number" id="rate-keinverdiener" class="form-input" value="10" step="0.01">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveSettings()">Einstellungen speichern</button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">Berichtszeitraum</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Startdatum für Einnahmen/Ausgaben-Berechnung</label>
+                        <input type="date" id="report-start-date" class="form-input">
+                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                            Legt fest, ab welchem Datum Einnahmen und Ausgaben für die Übersicht gezählt werden.
+                        </div>
                     </div>
                     <button class="btn btn-primary" onclick="saveSettings()">Einstellungen speichern</button>
                 </div>
@@ -1250,7 +1276,7 @@
 
         // Global variables
         let people = [];
-        let settings = {"vollverdiener": 50, "geringverdiener": 25, "keinverdiener": 10};
+        let settings = {"vollverdiener": 50, "geringverdiener": 25, "keinverdiener": 10, "reportStartDate": null};
         let currentPersonId = null;
         let isLoading = true;
         let isAuthenticated = false;
@@ -1911,10 +1937,12 @@
             settings.vollverdiener = parseFloat(document.getElementById('rate-vollverdiener').value);
             settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value);
             settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value);
+            settings.reportStartDate = document.getElementById('report-start-date').value || null;
 
             try {
                 await set(ref(database, 'settings'), settings);
                 renderPeople(); // Re-render to update calculations
+                renderKassenstand(); // Update kassenstand with new date filter
                 alert('Einstellungen gespeichert!');
             } catch (error) {
                 console.error('Fehler beim Speichern der Einstellungen:', error);
@@ -2084,6 +2112,39 @@
             return total;
         }
 
+        function calculateFilteredAmounts() {
+            const startDate = settings.reportStartDate ? new Date(settings.reportStartDate) : null;
+            let totalIncome = 0;
+            let totalExpenses = 0;
+            
+            // Calculate income from payments
+            people.forEach(person => {
+                if (person.payments && person.payments.length > 0) {
+                    person.payments.forEach(payment => {
+                        if (!startDate || new Date(payment.date) >= startDate) {
+                            totalIncome += payment.amount || 0;
+                        }
+                    });
+                }
+            });
+            
+            // Add donations to income
+            donations.forEach(donation => {
+                if (!startDate || new Date(donation.date) >= startDate) {
+                    totalIncome += donation.amount || 0;
+                }
+            });
+            
+            // Calculate total expenses
+            expenses.forEach(expense => {
+                if (!startDate || new Date(expense.date) >= startDate) {
+                    totalExpenses += expense.amount || 0;
+                }
+            });
+            
+            return { totalIncome, totalExpenses };
+        }
+
         function renderKassenstand() {
             const total = calculateTotalAmount();
             const amountElement = document.getElementById('kassenstand-amount');
@@ -2102,6 +2163,17 @@
 
         function renderTransactionHistory() {
             const transactionList = document.getElementById('transaction-list');
+            
+            // Update income and expenses summary
+            const { totalIncome, totalExpenses } = calculateFilteredAmounts();
+            document.getElementById('total-income').textContent = totalIncome.toLocaleString('de-DE', { 
+                style: 'currency', 
+                currency: 'EUR' 
+            });
+            document.getElementById('total-expenses').textContent = totalExpenses.toLocaleString('de-DE', { 
+                style: 'currency', 
+                currency: 'EUR' 
+            });
             
             // Sammle alle Transaktionen von allen Personen
             const allTransactions = [];
@@ -2351,6 +2423,7 @@
             document.getElementById('rate-vollverdiener').value = settings.vollverdiener;
             document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
             document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
+            document.getElementById('report-start-date').value = settings.reportStartDate || '';
         }
 
         // Close modals when clicking outside
