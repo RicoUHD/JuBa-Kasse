@@ -662,19 +662,16 @@
         }
 
         .floating-menu-item {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 16px;
             padding: 12px 16px;
             font-size: 14px;
-            font-weight: 600;
-            color: #64748b;
+            font-weight: 700;
+            color: #000000;
             cursor: pointer;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+                        0 2px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             white-space: nowrap;
             display: flex;
@@ -694,10 +691,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(255, 255, 255, 0.05) 50%, 
-                rgba(255, 255, 255, 0) 100%);
+            background: none;
             border-radius: 16px;
             pointer-events: none;
         }
@@ -720,12 +714,10 @@
         }
 
         .floating-menu-item:hover {
-            background: rgba(255, 255, 255, 0.22);
-            color: white;
+            background: #f3f4f6;
+            color: #000000;
             transform: translateX(-8px) scale(1.05);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
         }
 
         .floating-menu-item .icon {
