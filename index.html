@@ -23,7 +23,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            background: #f8fafc;
             min-height: 100vh;
             color: #333;
         }
@@ -31,20 +31,20 @@
         .container {
             max-width: 428px;
             margin: 0 auto;
-            background: #f8fafc;
+            background: #ffffff;
             min-height: 100vh;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .header {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: #2563eb;
             color: white;
             padding: 20px;
             text-align: center;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .header-content {
@@ -70,21 +70,16 @@
             display: flex;
             justify-content: center;
             padding: 16px 20px 12px;
-            background: #f8fafc;
+            background: #ffffff;
             position: relative;
         }
 
         .tab-nav-container {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: #f3f4f6;
             border-radius: 25px;
             padding: 4px;
             display: flex;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
             position: relative;
         }
 
@@ -96,7 +91,7 @@
             font-size: 14px;
             font-weight: 500;
             color: #64748b;
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: color 0.3s ease;
             border-radius: 20px;
             min-width: 80px;
             position: relative;
@@ -105,7 +100,6 @@
 
         .tab-btn.active {
             color: white;
-            transform: scale(1.05);
         }
 
         .tab-indicator {
@@ -114,9 +108,8 @@
             bottom: 4px;
             background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
             border-radius: 20px;
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
             z-index: 1;
         }
 
@@ -124,10 +117,8 @@
             display: none;
             padding: 20px;
             opacity: 0;
-            transform: translateX(30px);
-            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            overflow: hidden;
+            transform: translateX(20px);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         .tab-content.active {
@@ -137,86 +128,28 @@
         }
 
         .tab-content.slide-out-left {
+            transform: translateX(-20px);
             opacity: 0;
-            transform: translateX(-40px);
-            transition: all 0.4s cubic-bezier(0.55, 0, 0.55, 0.2);
         }
 
         .tab-content.slide-out-right {
+            transform: translateX(20px);
             opacity: 0;
-            transform: translateX(40px);
-            transition: all 0.4s cubic-bezier(0.55, 0, 0.55, 0.2);
-        }
-
-        .tab-content.slide-in-left {
-            opacity: 1;
-            transform: translateX(0);
-            animation: slideInFromRight 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-
-        .tab-content.slide-in-right {
-            opacity: 1;
-            transform: translateX(0);
-            animation: slideInFromLeft 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-
-        @keyframes slideInFromLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes slideInFromRight {
-            from {
-                opacity: 0;
-                transform: translateX(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes bounceIn {
-            0% {
-                opacity: 0;
-                transform: scaleY(0.8);
-                transform-origin: top;
-            }
-            60% {
-                opacity: 1;
-                transform: scaleY(1.03);
-                transform-origin: top;
-            }
-            80% {
-                transform: scaleY(0.98);
-                transform-origin: top;
-            }
-            100% {
-                opacity: 1;
-                transform: scaleY(1);
-                transform-origin: top;
-            }
         }
 
         .card {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
             margin-bottom: 16px;
-            overflow: hidden;
         }
 
         .card-header {
             padding: 16px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e5e7eb;
             font-weight: 600;
             color: #1e293b;
+            background: #f9fafb;
         }
 
         .card-body {
@@ -291,22 +224,19 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
-            /* color: #374151; */ /* Original global style, might be overridden below for modals */
-            color: rgba(255, 255, 255, 0.9); /* Default for non-modal contexts if any */
+            color: #374151;
             font-size: 14px;
         }
 
         .form-input, .form-select { /* Combined for shared styling */
             width: 100%;
             padding: 12px;
-            /* border: 2px solid #e5e7eb; */ /* Original global style */
-            border: 1px solid rgba(255, 255, 255, 0.3); /* Default for non-modal contexts */
-            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
             font-size: 16px;
-            /* background: white; */ /* Original global style */
-            background: rgba(255, 255, 255, 0.2); /* Default for non-modal contexts */
-            color: #f0f0f0; /* Default for non-modal contexts */
-            transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+            background: white;
+            color: #374151;
+            transition: border-color 0.2s ease;
             /* Re-enable text selection for input fields */
             -webkit-user-select: text;
             -moz-user-select: text;
@@ -315,14 +245,12 @@
         }
         
         .form-input::placeholder { /* General placeholder styling */
-            color: rgba(240, 240, 240, 0.6); /* Default for non-modal contexts */
+            color: #9ca3af;
         }
 
         .form-input:focus, .form-select:focus {
             outline: none;
-            /* border-color: #4f46e5; */ /* Original global style */
-            border-color: rgba(255, 255, 255, 0.7); /* Default for non-modal contexts */
-            background: rgba(255, 255, 255, 0.3); /* Default for non-modal contexts */
+            border-color: #2563eb;
         }
 
         /* .form-select {
@@ -337,13 +265,17 @@
         .btn {
             padding: 12px 24px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background-color 0.2s ease;
             text-align: center;
             display: inline-block;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
         }
 
         .btn-primary {
@@ -367,23 +299,21 @@
         }
 
         .person-item {
-            /* background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%); */
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
             border-radius: 16px;
-            padding: 14px 20px;
+            padding: 20px;
             margin-bottom: 16px;
-            /* border: 1px solid #e2e8f0; */
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); */
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
             overflow: hidden;
+        }
+
+        .person-item:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.12);
         }
 
         .person-item::before {
@@ -392,13 +322,29 @@
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.02) 0%, rgba(59, 130, 246, 0.05) 50%, rgba(147, 197, 253, 0.03) 100%);
-            pointer-events: none;
-            z-index: 1;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+            border-radius: 16px 16px 0 0;
         }
 
-        .person-item > * {
+        .person-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, rgba(59, 130, 246, 0.02) 70%, transparent 100%);
+            border-radius: 50%;
+            transform: translate(30%, -30%);
+        }
+
+        .person-item .person-pill {
+            position: relative;
+            z-index: 2;
+        }
+
+        .person-item .person-details {
             position: relative;
             z-index: 2;
         }
@@ -407,18 +353,14 @@
             display: none;
             margin-top: 16px;
             padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
-            transform: scaleY(0);
-            transform-origin: top;
+            border-top: 1px solid #e5e7eb;
             opacity: 0;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: opacity 0.2s ease;
         }
 
         .person-details.active {
             display: block;
-            transform: scaleY(1);
             opacity: 1;
-            animation: bounceIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         .detail-section {
@@ -505,13 +447,28 @@
         }
 
         .person-status {
-            padding: 6px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
             width: fit-content;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            position: relative;
+        }
+
+        .status-vollverdiener {
+            background: linear-gradient(135deg, #ddd6fe 0%, #e0e7ff 100%);
+            color: #5b21b6;
+            border-color: #c4b5fd;
+        }
+
+        .status-geringverdiener {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+            border-color: #fbbf24;
         }
 
         .person-right {
@@ -522,30 +479,20 @@
         }
 
         .payment-date {
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 4px;
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 6px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.05);
         }
 
         .time-remaining {
             font-size: 12px;
-            opacity: 0.8;
-            font-weight: 500;
-        }
-
-        .status-vollverdiener {
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .status-geringverdiener {
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .status-keinverdiener {
-            background: #e0e7ff;
-            color: #3730a3;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: rgba(107, 114, 128, 0.1);
         }
 
         .paid-until {
@@ -590,55 +537,25 @@
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            color: #64748b;
+            background: #2563eb;
+            color: white;
             font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease;
             z-index: 1100;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            border: none;
         }
 
-        .floating-add::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(255, 255, 255, 0.05) 50%, 
-                rgba(255, 255, 255, 0) 100%);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .floating-add:hover {
-            background: rgba(255, 255, 255, 0.25);
-            color: white;
-            transform: scale(1.08);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        .floating-add:active {
+            transform: scale(0.95);
         }
 
         .floating-add.active {
-            transform: rotate(45deg) scale(1.08);
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            transform: rotate(45deg);
         }
 
         .floating-menu {
@@ -651,80 +568,40 @@
             z-index: 1099;
             opacity: 0;
             visibility: hidden;
-            transform: translateY(20px) scale(0.8);
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateY(20px);
+            transition: all 0.2s ease;
         }
 
         .floating-menu.show {
             opacity: 1;
             visibility: visible;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
         }
 
         .floating-menu-item {
             background: white;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
             padding: 12px 16px;
             font-size: 14px;
-            font-weight: 700;
-            color: #000000;
+            font-weight: 500;
+            color: #374151;
             cursor: pointer;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
-                        0 2px 8px rgba(0, 0, 0, 0.1);
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
             white-space: nowrap;
             display: flex;
             align-items: center;
             gap: 8px;
-            min-width: 160px;
-            transform: translateX(50px) translateY(20px) scale(0.3) rotate(45deg);
-            opacity: 0;
-            transform-origin: right center;
-            overflow: hidden;
+            min-width: 140px;
         }
 
-        .floating-menu-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: none;
-            border-radius: 16px;
-            pointer-events: none;
-        }
-
-        .floating-menu.show .floating-menu-item {
-            transform: translateX(0) translateY(0) scale(1) rotate(0deg);
-            opacity: 1;
-        }
-
-        .floating-menu.show .floating-menu-item:nth-child(1) {
-            transition-delay: 0.1s;
-        }
-
-        .floating-menu.show .floating-menu-item:nth-child(2) {
-            transition-delay: 0.2s;
-        }
-
-        .floating-menu.show .floating-menu-item:nth-child(3) {
-            transition-delay: 0.3s;
-        }
-
-        .floating-menu-item:hover {
-            background: #f3f4f6;
-            color: #000000;
-            transform: translateX(-8px) scale(1.05);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        .floating-menu-item:active {
+            transform: scale(0.95);
         }
 
         .floating-menu-item .icon {
             font-size: 16px;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-            position: relative;
-            z-index: 1;
         }
 
         @media (max-width: 428px) {
@@ -770,145 +647,124 @@
         }
 
         .modal-content {
-            background: rgba(248, 250, 252, 0.85); /* Lighter, whiter glass */
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-radius: 12px;
+            background: white;
+            border-radius: 8px;
             padding: 24px;
             margin: 20px;
             max-width: 400px;
             width: 100%;
             max-height: 80vh;
             overflow-y: auto;
-            border: 1px solid rgba(226, 232, 240, 0.7); /* Light grey border */
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
         }
 
         .modal-header {
             font-size: 18px;
             font-weight: 600;
-            margin-bottom: 20px; /* Increased margin for better spacing */
-            color: #1e293b; /* Dark text for modal header */
-            padding-bottom: 12px; /* Add some padding below header */
-            border-bottom: 1px solid rgba(203, 213, 225, 0.5); /* Subtle separator line */
-        }
-
-        /* Specific styles for form elements within modals */
-        .modal-content .form-label {
-            color: #374151; /* Dark grey text for labels in modals */
-            font-weight: 500;
-        }
-
-        .modal-content .form-input,
-        .modal-content .form-select {
-            background: rgba(255, 255, 255, 0.6); /* White glass for input background */
-            color: #1e293b; /* Dark text for input content */
-            border: 1px solid rgba(203, 213, 225, 0.7); /* Slightly visible light grey border */
-        }
-
-        .modal-content .form-input::placeholder {
-            color: #64748b; /* Medium grey for placeholder in modals */
-        }
-
-        .modal-content .form-input:focus,
-        .modal-content .form-select:focus {
-            background: rgba(255, 255, 255, 0.75); /* Slightly more opaque white glass on focus */
-            border-color: #2563eb; /* Brand blue for focus */
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); /* Focus ring */
-        }
-        
-        /* Ensure select options are readable if they inherit strange colors */
-        .modal-content .form-select option {
-            background: white; /* Or a light color */
-            color: #1e293b; /* Dark text for options */
+            margin-bottom: 20px;
+            color: #1e293b;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .close-btn {
             float: right;
             background: none;
             border: none;
-            font-size: 28px; /* Slightly larger for easier clicking */
+            font-size: 24px;
             line-height: 1;
             cursor: pointer;
-            color: #64748b; /* Medium-dark grey */
-            transition: color 0.2s ease, transform 0.2s ease;
-            padding: 0; /* Remove padding if any */
+            color: #64748b;
+            transition: color 0.2s ease;
+            padding: 0;
             position: relative;
-            top: -4px; /* Adjust position to align better with header text */
+            top: -4px;
         }
-        .close-btn:hover {
-            color: #1e293b; /* Darker on hover */
-            transform: scale(1.1);
+        
+        .close-btn:active {
+            color: #1e293b;
         }
 
         /* Kassenstand Styles */
         .kassenstand-item {
-            background: rgba(5, 150, 105, 0.08); /* Light green tint matching the amount color */
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 16px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 12px;
             padding: 24px;
             margin-bottom: 20px;
-            border: 1px solid rgba(5, 150, 105, 0.2); /* Green border */
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.15),
-                        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
+            border: 1px solid #bae6fd;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
             cursor: pointer;
             position: relative;
             overflow: hidden;
+        }
+
+        .kassenstand-item:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .kassenstand-item::before {
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.15) 0%, 
-                rgba(251, 191, 36, 0.05) 25%, /* Subtle yellow tint */
-                rgba(5, 150, 105, 0.08) 50%, /* Green tint */
-                rgba(255, 255, 255, 0.05) 75%,
-                rgba(5, 150, 105, 0.03) 100%);
-            border-radius: 16px;
-            pointer-events: none;
-            z-index: 1;
+            left: -80%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg);
+            transition: left 0.6s ease;
         }
 
+        .kassenstand-item:hover::before {
+            left: 130%;
+        }
+
+        /* Decorative circles for kassenstand */
         .kassenstand-item::after {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, 
-                transparent 30%, 
-                rgba(255, 255, 255, 0.1) 50%, 
-                transparent 70%);
-            transform: rotate(-45deg);
-            pointer-events: none;
-            transition: all 0.6s ease;
-            opacity: 0;
+            top: -20px;
+            right: -20px;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-radius: 50%;
+            opacity: 0.1;
+            z-index: 1;
+        }
+
+        .kassenstand-item .kassenstand-content {
+            position: relative;
             z-index: 2;
         }
 
-        .kassenstand-item:hover::after {
-            opacity: 1;
-            animation: mirror-sweep 2s ease-in-out infinite;
+        .kassenstand-item .kassenstand-content::before {
+            content: '';
+            position: absolute;
+            bottom: -40px;
+            left: -40px;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-radius: 50%;
+            opacity: 0.08;
+            z-index: -1;
         }
 
-        @keyframes mirror-sweep {
-            0% { transform: translateX(-100%) translateY(-100%) rotate(-45deg); }
-            50% { transform: translateX(0%) translateY(0%) rotate(-45deg); }
-            100% { transform: translateX(100%) translateY(100%) rotate(-45deg); }
-        }
-
-        .kassenstand-item > * {
-            position: relative;
-            z-index: 3;
+        .kassenstand-item .kassenstand-content::after {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-radius: 50%;
+            opacity: 0.06;
+            z-index: -1;
         }
 
         .kassenstand-content {
@@ -942,18 +798,14 @@
             display: none;
             margin-top: 20px;
             padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            transform: scaleY(0);
-            transform-origin: top;
+            border-top: 1px solid #e5e7eb;
             opacity: 0;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: opacity 0.2s ease;
         }
 
         .transaction-details.active {
             display: block;
-            transform: scaleY(1);
             opacity: 1;
-            animation: bounceIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         #transaction-list {
@@ -963,25 +815,25 @@
         }
 
         #transaction-list::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
         }
 
         #transaction-list::-webkit-scrollbar-track {
             background: #f1f5f9;
-            border-radius: 3px;
+            border-radius: 2px;
         }
 
         #transaction-list::-webkit-scrollbar-thumb {
             background: #cbd5e1;
-            border-radius: 3px;
+            border-radius: 2px;
         }
 
         .transaction-item {
             background: #f8fafc;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 12px;
             margin-bottom: 8px;
-            border-left: 4px solid #2563eb;
+            border-left: 3px solid #2563eb;
         }
 
         .transaction-header {
@@ -1287,7 +1139,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
             // Initialize tab indicator
             updateTabIndicator('overview');
-            
+
             // Check authentication on startup
             await checkAuthentication();
             
@@ -1570,63 +1422,36 @@
 
         // Make functions globally available for onclick handlers
         window.showTab = function(tabName) {
-            if (tabName === currentTab) return; // Don't animate if same tab
+            if (tabName === currentTab) return;
 
             const tabs = ['overview', 'settings'];
             const currentIndex = tabs.indexOf(currentTab);
             const newIndex = tabs.indexOf(tabName);
-            const isMovingRight = newIndex > currentIndex; // overview -> settings
-            const isMovingLeft = newIndex < currentIndex; // settings -> overview
+            const isMovingRight = newIndex > currentIndex;
 
-            // Get current and new tab elements
             const currentTabElement = document.getElementById(currentTab);
             const newTabElement = document.getElementById(tabName);
 
-            // Remove active classes from all tabs and buttons
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active', 'slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
-            });
+            // Remove active classes from buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
 
-            // Update tab indicator position with smooth animation
-            updateTabIndicator(tabName);
-
             // Animate current tab out
-            if (isMovingRight) {
-                currentTabElement.classList.add('slide-out-left');
-            } else if (isMovingLeft) {
-                currentTabElement.classList.add('slide-out-right');
-            }
-
-            // After slide-out animation starts, prepare new tab
+            currentTabElement.classList.add(isMovingRight ? 'slide-out-left' : 'slide-out-right');
+            
             setTimeout(() => {
-                // Hide current tab completely
-                currentTabElement.style.display = 'none';
-                
-                // Prepare new tab for animation
-                newTabElement.style.display = 'block';
-                newTabElement.style.opacity = '0';
-                
-                if (isMovingRight) {
-                    newTabElement.style.transform = 'translateX(30px)';
-                    newTabElement.classList.add('slide-in-left');
-                } else if (isMovingLeft) {
-                    newTabElement.style.transform = 'translateX(-30px)';
-                    newTabElement.classList.add('slide-in-right');
-                }
+                currentTabElement.classList.remove('active');
+                currentTabElement.classList.remove('slide-out-left', 'slide-out-right');
 
-                // Trigger animation
-                requestAnimationFrame(() => {
-                    newTabElement.classList.add('active');
-                    newTabElement.style.opacity = '1';
-                    newTabElement.style.transform = 'translateX(0)';
-                });
-            }, 100); // Small delay to ensure smooth transition
+                // Animate new tab in
+                newTabElement.classList.add('active');
+            }, 200);
 
-            // Update button states
-            event.target.classList.add('active');
+
+            // Update button states and indicator
+            document.querySelector(`.tab-btn[onclick="showTab('${tabName}')"]`).classList.add('active');
+            updateTabIndicator(tabName);
             
             // Update current tab
             currentTab = tabName;
@@ -1639,7 +1464,6 @@
             
             if (!activeButton) return;
 
-            // Create indicator if it doesn't exist
             let indicator = document.querySelector('.tab-indicator');
             if (!indicator) {
                 indicator = document.createElement('div');
@@ -1647,16 +1471,11 @@
                 tabContainer.appendChild(indicator);
             }
 
-            // Calculate position and size
             const containerRect = tabContainer.getBoundingClientRect();
             const buttonRect = activeButton.getBoundingClientRect();
             
-            const left = buttonRect.left - containerRect.left;
-            const width = buttonRect.width;
-
-            // Apply smooth animation
-            indicator.style.left = left + 'px';
-            indicator.style.width = width + 'px';
+            indicator.style.left = (buttonRect.left - containerRect.left) + 'px';
+            indicator.style.width = buttonRect.width + 'px';
         }
 
         window.showAddPersonModal = function() {
