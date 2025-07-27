@@ -300,11 +300,11 @@
 
         .person-item {
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.08);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
@@ -314,17 +314,6 @@
         .person-item:active {
             transform: translateY(1px);
             box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.12);
-        }
-
-        .person-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-            border-radius: 16px 16px 0 0;
         }
 
         .person-item::after {
@@ -430,33 +419,42 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            text-align: left;
+            flex-direction: row;
+            gap: 12px;
+            width: 100%;
         }
 
         .person-left {
             display: flex;
             flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
             flex: 1;
+            min-width: 0;
         }
 
         .person-name {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 16px;
             color: #1e293b;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .person-status {
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 9px;
             font-weight: 700;
-            width: fit-content;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
-            border: 2px solid transparent;
+            letter-spacing: 0.5px;
+            border: 1px solid transparent;
             background-clip: padding-box;
-            position: relative;
+            margin-bottom: 0;
+            white-space: nowrap;
         }
 
         .status-vollverdiener {
@@ -472,27 +470,33 @@
         }
 
         .person-right {
-            text-align: right;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
+            text-align: right;
+            gap: 4px;
+            min-width: 0;
+            flex-shrink: 0;
         }
 
         .payment-date {
             font-weight: 700;
-            font-size: 15px;
-            margin-bottom: 6px;
+            font-size: 12px;
             padding: 4px 8px;
             border-radius: 8px;
-            background: rgba(59, 130, 246, 0.05);
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            white-space: nowrap;
         }
 
         .time-remaining {
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 600;
-            padding: 3px 8px;
-            border-radius: 12px;
+            padding: 3px 6px;
+            border-radius: 8px;
             background: rgba(107, 114, 128, 0.1);
+            border: 1px solid rgba(107, 114, 128, 0.15);
+            white-space: nowrap;
         }
 
         .paid-until {
