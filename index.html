@@ -305,14 +305,15 @@
             margin-bottom: 12px;
             border: 1px solid #e2e8f0;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             position: relative;
             overflow: hidden;
+            transform: translateY(0);
         }
 
         .person-item:active {
-            transform: translateY(1px);
+            transform: translateY(0);
             box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.12);
         }
 
@@ -339,21 +340,30 @@
         }
 
         .person-details {
-            display: none;
-            margin-top: 16px;
-            padding-top: 16px;
+            margin-top: 0;
+            padding-top: 0;
             border-top: 1px solid #e5e7eb;
+            max-height: 0;
+            overflow: hidden;
             opacity: 0;
-            transition: opacity 0.2s ease;
+            transform: translateY(-10px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .person-details.active {
-            display: block;
+            max-height: 1000px;
             opacity: 1;
+            transform: translateY(0);
+            margin-top: 16px;
+            padding-top: 16px;
         }
 
         .detail-section {
             margin-bottom: 16px;
+        }
+
+        .detail-section:last-child {
+            margin-bottom: 0;
         }
 
         .detail-section h4 {
@@ -391,7 +401,7 @@
 
         .delete-button-container {
             text-align: center;
-            margin-top: 24px;
+            margin-top: 16px;
             padding-top: 16px;
             border-top: 1px solid #e2e8f0;
         }
@@ -640,19 +650,21 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            transition: background-color 0.3s ease;
         }
 
         .modal.show {
             display: flex;
+            background: rgba(0,0,0,0.5);
         }
 
         .modal-content {
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 24px;
             margin: 20px;
             max-width: 400px;
@@ -660,7 +672,15 @@
             max-height: 80vh;
             overflow-y: auto;
             border: 1px solid #e5e7eb;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            transform: scale(0.7) translateY(50px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1) translateY(0);
+            opacity: 1;
         }
 
         .modal-header {
@@ -698,10 +718,11 @@
             margin-bottom: 20px;
             border: 1px solid #bae6fd;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             position: relative;
             overflow: hidden;
+            transform: translateY(0);
         }
 
         .kassenstand-item:active {
@@ -719,10 +740,6 @@
             background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%);
             transform: skewX(-25deg);
             transition: left 0.6s ease;
-        }
-
-        .kassenstand-item:hover::before {
-            left: 130%;
         }
 
         /* Decorative circles for kassenstand */
@@ -799,17 +816,22 @@
         }
 
         .transaction-details {
-            display: none;
-            margin-top: 20px;
-            padding-top: 20px;
+            margin-top: 0;
+            padding-top: 0;
             border-top: 1px solid #e5e7eb;
+            max-height: 0;
+            overflow: hidden;
             opacity: 0;
-            transition: opacity 0.2s ease;
+            transform: translateY(-10px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .transaction-details.active {
-            display: block;
+            max-height: 600px;
             opacity: 1;
+            transform: translateY(0);
+            margin-top: 20px;
+            padding-top: 20px;
         }
 
         #transaction-list {
@@ -862,6 +884,115 @@
             justify-content: space-between;
             font-size: 12px;
             color: #64748b;
+        }
+
+        /* Animation keyframes for smooth entrance effects */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Apply entrance animations to new elements */
+        .person-item {
+            animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .kassenstand-item {
+            animation: slideInDown 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .transaction-item {
+            animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        /* Stagger animation delays for multiple items */
+        .person-item:nth-child(1) { animation-delay: 0.1s; }
+        .person-item:nth-child(2) { animation-delay: 0.15s; }
+        .person-item:nth-child(3) { animation-delay: 0.2s; }
+        .person-item:nth-child(4) { animation-delay: 0.25s; }
+        .person-item:nth-child(5) { animation-delay: 0.3s; }
+        .person-item:nth-child(6) { animation-delay: 0.35s; }
+        .person-item:nth-child(7) { animation-delay: 0.4s; }
+        .person-item:nth-child(8) { animation-delay: 0.45s; }
+        .person-item:nth-child(9) { animation-delay: 0.5s; }
+        .person-item:nth-child(10) { animation-delay: 0.55s; }
+
+        .transaction-item:nth-child(1) { animation-delay: 0.1s; }
+        .transaction-item:nth-child(2) { animation-delay: 0.15s; }
+        .transaction-item:nth-child(3) { animation-delay: 0.2s; }
+        .transaction-item:nth-child(4) { animation-delay: 0.25s; }
+        .transaction-item:nth-child(5) { animation-delay: 0.3s; }
+        .transaction-item:nth-child(6) { animation-delay: 0.35s; }
+        .transaction-item:nth-child(7) { animation-delay: 0.4s; }
+        .transaction-item:nth-child(8) { animation-delay: 0.45s; }
+        .transaction-item:nth-child(9) { animation-delay: 0.5s; }
+        .transaction-item:nth-child(10) { animation-delay: 0.55s; }
+
+        /* Enhanced modal animations */
+        .modal {
+            backdrop-filter: blur(0px);
+            transition: backdrop-filter 0.3s ease, background-color 0.3s ease;
+        }
+
+        .modal.show {
+            backdrop-filter: blur(4px);
+        }
+
+        /* Confirm delete animation */
+        .confirm-delete {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .confirm-delete.show {
+            max-height: 150px;
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
@@ -1227,7 +1358,11 @@
         }
 
         function showLoginModal() {
-            document.getElementById('login-modal').style.display = 'flex';
+            const modal = document.getElementById('login-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
             document.getElementById('login-password').focus();
             // Add enter key listener
             document.getElementById('login-password').addEventListener('keypress', function(e) {
@@ -1238,8 +1373,12 @@
         }
 
         function hideLoginModal() {
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('login-error').style.display = 'none';
+            const modal = document.getElementById('login-modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.getElementById('login-error').style.display = 'none';
+            }, 300);
         }
 
         window.attemptLogin = async function() {
@@ -1483,13 +1622,21 @@
         }
 
         window.showAddPersonModal = function() {
-            document.getElementById('add-person-modal').classList.add('show');
+            const modal = document.getElementById('add-person-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
         };
 
         window.hideAddPersonModal = function() {
-            document.getElementById('add-person-modal').classList.remove('show');
-            document.getElementById('new-person-name').value = '';
-            document.getElementById('new-person-status').value = 'vollverdiener';
+            const modal = document.getElementById('add-person-modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.getElementById('new-person-name').value = '';
+                document.getElementById('new-person-status').value = 'vollverdiener';
+            }, 300);
         };
 
         window.showAddPaymentModal = function(personId) {
@@ -1499,14 +1646,22 @@
             if (paymentDateEl) {
                 paymentDateEl.value = new Date().toISOString().split('T')[0];
             }
-            document.getElementById('add-payment-modal').classList.add('show');
+            const modal = document.getElementById('add-payment-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
         };
 
         window.hideAddPaymentModal = function() {
-            document.getElementById('add-payment-modal').classList.remove('show');
-            document.getElementById('payment-amount').value = '';
-            document.getElementById('payment-description').value = '';
-            currentPersonId = null;
+            const modal = document.getElementById('add-payment-modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.getElementById('payment-amount').value = '';
+                document.getElementById('payment-description').value = '';
+                currentPersonId = null;
+            }, 300);
         };
 
         // Floating menu functions
@@ -1575,27 +1730,43 @@
         // Donation modal functions
         window.showAddDonationModal = function() {
             document.getElementById('donation-date').value = new Date().toISOString().split('T')[0];
-            document.getElementById('add-donation-modal').classList.add('show');
+            const modal = document.getElementById('add-donation-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
         };
 
         window.hideAddDonationModal = function() {
-            document.getElementById('add-donation-modal').classList.remove('show');
-            document.getElementById('donation-amount').value = '';
-            document.getElementById('donation-name').value = '';
-            document.getElementById('donation-description').value = '';
+            const modal = document.getElementById('add-donation-modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.getElementById('donation-amount').value = '';
+                document.getElementById('donation-name').value = '';
+                document.getElementById('donation-description').value = '';
+            }, 300);
         };
 
         // Expense modal functions
         window.showAddExpenseModal = function() {
             document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
-            document.getElementById('add-expense-modal').classList.add('show');
+            const modal = document.getElementById('add-expense-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
         };
 
         window.hideAddExpenseModal = function() {
-            document.getElementById('add-expense-modal').classList.remove('show');
-            document.getElementById('expense-amount').value = '';
-            document.getElementById('expense-issuer').value = '';
-            document.getElementById('expense-description').value = '';
+            const modal = document.getElementById('add-expense-modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.getElementById('expense-amount').value = '';
+                document.getElementById('expense-issuer').value = '';
+                document.getElementById('expense-description').value = '';
+            }, 300);
         };
 
         window.addPerson = async function() {
@@ -2350,8 +2521,28 @@
         window.onclick = function(event) {
             const modals = document.querySelectorAll('.modal');
             modals.forEach(modal => {
-                if (event.target === modal) {
+                if (event.target === modal && modal.classList.contains('show')) {
                     modal.classList.remove('show');
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        // Clear form fields based on modal id
+                        if (modal.id === 'add-person-modal') {
+                            document.getElementById('new-person-name').value = '';
+                            document.getElementById('new-person-status').value = 'vollverdiener';
+                        } else if (modal.id === 'add-payment-modal') {
+                            document.getElementById('payment-amount').value = '';
+                            document.getElementById('payment-description').value = '';
+                            currentPersonId = null;
+                        } else if (modal.id === 'add-donation-modal') {
+                            document.getElementById('donation-amount').value = '';
+                            document.getElementById('donation-name').value = '';
+                            document.getElementById('donation-description').value = '';
+                        } else if (modal.id === 'add-expense-modal') {
+                            document.getElementById('expense-amount').value = '';
+                            document.getElementById('expense-issuer').value = '';
+                            document.getElementById('expense-description').value = '';
+                        }
+                    }, 300);
                 }
             });
             
