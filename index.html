@@ -618,6 +618,97 @@
             font-size: 16px;
         }
 
+        /* Desktop Layout - ab 769px Breite */
+        @media (min-width: 769px) {
+            .container {
+                max-width: 1200px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .overview-desktop {
+                display: flex;
+                gap: 24px;
+                padding: 20px;
+            }
+
+            .overview-left {
+                flex: 1;
+                max-width: 500px;
+            }
+
+            .overview-right {
+                flex: 1;
+                max-height: calc(100vh - 200px);
+                overflow-y: auto;
+                padding-right: 8px;
+            }
+
+            .overview-right::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .overview-right::-webkit-scrollbar-track {
+                background: #f1f5f9;
+                border-radius: 3px;
+            }
+
+            .overview-right::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 3px;
+            }
+
+            .overview-right::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
+
+            /* Verstecke die mobile Ansicht auf Desktop */
+            .overview-mobile {
+                display: none;
+            }
+
+            /* Kassenstand für Desktop anpassen */
+            .kassenstand-item {
+                margin-bottom: 24px;
+            }
+
+            /* Transaktionsdetails für Desktop */
+            .transaction-details.active {
+                max-height: 400px;
+            }
+
+            #transaction-list {
+                max-height: 250px;
+            }
+
+            /* Desktop-spezifische Person Items */
+            .overview-right .person-item {
+                margin-bottom: 16px;
+            }
+
+            /* Floating Button für Desktop */
+            .floating-add {
+                width: 60px;
+                height: 60px;
+                font-size: 26px;
+            }
+
+            .floating-menu {
+                bottom: 92px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            /* Mobile Layout - verstecke Desktop-Ansicht */
+            .overview-desktop {
+                display: none;
+            }
+
+            .overview-mobile {
+                display: block;
+            }
+        }
+
         @media (max-width: 428px) {
             .container {
                 max-width: 100%;
@@ -1014,42 +1105,93 @@
 
         <!-- Übersicht Tab -->
         <div id="overview" class="tab-content active">
-            <!-- Kassenstand -->
-            <div id="kassenstand" class="kassenstand-item" onclick="toggleKassenstandDetails()">
-                <div class="kassenstand-content">
-                    <div class="kassenstand-title">Kassenstand</div>
-                    <div id="kassenstand-amount" class="kassenstand-amount">0,00 €</div>
-                    <div class="kassenstand-subtitle">Gesamter Kontostand</div>
-                </div>
-                
-                <div id="transaction-details" class="transaction-details" onclick="event.stopPropagation()">
-                    <!-- Einnahmen/Ausgaben Summary -->
-                    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                        <div style="flex: 1; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #86efac; border-radius: 12px; padding: 16px; text-align: center;">
-                            <div style="font-size: 12px; color: #166534; font-weight: 600; margin-bottom: 4px;">EINNAHMEN</div>
-                            <div id="total-income" style="font-size: 18px; font-weight: 700; color: #059669;">0,00 €</div>
-                        </div>
-                        <div style="flex: 1; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #f87171; border-radius: 12px; padding: 16px; text-align: center;">
-                            <div style="font-size: 12px; color: #991b1b; font-weight: 600; margin-bottom: 4px;">AUSGABEN</div>
-                            <div id="total-expenses" style="font-size: 18px; font-weight: 700; color: #dc2626;">0,00 €</div>
-                        </div>
+            <!-- Mobile Ansicht -->
+            <div class="overview-mobile">
+                <!-- Kassenstand -->
+                <div id="kassenstand" class="kassenstand-item" onclick="toggleKassenstandDetails()">
+                    <div class="kassenstand-content">
+                        <div class="kassenstand-title">Kassenstand</div>
+                        <div id="kassenstand-amount" class="kassenstand-amount">0,00 €</div>
+                        <div class="kassenstand-subtitle">Gesamter Kontostand</div>
                     </div>
                     
-                    <h4 style="margin-bottom: 16px; color: #374151;">Alle Transaktionen</h4>
-                    <div id="transaction-list">
-                        <!-- Transaktionen werden hier dynamisch eingefügt -->
+                    <div id="transaction-details" class="transaction-details" onclick="event.stopPropagation()">
+                        <!-- Einnahmen/Ausgaben Summary -->
+                        <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                            <div style="flex: 1; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #86efac; border-radius: 12px; padding: 16px; text-align: center;">
+                                <div style="font-size: 12px; color: #166534; font-weight: 600; margin-bottom: 4px;">EINNAHMEN</div>
+                                <div id="total-income" style="font-size: 18px; font-weight: 700; color: #059669;">0,00 €</div>
+                            </div>
+                            <div style="flex: 1; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #f87171; border-radius: 12px; padding: 16px; text-align: center;">
+                                <div style="font-size: 12px; color: #991b1b; font-weight: 600; margin-bottom: 4px;">AUSGABEN</div>
+                                <div id="total-expenses" style="font-size: 18px; font-weight: 700; color: #dc2626;">0,00 €</div>
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin-bottom: 16px; color: #374151;">Alle Transaktionen</h4>
+                        <div id="transaction-list">
+                            <!-- Transaktionen werden hier dynamisch eingefügt -->
+                        </div>
                     </div>
+                </div>
+
+                <div id="people-list">
+                    <!-- Personen werden hier dynamisch eingefügt -->
+                </div>
+                
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <h3>Keine Personen hinzugefügt</h3>
+                    <p>Klicke auf das + um eine Person hinzuzufügen</p>
                 </div>
             </div>
 
-            <div id="people-list">
-                <!-- Personen werden hier dynamisch eingefügt -->
-            </div>
-            
-            <div id="empty-state" class="empty-state">
-                <div class="empty-state-icon">👥</div>
-                <h3>Keine Personen hinzugefügt</h3>
-                <p>Klicke auf das + um eine Person hinzuzufügen</p>
+            <!-- Desktop Ansicht -->
+            <div class="overview-desktop">
+                <!-- Linke Spalte: Kassenstand und Transaktionen -->
+                <div class="overview-left">
+                    <!-- Kassenstand Desktop -->
+                    <div id="kassenstand-desktop" class="kassenstand-item" onclick="toggleKassenstandDetailsDesktop()">
+                        <div class="kassenstand-content">
+                            <div class="kassenstand-title">Kassenstand</div>
+                            <div id="kassenstand-amount-desktop" class="kassenstand-amount">0,00 €</div>
+                            <div class="kassenstand-subtitle">Gesamter Kontostand</div>
+                        </div>
+                        
+                        <div id="transaction-details-desktop" class="transaction-details active" onclick="event.stopPropagation()">
+                            <!-- Einnahmen/Ausgaben Summary -->
+                            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                                <div style="flex: 1; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #86efac; border-radius: 12px; padding: 16px; text-align: center;">
+                                    <div style="font-size: 12px; color: #166534; font-weight: 600; margin-bottom: 4px;">EINNAHMEN</div>
+                                    <div id="total-income-desktop" style="font-size: 18px; font-weight: 700; color: #059669;">0,00 €</div>
+                                </div>
+                                <div style="flex: 1; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #f87171; border-radius: 12px; padding: 16px; text-align: center;">
+                                    <div style="font-size: 12px; color: #991b1b; font-weight: 600; margin-bottom: 4px;">AUSGABEN</div>
+                                    <div id="total-expenses-desktop" style="font-size: 18px; font-weight: 700; color: #dc2626;">0,00 €</div>
+                                </div>
+                            </div>
+                            
+                            <h4 style="margin-bottom: 16px; color: #374151;">Letzte Transaktionen</h4>
+                            <div id="transaction-list-desktop">
+                                <!-- Transaktionen werden hier dynamisch eingefügt -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rechte Spalte: Personen Liste -->
+                <div class="overview-right">
+                    <h3 style="margin-bottom: 20px; color: #374151; font-size: 20px;">Mitglieder</h3>
+                    <div id="people-list-desktop">
+                        <!-- Personen werden hier dynamisch eingefügt -->
+                    </div>
+                    
+                    <div id="empty-state-desktop" class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <h3>Keine Personen hinzugefügt</h3>
+                        <p>Klicke auf das + um eine Person hinzuzufügen</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2039,6 +2181,18 @@
             }
         };
 
+        window.toggleKassenstandDetailsDesktop = function() {
+            const detailsElement = document.getElementById('transaction-details-desktop');
+            const isVisible = detailsElement.classList.contains('active');
+            
+            if (!isVisible) {
+                renderTransactionHistoryDesktop();
+                detailsElement.classList.add('active');
+            } else {
+                detailsElement.classList.remove('active');
+            }
+        };
+
         window.confirmDeletePerson = async function(personId) {
             if (isLoading || !isAuthenticated) return;
             
@@ -2223,17 +2377,43 @@
 
         function renderKassenstand() {
             const total = calculateTotalAmount();
-            const amountElement = document.getElementById('kassenstand-amount');
-            amountElement.textContent = total.toLocaleString('de-DE', { 
-                style: 'currency', 
-                currency: 'EUR' 
-            });
             
-            // Add or remove negative class based on amount
-            if (total < 0) {
-                amountElement.classList.add('negative');
-            } else {
-                amountElement.classList.remove('negative');
+            // Mobile Ansicht
+            const amountElement = document.getElementById('kassenstand-amount');
+            if (amountElement) {
+                amountElement.textContent = total.toLocaleString('de-DE', { 
+                    style: 'currency', 
+                    currency: 'EUR' 
+                });
+                
+                // Add or remove negative class based on amount
+                if (total < 0) {
+                    amountElement.classList.add('negative');
+                } else {
+                    amountElement.classList.remove('negative');
+                }
+            }
+
+            // Desktop Ansicht
+            const amountElementDesktop = document.getElementById('kassenstand-amount-desktop');
+            if (amountElementDesktop) {
+                amountElementDesktop.textContent = total.toLocaleString('de-DE', { 
+                    style: 'currency', 
+                    currency: 'EUR' 
+                });
+                
+                // Add or remove negative class based on amount
+                if (total < 0) {
+                    amountElementDesktop.classList.add('negative');
+                } else {
+                    amountElementDesktop.classList.remove('negative');
+                }
+            }
+
+            // Update desktop income/expenses wenn bereits aktiv
+            const desktopDetails = document.getElementById('transaction-details-desktop');
+            if (desktopDetails && desktopDetails.classList.contains('active')) {
+                renderTransactionHistoryDesktop();
             }
         }
 
@@ -2343,20 +2523,145 @@
             transactionList.innerHTML = transactionsHTML;
         }
 
+        function renderTransactionHistoryDesktop() {
+            const transactionList = document.getElementById('transaction-list-desktop');
+            
+            // Update income and expenses summary for desktop
+            const { totalIncome, totalExpenses } = calculateFilteredAmounts();
+            const totalIncomeDesktop = document.getElementById('total-income-desktop');
+            const totalExpensesDesktop = document.getElementById('total-expenses-desktop');
+            
+            if (totalIncomeDesktop) {
+                totalIncomeDesktop.textContent = totalIncome.toLocaleString('de-DE', { 
+                    style: 'currency', 
+                    currency: 'EUR' 
+                });
+            }
+            if (totalExpensesDesktop) {
+                totalExpensesDesktop.textContent = totalExpenses.toLocaleString('de-DE', { 
+                    style: 'currency', 
+                    currency: 'EUR' 
+                });
+            }
+            
+            // Sammle alle Transaktionen von allen Personen
+            const allTransactions = [];
+            
+            // Add payments from people
+            people.forEach(person => {
+                if (person.payments && person.payments.length > 0) {
+                    person.payments.forEach(payment => {
+                        allTransactions.push({
+                            ...payment,
+                            personName: person.name,
+                            type: 'payment'
+                        });
+                    });
+                }
+            });
+            
+            // Add donations
+            donations.forEach(donation => {
+                allTransactions.push({
+                    ...donation,
+                    personName: donation.name,
+                    type: 'donation'
+                });
+            });
+            
+            // Add expenses
+            expenses.forEach(expense => {
+                allTransactions.push({
+                    ...expense,
+                    personName: expense.issuer,
+                    type: 'expense'
+                });
+            });
+            
+            // Sortiere nach Datum (neueste zuerst), dann nach Zeitstempel (neueste zuerst)
+            allTransactions.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                
+                // Erst nach Datum sortieren
+                if (dateA.getTime() !== dateB.getTime()) {
+                    return dateB - dateA;
+                }
+                
+                // Bei gleichem Datum nach Zeitstempel sortieren (neueste zuerst)
+                // Fallback auf ID-Vergleich falls kein Zeitstempel vorhanden
+                const timestampA = a.timestamp || parseInt(a.id) || 0;
+                const timestampB = b.timestamp || parseInt(b.id) || 0;
+                return timestampB - timestampA;
+            });
+            
+            // Zeige nur die letzten 10 Transaktionen für Desktop
+            const recentTransactions = allTransactions.slice(0, 10);
+            
+            if (recentTransactions.length === 0) {
+                transactionList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Noch keine Transaktionen vorhanden</div>';
+                return;
+            }
+            
+            const transactionsHTML = recentTransactions.map(transaction => {
+                let borderColor = '#2563eb'; // Default blue for payments
+                let amountColor = '#059669'; // Default green for income
+                let typeIcon = '💳';
+                
+                if (transaction.type === 'donation') {
+                    borderColor = '#059669';
+                    amountColor = '#059669';
+                    typeIcon = '💝';
+                } else if (transaction.type === 'expense') {
+                    borderColor = '#dc2626';
+                    amountColor = '#dc2626';
+                    typeIcon = '💸';
+                }
+                
+                const amount = transaction.type === 'expense' 
+                    ? `-${transaction.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`
+                    : `+${transaction.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`;
+                
+                return `
+                    <div class="transaction-item" style="border-left-color: ${borderColor};">
+                        <div class="transaction-header">
+                            <span class="transaction-person">${typeIcon} ${transaction.personName}</span>
+                            <span class="transaction-amount" style="color: ${amountColor};">${amount}</span>
+                        </div>
+                        <div class="transaction-meta">
+                            <span>${transaction.description || 'Transaktion'}</span>
+                            <span>${new Date(transaction.date).toLocaleDateString('de-DE')}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            transactionList.innerHTML = transactionsHTML;
+        }
+
         function renderPeople() {
             const container = document.getElementById('people-list');
             const emptyState = document.getElementById('empty-state');
+            const containerDesktop = document.getElementById('people-list-desktop');
+            const emptyStateDesktop = document.getElementById('empty-state-desktop');
 
             // Kassenstand aktualisieren
             renderKassenstand();
 
             if (people.length === 0) {
-                container.innerHTML = '';
-                emptyState.style.display = 'block';
+                if (container) {
+                    container.innerHTML = '';
+                    emptyState.style.display = 'block';
+                }
+                if (containerDesktop) {
+                    containerDesktop.innerHTML = '';
+                    emptyStateDesktop.style.display = 'block';
+                }
                 return;
             }
 
-            emptyState.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'none';
+            if (emptyStateDesktop) emptyStateDesktop.style.display = 'none';
 
             // Personen in überfällig und aktuell aufteilen
             const overduePeople = [];
@@ -2409,7 +2714,9 @@
                 `;
             }
 
-            container.innerHTML = html;
+            // Beide Container aktualisieren
+            if (container) container.innerHTML = html;
+            if (containerDesktop) containerDesktop.innerHTML = html;
         }
 
         function generatePersonHTML(person) {
