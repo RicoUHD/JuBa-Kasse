@@ -1231,6 +1231,27 @@
             </div>
 
             <div class="card" style="margin-top: 20px;">
+                <div class="card-header">Benachrichtigungen</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="notifications-enabled" style="margin-right: 8px;" onchange="toggleNotifications()" checked>
+                            Push-Benachrichtigungen aktivieren
+                        </label>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                            Erhalten Sie Benachrichtigungen bei neuen Transaktionen (Zahlungen, Spenden, Ausgaben)
+                        </div>
+                    </div>
+                    <div id="notification-status" style="font-size: 12px; margin-top: 8px; padding: 8px; border-radius: 4px;">
+                        <!-- Status wird dynamisch gesetzt -->
+                    </div>
+                    <button class="btn btn-secondary" onclick="testNotification()" style="margin-top: 12px;">
+                        Test-Benachrichtigung senden
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
                 <div class="card-header">Passwort ändern</div>
                 <div class="card-body">
                     <div class="form-group">
@@ -1411,11 +1432,15 @@
         let isAuthenticated = false;
         let donations = [];
         let expenses = [];
+        let serviceWorkerRegistration = null;
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', async function() {
             // Initialize tab indicator
             updateTabIndicator('overview');
+
+            // Register service worker and request notification permission
+            await initializeServiceWorker();
 
             // Check authentication on startup
             await checkAuthentication();
@@ -1423,6 +1448,160 @@
             // Render initial kassenstand even without authentication
             renderKassenstand();
         });
+
+        // Service Worker and Notification functions
+        async function initializeServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    // Register service worker
+                    serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('Service Worker registered successfully:', serviceWorkerRegistration);
+                    
+                    // Request notification permission
+                    await requestNotificationPermission();
+                    
+                } catch (error) {
+                    console.error('Service Worker registration failed:', error);
+                }
+            } else {
+                console.log('Service Worker not supported');
+            }
+        }
+
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                console.log('Notification permission:', permission);
+                
+                if (permission === 'granted') {
+                    console.log('Notifications enabled');
+                } else if (permission === 'denied') {
+                    console.log('Notifications blocked by user');
+                } else {
+                    console.log('Notification permission not determined');
+                }
+            }
+        }
+
+        function showTransactionNotification(type, data) {
+            // Check if notifications are enabled in settings
+            const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
+            
+            if (!notificationsEnabled || !serviceWorkerRegistration || !('Notification' in window) || Notification.permission !== 'granted') {
+                return;
+            }
+
+            let title = 'JuBa-Kasse';
+            let body = '';
+            let amount = '';
+            let person = '';
+
+            if (type === 'payment') {
+                title = '💰 Neue Zahlung';
+                body = data.description || 'Mitgliedsbeitrag';
+                amount = `${data.amount}€`;
+                person = data.person;
+            } else if (type === 'donation') {
+                title = '💝 Neue Spende';
+                body = data.description || 'Spende erhalten';
+                amount = `${data.amount}€`;
+                person = data.name || '';
+            } else if (type === 'expense') {
+                title = '💸 Neue Ausgabe';
+                body = data.description || 'Ausgabe getätigt';
+                amount = `${data.amount}€`;
+                person = data.issuer || '';
+            }
+
+            // Send message to service worker to show notification
+            if (serviceWorkerRegistration.active) {
+                serviceWorkerRegistration.active.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    body: body,
+                    type: type,
+                    amount: amount,
+                    person: person
+                });
+            }
+        }
+
+        window.toggleNotifications = async function() {
+            const checkbox = document.getElementById('notifications-enabled');
+            const statusDiv = document.getElementById('notification-status');
+            
+            if (checkbox.checked) {
+                // User wants to enable notifications
+                const permission = await requestNotificationPermission();
+                if (permission === 'granted') {
+                    localStorage.setItem('juba-notifications-enabled', 'true');
+                    statusDiv.innerHTML = '<span style="color: #059669;">✓ Benachrichtigungen sind aktiviert</span>';
+                    statusDiv.style.background = '#dcfce7';
+                    statusDiv.style.borderColor = '#86efac';
+                } else {
+                    checkbox.checked = false;
+                    localStorage.setItem('juba-notifications-enabled', 'false');
+                    statusDiv.innerHTML = '<span style="color: #dc2626;">✗ Benachrichtigungen wurden blockiert. Bitte aktivieren Sie sie in den Browser-Einstellungen.</span>';
+                    statusDiv.style.background = '#fee2e2';
+                    statusDiv.style.borderColor = '#fca5a5';
+                }
+            } else {
+                // User wants to disable notifications
+                localStorage.setItem('juba-notifications-enabled', 'false');
+                statusDiv.innerHTML = '<span style="color: #64748b;">Benachrichtigungen sind deaktiviert</span>';
+                statusDiv.style.background = '#f1f5f9';
+                statusDiv.style.borderColor = '#cbd5e1';
+            }
+        };
+
+        function updateNotificationStatus() {
+            const checkbox = document.getElementById('notifications-enabled');
+            const statusDiv = document.getElementById('notification-status');
+            
+            if (!checkbox || !statusDiv) return;
+            
+            const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
+            checkbox.checked = notificationsEnabled;
+            
+            if (notificationsEnabled && Notification.permission === 'granted') {
+                statusDiv.innerHTML = '<span style="color: #059669;">✓ Benachrichtigungen sind aktiviert</span>';
+                statusDiv.style.background = '#dcfce7';
+                statusDiv.style.borderColor = '#86efac';
+            } else if (notificationsEnabled && Notification.permission === 'denied') {
+                statusDiv.innerHTML = '<span style="color: #dc2626;">✗ Benachrichtigungen wurden blockiert. Bitte aktivieren Sie sie in den Browser-Einstellungen.</span>';
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.borderColor = '#fca5a5';
+            } else {
+                statusDiv.innerHTML = '<span style="color: #64748b;">Benachrichtigungen sind deaktiviert</span>';
+                statusDiv.style.background = '#f1f5f9';
+                statusDiv.style.borderColor = '#cbd5e1';
+            }
+        }
+
+        window.testNotification = function() {
+            if (!serviceWorkerRegistration || !('Notification' in window)) {
+                alert('Benachrichtigungen werden von Ihrem Browser nicht unterstützt.');
+                return;
+            }
+            
+            if (Notification.permission !== 'granted') {
+                alert('Benachrichtigungen sind nicht aktiviert. Bitte aktivieren Sie sie zuerst.');
+                return;
+            }
+            
+            const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
+            if (!notificationsEnabled) {
+                alert('Benachrichtigungen sind in den Einstellungen deaktiviert.');
+                return;
+            }
+            
+            // Send test notification
+            showTransactionNotification('payment', {
+                amount: 50,
+                person: 'Test Person',
+                description: 'Test-Zahlung für Benachrichtigungen'
+            });
+        };
 
         // Authentication functions
         async function checkAuthentication() {
@@ -1447,6 +1626,8 @@
                         if (paymentDateEl) {
                             paymentDateEl.value = new Date().toISOString().split('T')[0];
                         }
+                        // Update notification status
+                        updateNotificationStatus();
                     });
                 } else {
                     // Password has been changed, force re-login
@@ -1547,6 +1728,8 @@
                     if (paymentDateEl) {
                         paymentDateEl.value = new Date().toISOString().split('T')[0];
                     }
+                    // Update notification status
+                    updateNotificationStatus();
                 });
             } else {
                 document.getElementById('login-error').style.display = 'block';
@@ -1740,6 +1923,11 @@
             
             // Update current tab
             currentTab = tabName;
+            
+            // Update notification status when switching to settings tab
+            if (tabName === 'settings') {
+                setTimeout(updateNotificationStatus, 250);
+            }
         };
 
         // Update tab indicator position
@@ -1988,6 +2176,14 @@
 
                 await savePeople();
                 renderPeople();
+                
+                // Show notification for payment
+                showTransactionNotification('payment', {
+                    amount: amount,
+                    person: person.name,
+                    description: payment.description
+                });
+                
                 window.hideAddPaymentModal();
             } catch (error) {
                 console.error('Fehler beim Hinzufügen der Zahlung:', error);
@@ -2024,6 +2220,14 @@
             donations.push(donation);
             saveTransactions();
             renderPeople();
+            
+            // Show notification for donation
+            showTransactionNotification('donation', {
+                amount: amount,
+                name: donation.name,
+                description: donation.description
+            });
+            
             window.hideAddDonationModal();
         };
 
@@ -2066,6 +2270,14 @@
             expenses.push(expense);
             saveTransactions();
             renderPeople();
+            
+            // Show notification for expense
+            showTransactionNotification('expense', {
+                amount: amount,
+                issuer: issuer,
+                description: description
+            });
+            
             window.hideAddExpenseModal();
         };
 

@@ -16,5 +16,14 @@
     }
   ],
   "categories": ["finance", "productivity"],
-  "lang": "de"
+  "lang": "de",
+  "prefer_related_applications": false,
+  "permissions": [
+    "notifications",
+    "background-sync"
+  ],
+  "serviceworker": {
+    "src": "sw.js",
+    "scope": "/"
+  }
 }
