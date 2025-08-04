@@ -1,5 +1,5 @@
 // JuBa-Kasse Service Worker
-const CACHE_NAME = 'juba-kasse-v1.0.0';
+const CACHE_NAME = 'juba-kasse-v1.0.1';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -148,23 +148,28 @@ self.addEventListener('sync', event => {
 
 // Message event - Communication with main thread
 self.addEventListener('message', event => {
+  console.log('=== SERVICE WORKER MESSAGE DEBUG ===');
   console.log('Service Worker: Message received', event.data);
   
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, type, amount, person } = event.data;
+    
+    console.log('Processing notification request:', { title, body, type, amount, person });
     
     let notificationBody = body;
     let icon = '/icon-512.png';
     
     // Customize notification based on transaction type
     if (type === 'payment') {
-      notificationBody = `💰 Zahlung: ${person} hat ${amount}€ gezahlt`;
+      notificationBody = `💰 Zahlung: ${person} hat ${amount} gezahlt`;
     } else if (type === 'donation') {
-      notificationBody = `💝 Spende: ${amount}€ erhalten`;
+      notificationBody = `💝 Spende: ${amount} erhalten`;
       if (person) notificationBody += ` von ${person}`;
     } else if (type === 'expense') {
-      notificationBody = `💸 Ausgabe: ${amount}€ für ${body}`;
+      notificationBody = `💸 Ausgabe: ${amount} für ${body}`;
     }
+    
+    console.log('Final notification body:', notificationBody);
     
     const options = {
       body: notificationBody,
@@ -182,6 +187,18 @@ self.addEventListener('message', event => {
       }
     };
     
-    self.registration.showNotification(title, options);
+    console.log('Attempting to show notification with options:', options);
+    
+    // Show notification and handle success/error
+    self.registration.showNotification(title, options)
+      .then(() => {
+        console.log('✅ Service Worker: Notification shown successfully');
+      })
+      .catch((error) => {
+        console.error('❌ Service Worker: Error showing notification:', error);
+      });
+  } else {
+    console.log('Service Worker: Unhandled message type or invalid data');
   }
+  console.log('=== END SERVICE WORKER MESSAGE DEBUG ===');
 });

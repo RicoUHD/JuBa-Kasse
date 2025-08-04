@@ -1251,6 +1251,12 @@
                     <button class="btn btn-secondary" onclick="showDiagnostics()" style="margin-top: 8px; margin-left: 8px;">
                         Diagnose anzeigen
                     </button>
+                    <button class="btn btn-secondary" onclick="showNotificationDebug()" style="margin-top: 8px; margin-left: 8px;">
+                        Debug-Konsole
+                    </button>
+                    <div id="notification-debug" style="display: none; margin-top: 16px; padding: 12px; background: #1f2937; color: #f9fafb; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 300px; overflow-y: auto;">
+                        <!-- Debug output will be shown here -->
+                    </div>
                     <div id="diagnostics-panel" style="display: none; margin-top: 16px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 12px;">
                         <!-- Diagnostics will be shown here -->
                     </div>
@@ -1560,23 +1566,29 @@
         }
 
         function showTransactionNotification(type, data) {
+            console.log('=== NOTIFICATION DEBUG ===');
             console.log('Attempting to show notification:', type, data);
+            console.log('Notification API available:', 'Notification' in window);
+            console.log('Permission:', Notification.permission);
+            console.log('Service Worker Registration:', !!serviceWorkerRegistration);
+            console.log('Service Worker Active:', !!(serviceWorkerRegistration && serviceWorkerRegistration.active));
             
             // Check if notifications are enabled in settings
             const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
+            console.log('Notifications enabled in settings:', notificationsEnabled);
             
             if (!notificationsEnabled) {
-                console.log('Notifications disabled in settings');
+                console.log('❌ Notifications disabled in settings - aborting');
                 return;
             }
             
             if (!('Notification' in window)) {
-                console.log('Notifications not supported');
+                console.log('❌ Notifications not supported - aborting');
                 return;
             }
             
             if (Notification.permission !== 'granted') {
-                console.log('Notification permission not granted:', Notification.permission);
+                console.log('❌ Notification permission not granted:', Notification.permission, '- aborting');
                 return;
             }
 
@@ -1602,9 +1614,11 @@
                 person = data.issuer || '';
             }
 
+            console.log('Notification details:', { title, body, amount, person });
+
             // Try service worker first, then fallback to direct notification
             if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
-                console.log('Sending notification via service worker');
+                console.log('✅ Sending notification via service worker');
                 try {
                     serviceWorkerRegistration.active.postMessage({
                         type: 'SHOW_NOTIFICATION',
@@ -1614,18 +1628,23 @@
                         amount: amount,
                         person: person
                     });
+                    console.log('✅ Message sent to service worker successfully');
                 } catch (error) {
-                    console.error('Error sending message to service worker:', error);
+                    console.error('❌ Error sending message to service worker:', error);
                     // Fallback to direct notification
                     showDirectNotification(title, body, type, amount, person);
                 }
             } else {
-                console.log('Service worker not available, showing direct notification');
+                console.log('⚠️ Service worker not available, showing direct notification');
                 showDirectNotification(title, body, type, amount, person);
             }
+            console.log('=== END NOTIFICATION DEBUG ===');
         }
 
         function showDirectNotification(title, body, type, amount, person) {
+            console.log('=== DIRECT NOTIFICATION DEBUG ===');
+            console.log('Showing direct notification:', { title, body, type, amount, person });
+            
             try {
                 let notificationBody = body;
                 
@@ -1639,57 +1658,124 @@
                     notificationBody = `💸 Ausgabe: ${amount} für ${body}`;
                 }
                 
+                console.log('Final notification content:', { title, notificationBody });
+                
+                const iconPath = window.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : '/icon-512.png';
+                console.log('Icon path:', iconPath);
+                
                 const notification = new Notification(title, {
                     body: notificationBody,
-                    icon: window.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : '/icon-512.png',
+                    icon: iconPath,
                     tag: 'juba-transaction',
                     requireInteraction: false,
                     silent: false
                 });
                 
+                console.log('✅ Direct notification created successfully:', notification);
+                
                 // Auto-close after 5 seconds
                 setTimeout(() => {
                     notification.close();
+                    console.log('Notification auto-closed after 5 seconds');
                 }, 5000);
                 
                 // Handle click
                 notification.onclick = function() {
+                    console.log('Notification clicked');
                     window.focus();
                     notification.close();
                 };
                 
-                console.log('Direct notification shown successfully');
+                // Handle errors
+                notification.onerror = function(error) {
+                    console.error('Notification error:', error);
+                };
+                
+                // Handle show event
+                notification.onshow = function() {
+                    console.log('✅ Notification shown successfully');
+                };
+                
+                // Handle close event
+                notification.onclose = function() {
+                    console.log('Notification closed');
+                };
                 
             } catch (error) {
-                console.error('Error showing direct notification:', error);
+                console.error('❌ Error showing direct notification:', error);
+                console.error('Error details:', error.message, error.stack);
             }
+            console.log('=== END DIRECT NOTIFICATION DEBUG ===');
         }
 
         window.toggleNotifications = async function() {
             const checkbox = document.getElementById('notifications-enabled');
             const statusDiv = document.getElementById('notification-status');
             
+            console.log('Toggle notifications called, checkbox checked:', checkbox.checked);
+            
             if (checkbox.checked) {
                 // User wants to enable notifications
-                const permission = await requestNotificationPermission();
-                if (permission === 'granted') {
-                    localStorage.setItem('juba-notifications-enabled', 'true');
-                    statusDiv.innerHTML = '<span style="color: #059669;">✓ Benachrichtigungen sind aktiviert</span>';
-                    statusDiv.style.background = '#dcfce7';
-                    statusDiv.style.borderColor = '#86efac';
-                } else {
+                console.log('User wants to enable notifications');
+                
+                if (!('Notification' in window)) {
+                    console.error('Notifications not supported');
                     checkbox.checked = false;
                     localStorage.setItem('juba-notifications-enabled', 'false');
-                    statusDiv.innerHTML = '<span style="color: #dc2626;">✗ Benachrichtigungen wurden blockiert. Bitte aktivieren Sie sie in den Browser-Einstellungen.</span>';
-                    statusDiv.style.background = '#fee2e2';
-                    statusDiv.style.borderColor = '#fca5a5';
+                    showNotificationError('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
+                    return;
+                }
+                
+                // Request permission if not already granted
+                let permission = Notification.permission;
+                console.log('Current permission:', permission);
+                
+                if (permission === 'default') {
+                    console.log('Requesting notification permission...');
+                    permission = await requestNotificationPermission();
+                    console.log('Permission result:', permission);
+                }
+                
+                if (permission === 'granted') {
+                    localStorage.setItem('juba-notifications-enabled', 'true');
+                    statusDiv.innerHTML = '<span style="color: #059669;">✅ Benachrichtigungen sind aktiviert</span>';
+                    statusDiv.style.background = '#dcfce7';
+                    statusDiv.style.borderColor = '#86efac';
+                    statusDiv.style.border = '1px solid';
+                    
+                    // Update the status display
+                    updateNotificationStatus();
+                } else {
+                    console.log('Permission denied or not granted:', permission);
+                    checkbox.checked = false;
+                    localStorage.setItem('juba-notifications-enabled', 'false');
+                    
+                    if (permission === 'denied') {
+                        statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Benachrichtigungen wurden blockiert. Bitte aktivieren Sie sie in den Browser-Einstellungen.</span>';
+                        statusDiv.style.background = '#fee2e2';
+                        statusDiv.style.borderColor = '#fca5a5';
+                        statusDiv.style.border = '1px solid';
+                    } else {
+                        statusDiv.innerHTML = '<span style="color: #ea580c;">⚠️ Benachrichtigungserlaubnis nicht erteilt. Versuchen Sie es erneut.</span>';
+                        statusDiv.style.background = '#fed7aa';
+                        statusDiv.style.borderColor = '#fb923c';
+                        statusDiv.style.border = '1px solid';
+                    }
+                    
+                    // Update the status display
+                    updateNotificationStatus();
                 }
             } else {
                 // User wants to disable notifications
+                console.log('User wants to disable notifications');
                 localStorage.setItem('juba-notifications-enabled', 'false');
-                statusDiv.innerHTML = '<span style="color: #64748b;">Benachrichtigungen sind deaktiviert</span>';
+                statusDiv.innerHTML = '<span style="color: #64748b;">⏸️ Benachrichtigungen sind deaktiviert</span>';
                 statusDiv.style.background = '#f1f5f9';
                 statusDiv.style.borderColor = '#cbd5e1';
+                statusDiv.style.border = '1px solid';
+                
+                // Update the status display
+                updateNotificationStatus();
             }
         };
 
@@ -1764,7 +1850,7 @@
             });
         }
 
-        window.testNotification = function() {
+        window.testNotification = async function() {
             console.log('Testing notification...');
             console.log('Service Worker Registration:', serviceWorkerRegistration);
             console.log('Notification support:', 'Notification' in window);
@@ -1776,27 +1862,37 @@
                 return;
             }
             
+            // Check and request permission if needed
+            if (Notification.permission === 'default') {
+                console.log('Requesting notification permission...');
+                const permission = await requestNotificationPermission();
+                if (permission !== 'granted') {
+                    alert(`Benachrichtigungen wurden nicht aktiviert.\nStatus: ${permission}\n\nBitte aktivieren Sie die Benachrichtigungen und versuchen Sie es erneut.`);
+                    return;
+                }
+            } else if (Notification.permission !== 'granted') {
+                alert(`Benachrichtigungen sind nicht aktiviert.\nAktueller Status: ${Notification.permission}\n\nBitte:\n1. Erlauben Sie Benachrichtigungen in der Browser-Leiste\n2. Oder aktivieren Sie sie in den Browser-Einstellungen\n3. Laden Sie die Seite neu und versuchen Sie es erneut`);
+                return;
+            }
+            
             if (!serviceWorkerRegistration) {
                 alert('Service Worker ist nicht registriert. Bitte laden Sie die Seite neu.');
                 return;
             }
             
-            if (Notification.permission !== 'granted') {
-                alert(`Benachrichtigungen sind nicht aktiviert.\nAktueller Status: ${Notification.permission}\n\nBitte:\n1. Erlauben Sie Benachrichtigungen in der Browser-Leiste\n2. Oder aktivieren Sie sie in den Browser-Einstellungen`);
-                return;
-            }
-            
             const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
             if (!notificationsEnabled) {
-                alert('Benachrichtigungen sind in den App-Einstellungen deaktiviert.');
+                alert('Benachrichtigungen sind in den App-Einstellungen deaktiviert. Bitte aktivieren Sie sie zuerst.');
                 return;
             }
             
             // Try direct notification first as fallback
             try {
+                console.log('Attempting to show test notification...');
+                
+                // Send test notification via service worker if available
                 if (serviceWorkerRegistration.active) {
                     console.log('Sending message to service worker...');
-                    // Send test notification via service worker
                     showTransactionNotification('payment', {
                         amount: 50,
                         person: 'Test Person',
@@ -1807,8 +1903,8 @@
                     // Fallback: direct notification
                     new Notification('🧪 JuBa-Kasse Test', {
                         body: '💰 Test-Benachrichtigung: 50€ von Test Person',
-                        icon: '/icon-512.png',
-                        badge: '/icon-512.png',
+                        icon: window.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : '/icon-512.png',
+                        badge: window.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : '/icon-512.png',
                         tag: 'juba-test'
                     });
                 }
@@ -1890,6 +1986,39 @@
             } else {
                 panel.style.display = 'none';
                 document.querySelector('button[onclick="showDiagnostics()"]').textContent = 'Diagnose anzeigen';
+            }
+        };
+
+        window.showNotificationDebug = function() {
+            const debugPanel = document.getElementById('notification-debug');
+            
+            if (debugPanel.style.display === 'none') {
+                debugPanel.style.display = 'block';
+                debugPanel.innerHTML = '<strong>🔍 Live Benachrichtigungs-Debug</strong><br>Konsolen-Output wird hier angezeigt...<br><br>';
+                
+                // Override console.log for this panel
+                const originalLog = console.log;
+                const originalError = console.error;
+                
+                window.notificationConsole = {
+                    log: function(...args) {
+                        originalLog.apply(console, args);
+                        const timestamp = new Date().toLocaleTimeString();
+                        debugPanel.innerHTML += `<span style="color: #10b981;">[${timestamp}] LOG:</span> ${args.join(' ')}<br>`;
+                        debugPanel.scrollTop = debugPanel.scrollHeight;
+                    },
+                    error: function(...args) {
+                        originalError.apply(console, args);
+                        const timestamp = new Date().toLocaleTimeString();
+                        debugPanel.innerHTML += `<span style="color: #ef4444;">[${timestamp}] ERROR:</span> ${args.join(' ')}<br>`;
+                        debugPanel.scrollTop = debugPanel.scrollHeight;
+                    }
+                };
+                
+                document.querySelector('button[onclick="showNotificationDebug()"]').textContent = 'Debug ausblenden';
+            } else {
+                debugPanel.style.display = 'none';
+                document.querySelector('button[onclick="showNotificationDebug()"]').textContent = 'Debug-Konsole';
             }
         };
 
