@@ -1248,6 +1248,12 @@
                     <button class="btn btn-secondary" onclick="testNotification()" style="margin-top: 12px;">
                         Test-Benachrichtigung senden
                     </button>
+                    <button class="btn btn-secondary" onclick="showDiagnostics()" style="margin-top: 8px; margin-left: 8px;">
+                        Diagnose anzeigen
+                    </button>
+                    <div id="diagnostics-panel" style="display: none; margin-top: 16px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 12px;">
+                        <!-- Diagnostics will be shown here -->
+                    </div>
                 </div>
             </div>
 
@@ -1451,43 +1457,126 @@
 
         // Service Worker and Notification functions
         async function initializeServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                try {
-                    // Register service worker
-                    serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
-                    console.log('Service Worker registered successfully:', serviceWorkerRegistration);
-                    
-                    // Request notification permission
-                    await requestNotificationPermission();
-                    
-                } catch (error) {
-                    console.error('Service Worker registration failed:', error);
-                }
-            } else {
-                console.log('Service Worker not supported');
+            console.log('Initializing Service Worker...');
+            console.log('Current URL:', window.location.href);
+            console.log('Protocol:', window.location.protocol);
+            console.log('Service Worker support:', 'serviceWorker' in navigator);
+            console.log('Notification support:', 'Notification' in window);
+            console.log('Is secure context:', window.isSecureContext);
+            
+            if (!('serviceWorker' in navigator)) {
+                console.error('Service Worker not supported in this browser');
+                showNotificationError('Service Worker wird von diesem Browser nicht unterstützt');
+                return;
+            }
+            
+            if (!('Notification' in window)) {
+                console.error('Notifications not supported in this browser');
+                showNotificationError('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
+                return;
+            }
+            
+            // Check if we're in a secure context (HTTPS or localhost)
+            if (!window.isSecureContext && window.location.protocol !== 'file:') {
+                console.warn('Not in secure context. Service Worker may not work properly.');
+                showNotificationError('Für Push-Benachrichtigungen ist HTTPS erforderlich (außer bei localhost)');
+            }
+            
+            try {
+                // Register service worker with correct scope
+                const swPath = window.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/sw.js' : '/sw.js';
+                console.log('Registering Service Worker at:', swPath);
+                
+                serviceWorkerRegistration = await navigator.serviceWorker.register(swPath, {
+                    scope: window.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/' : '/'
+                });
+                
+                console.log('Service Worker registered successfully:', serviceWorkerRegistration);
+                
+                // Wait for service worker to be ready
+                await navigator.serviceWorker.ready;
+                console.log('Service Worker is ready');
+                
+                // Request notification permission
+                await requestNotificationPermission();
+                
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+                showNotificationError(`Service Worker Registrierung fehlgeschlagen: ${error.message}`);
+            }
+        }
+
+        function showNotificationError(message) {
+            const statusDiv = document.getElementById('notification-status');
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color: #dc2626;">⚠️ ${message}</span>`;
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.borderColor = '#fca5a5';
+                statusDiv.style.border = '1px solid';
             }
         }
 
         async function requestNotificationPermission() {
-            if ('Notification' in window) {
+            if (!('Notification' in window)) {
+                console.error('Notifications not supported');
+                showNotificationError('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
+                return 'not-supported';
+            }
+            
+            console.log('Current notification permission:', Notification.permission);
+            
+            if (Notification.permission === 'granted') {
+                console.log('Notifications already granted');
+                return 'granted';
+            }
+            
+            if (Notification.permission === 'denied') {
+                console.log('Notifications denied by user');
+                showNotificationError('Benachrichtigungen wurden blockiert. Bitte aktivieren Sie sie in den Browser-Einstellungen.');
+                return 'denied';
+            }
+            
+            try {
                 const permission = await Notification.requestPermission();
-                console.log('Notification permission:', permission);
+                console.log('Notification permission result:', permission);
                 
                 if (permission === 'granted') {
                     console.log('Notifications enabled');
+                    return 'granted';
                 } else if (permission === 'denied') {
                     console.log('Notifications blocked by user');
+                    showNotificationError('Benachrichtigungen wurden blockiert');
+                    return 'denied';
                 } else {
                     console.log('Notification permission not determined');
+                    showNotificationError('Benachrichtigungsberechtigung nicht bestimmt');
+                    return 'default';
                 }
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+                showNotificationError(`Fehler beim Anfordern von Benachrichtigungsberechtigungen: ${error.message}`);
+                return 'error';
             }
         }
 
         function showTransactionNotification(type, data) {
+            console.log('Attempting to show notification:', type, data);
+            
             // Check if notifications are enabled in settings
             const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
             
-            if (!notificationsEnabled || !serviceWorkerRegistration || !('Notification' in window) || Notification.permission !== 'granted') {
+            if (!notificationsEnabled) {
+                console.log('Notifications disabled in settings');
+                return;
+            }
+            
+            if (!('Notification' in window)) {
+                console.log('Notifications not supported');
+                return;
+            }
+            
+            if (Notification.permission !== 'granted') {
+                console.log('Notification permission not granted:', Notification.permission);
                 return;
             }
 
@@ -1513,16 +1602,66 @@
                 person = data.issuer || '';
             }
 
-            // Send message to service worker to show notification
-            if (serviceWorkerRegistration.active) {
-                serviceWorkerRegistration.active.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: title,
-                    body: body,
-                    type: type,
-                    amount: amount,
-                    person: person
+            // Try service worker first, then fallback to direct notification
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                console.log('Sending notification via service worker');
+                try {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'SHOW_NOTIFICATION',
+                        title: title,
+                        body: body,
+                        type: type,
+                        amount: amount,
+                        person: person
+                    });
+                } catch (error) {
+                    console.error('Error sending message to service worker:', error);
+                    // Fallback to direct notification
+                    showDirectNotification(title, body, type, amount, person);
+                }
+            } else {
+                console.log('Service worker not available, showing direct notification');
+                showDirectNotification(title, body, type, amount, person);
+            }
+        }
+
+        function showDirectNotification(title, body, type, amount, person) {
+            try {
+                let notificationBody = body;
+                
+                // Customize notification body based on transaction type
+                if (type === 'payment') {
+                    notificationBody = `💰 Zahlung: ${person} hat ${amount} gezahlt`;
+                } else if (type === 'donation') {
+                    notificationBody = `💝 Spende: ${amount} erhalten`;
+                    if (person) notificationBody += ` von ${person}`;
+                } else if (type === 'expense') {
+                    notificationBody = `💸 Ausgabe: ${amount} für ${body}`;
+                }
+                
+                const notification = new Notification(title, {
+                    body: notificationBody,
+                    icon: window.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : '/icon-512.png',
+                    tag: 'juba-transaction',
+                    requireInteraction: false,
+                    silent: false
                 });
+                
+                // Auto-close after 5 seconds
+                setTimeout(() => {
+                    notification.close();
+                }, 5000);
+                
+                // Handle click
+                notification.onclick = function() {
+                    window.focus();
+                    notification.close();
+                };
+                
+                console.log('Direct notification shown successfully');
+                
+            } catch (error) {
+                console.error('Error showing direct notification:', error);
             }
         }
 
@@ -1563,44 +1702,195 @@
             const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
             checkbox.checked = notificationsEnabled;
             
-            if (notificationsEnabled && Notification.permission === 'granted') {
-                statusDiv.innerHTML = '<span style="color: #059669;">✓ Benachrichtigungen sind aktiviert</span>';
-                statusDiv.style.background = '#dcfce7';
-                statusDiv.style.borderColor = '#86efac';
-            } else if (notificationsEnabled && Notification.permission === 'denied') {
-                statusDiv.innerHTML = '<span style="color: #dc2626;">✗ Benachrichtigungen wurden blockiert. Bitte aktivieren Sie sie in den Browser-Einstellungen.</span>';
-                statusDiv.style.background = '#fee2e2';
-                statusDiv.style.borderColor = '#fca5a5';
-            } else {
-                statusDiv.innerHTML = '<span style="color: #64748b;">Benachrichtigungen sind deaktiviert</span>';
-                statusDiv.style.background = '#f1f5f9';
-                statusDiv.style.borderColor = '#cbd5e1';
+            // Detailed status check
+            let statusMessage = '';
+            let statusColor = '';
+            let bgColor = '';
+            let borderColor = '';
+            
+            if (!('Notification' in window)) {
+                statusMessage = '❌ Browser unterstützt keine Push-Benachrichtigungen';
+                statusColor = '#dc2626';
+                bgColor = '#fee2e2';
+                borderColor = '#fca5a5';
+            } else if (!('serviceWorker' in navigator)) {
+                statusMessage = '❌ Browser unterstützt keine Service Worker';
+                statusColor = '#dc2626';
+                bgColor = '#fee2e2';
+                borderColor = '#fca5a5';
+            } else if (!window.isSecureContext && window.location.protocol !== 'file:') {
+                statusMessage = '⚠️ HTTPS erforderlich für Push-Benachrichtigungen';
+                statusColor = '#ea580c';
+                bgColor = '#fed7aa';
+                borderColor = '#fb923c';
+            } else if (!serviceWorkerRegistration) {
+                statusMessage = '⚠️ Service Worker nicht registriert';
+                statusColor = '#ea580c';
+                bgColor = '#fed7aa';
+                borderColor = '#fb923c';
+            } else if (Notification.permission === 'denied') {
+                statusMessage = '❌ Benachrichtigungen blockiert - Bitte in Browser-Einstellungen aktivieren';
+                statusColor = '#dc2626';
+                bgColor = '#fee2e2';
+                borderColor = '#fca5a5';
+            } else if (Notification.permission === 'default') {
+                statusMessage = '⏳ Benachrichtigungen noch nicht aktiviert - Klicken Sie "Test-Benachrichtigung"';
+                statusColor = '#ea580c';
+                bgColor = '#fed7aa';
+                borderColor = '#fb923c';
+            } else if (notificationsEnabled && Notification.permission === 'granted') {
+                statusMessage = '✅ Benachrichtigungen sind vollständig aktiviert';
+                statusColor = '#059669';
+                bgColor = '#dcfce7';
+                borderColor = '#86efac';
+            } else if (!notificationsEnabled) {
+                statusMessage = '⏸️ Benachrichtigungen sind in den App-Einstellungen deaktiviert';
+                statusColor = '#64748b';
+                bgColor = '#f1f5f9';
+                borderColor = '#cbd5e1';
             }
+            
+            statusDiv.innerHTML = `<span style="color: ${statusColor};">${statusMessage}</span>`;
+            statusDiv.style.background = bgColor;
+            statusDiv.style.borderColor = borderColor;
+            statusDiv.style.border = '1px solid';
+            
+            console.log('Notification status updated:', {
+                notificationsEnabled,
+                permission: Notification.permission,
+                serviceWorkerRegistered: !!serviceWorkerRegistration,
+                secureContext: window.isSecureContext,
+                protocol: window.location.protocol
+            });
         }
 
         window.testNotification = function() {
-            if (!serviceWorkerRegistration || !('Notification' in window)) {
-                alert('Benachrichtigungen werden von Ihrem Browser nicht unterstützt.');
+            console.log('Testing notification...');
+            console.log('Service Worker Registration:', serviceWorkerRegistration);
+            console.log('Notification support:', 'Notification' in window);
+            console.log('Notification permission:', Notification.permission);
+            console.log('Secure context:', window.isSecureContext);
+            
+            if (!('Notification' in window)) {
+                alert('Push-Benachrichtigungen werden von Ihrem Browser nicht unterstützt.\n\nUnterstützte Browser:\n- Chrome 50+\n- Firefox 44+\n- Safari 16+\n- Edge 79+');
+                return;
+            }
+            
+            if (!serviceWorkerRegistration) {
+                alert('Service Worker ist nicht registriert. Bitte laden Sie die Seite neu.');
                 return;
             }
             
             if (Notification.permission !== 'granted') {
-                alert('Benachrichtigungen sind nicht aktiviert. Bitte aktivieren Sie sie zuerst.');
+                alert(`Benachrichtigungen sind nicht aktiviert.\nAktueller Status: ${Notification.permission}\n\nBitte:\n1. Erlauben Sie Benachrichtigungen in der Browser-Leiste\n2. Oder aktivieren Sie sie in den Browser-Einstellungen`);
                 return;
             }
             
             const notificationsEnabled = localStorage.getItem('juba-notifications-enabled') !== 'false';
             if (!notificationsEnabled) {
-                alert('Benachrichtigungen sind in den Einstellungen deaktiviert.');
+                alert('Benachrichtigungen sind in den App-Einstellungen deaktiviert.');
                 return;
             }
             
-            // Send test notification
-            showTransactionNotification('payment', {
-                amount: 50,
-                person: 'Test Person',
-                description: 'Test-Zahlung für Benachrichtigungen'
-            });
+            // Try direct notification first as fallback
+            try {
+                if (serviceWorkerRegistration.active) {
+                    console.log('Sending message to service worker...');
+                    // Send test notification via service worker
+                    showTransactionNotification('payment', {
+                        amount: 50,
+                        person: 'Test Person',
+                        description: 'Test-Zahlung für Benachrichtigungen'
+                    });
+                } else {
+                    console.log('Service worker not active, showing direct notification...');
+                    // Fallback: direct notification
+                    new Notification('🧪 JuBa-Kasse Test', {
+                        body: '💰 Test-Benachrichtigung: 50€ von Test Person',
+                        icon: '/icon-512.png',
+                        badge: '/icon-512.png',
+                        tag: 'juba-test'
+                    });
+                }
+                
+                alert('Test-Benachrichtigung wurde gesendet! Sie sollte in Kürze erscheinen.');
+                
+            } catch (error) {
+                console.error('Error showing test notification:', error);
+                alert(`Fehler beim Senden der Test-Benachrichtigung:\n${error.message}`);
+            }
+        };
+
+        window.showDiagnostics = function() {
+            const panel = document.getElementById('diagnostics-panel');
+            
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                
+                const diagnostics = {
+                    'Browser Info': {
+                        'User Agent': navigator.userAgent,
+                        'Platform': navigator.platform,
+                        'Language': navigator.language
+                    },
+                    'Environment': {
+                        'URL': window.location.href,
+                        'Protocol': window.location.protocol,
+                        'Host': window.location.host,
+                        'Secure Context': window.isSecureContext,
+                        'Localhost': window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    },
+                    'API Support': {
+                        'Service Worker': 'serviceWorker' in navigator,
+                        'Notifications': 'Notification' in window,
+                        'Push Manager': 'PushManager' in window,
+                        'Cache API': 'caches' in window
+                    },
+                    'Notification Status': {
+                        'Permission': Notification.permission,
+                        'App Setting': localStorage.getItem('juba-notifications-enabled') !== 'false',
+                        'SW Registered': !!serviceWorkerRegistration,
+                        'SW Active': !!(serviceWorkerRegistration && serviceWorkerRegistration.active),
+                        'SW State': serviceWorkerRegistration ? serviceWorkerRegistration.active?.state : 'none'
+                    }
+                };
+                
+                let html = '<strong>🔍 Browser & Benachrichtigungs-Diagnose</strong><br><br>';
+                
+                for (const [category, items] of Object.entries(diagnostics)) {
+                    html += `<strong>${category}:</strong><br>`;
+                    for (const [key, value] of Object.entries(items)) {
+                        const status = typeof value === 'boolean' ? (value ? '✅' : '❌') : '';
+                        html += `&nbsp;&nbsp;${key}: ${status} ${value}<br>`;
+                    }
+                    html += '<br>';
+                }
+                
+                // Add recommendations
+                html += '<strong>💡 Empfohlene Lösungen:</strong><br>';
+                
+                if (window.location.protocol === 'file:') {
+                    html += '• Verwenden Sie einen lokalen Webserver (z.B. Live Server in VS Code)<br>';
+                } else if (!window.isSecureContext) {
+                    html += '• Verwenden Sie HTTPS statt HTTP<br>';
+                }
+                
+                if (!('serviceWorker' in navigator)) {
+                    html += '• Aktualisieren Sie Ihren Browser auf eine neuere Version<br>';
+                }
+                
+                if (Notification.permission === 'denied') {
+                    html += '• Gehen Sie zu Browser-Einstellungen > Datenschutz & Sicherheit > Website-Einstellungen > Benachrichtigungen<br>';
+                    html += '• Entfernen Sie diese Website aus der "Blockiert"-Liste<br>';
+                }
+                
+                panel.innerHTML = html;
+                
+                document.querySelector('button[onclick="showDiagnostics()"]').textContent = 'Diagnose ausblenden';
+            } else {
+                panel.style.display = 'none';
+                document.querySelector('button[onclick="showDiagnostics()"]').textContent = 'Diagnose anzeigen';
+            }
         };
 
         // Authentication functions
