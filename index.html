@@ -1412,6 +1412,305 @@
         let donations = [];
         let expenses = [];
 
+        // FCM and Notifications functions
+        async function initializeFCM() {
+            try {
+                console.log('Initialisiere FCM...');
+                
+                // FCM Manager importieren und initialisieren
+                const fcmModule = await import('./fcm.js');
+                const fcmManager = window.fcmManager || new fcmModule.default();
+                window.fcmManager = fcmManager;
+                
+                const success = await fcmManager.initialize();
+                if (success) {
+                    console.log('FCM erfolgreich initialisiert');
+                    
+                    // Notification-Settings UI anzeigen
+                    showNotificationSettings();
+                    
+                    // Automatische Benachrichtigungen einrichten
+                    setupAutomaticNotifications();
+                } else {
+                    console.warn('FCM konnte nicht initialisiert werden');
+                }
+            } catch (error) {
+                console.error('FCM Initialisierungsfehler:', error);
+            }
+        }
+
+        // Notification Settings UI anzeigen
+        function showNotificationSettings() {
+            const settingsTab = document.getElementById('settings');
+            if (!settingsTab || document.getElementById('notification-settings-card')) {
+                return; // Bereits vorhanden oder Settings Tab nicht gefunden
+            }
+            
+            const notificationCard = document.createElement('div');
+            notificationCard.id = 'notification-settings-card';
+            notificationCard.className = 'card';
+            notificationCard.style.marginTop = '20px';
+            
+            const fcmStatus = window.fcmManager ? window.fcmManager.getStatus() : { isInitialized: false };
+            
+            notificationCard.innerHTML = `
+                <div class="card-header">📱 Benachrichtigungen</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <label class="form-label" style="margin-bottom: 0;">Push-Benachrichtigungen</label>
+                            <span id="notification-status" style="padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                ${fcmStatus.isInitialized ? '✅ Aktiv' : '❌ Inaktiv'}
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b; margin-bottom: 16px;">
+                            Erhalten Sie Benachrichtigungen über neue Zahlungen, fällige Beiträge und wichtige Updates.
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-primary btn-small" onclick="enableNotifications()" id="enable-notifications-btn" ${fcmStatus.isInitialized ? 'style="display: none;"' : ''}>
+                                Aktivieren
+                            </button>
+                            <button class="btn btn-secondary btn-small" onclick="testNotification()" id="test-notification-btn" ${!fcmStatus.isInitialized ? 'style="display: none;"' : ''}>
+                                Test senden
+                            </button>
+                            <button class="btn btn-secondary btn-small" onclick="showNotificationToken()" id="show-token-btn" ${!fcmStatus.isInitialized ? 'style="display: none;"' : ''}>
+                                Token anzeigen
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label class="form-label">Automatische Erinnerungen</label>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                            <input type="checkbox" id="payment-reminders" checked style="width: auto;">
+                            <label for="payment-reminders" style="margin: 0; font-weight: normal;">Zahlungserinnerungen (5 Tage vor Fälligkeit)</label>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                            <input type="checkbox" id="low-balance-alerts" checked style="width: auto;">
+                            <label for="low-balance-alerts" style="margin: 0; font-weight: normal;">Warnung bei niedrigem Kassenstand (< 100€)</label>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <input type="checkbox" id="new-payment-notifications" checked style="width: auto;">
+                            <label for="new-payment-notifications" style="margin: 0; font-weight: normal;">Benachrichtigung bei neuen Zahlungen</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveNotificationSettings()">Einstellungen speichern</button>
+                </div>
+            `;
+            
+            settingsTab.appendChild(notificationCard);
+        }
+
+        // Notification-Funktionen
+        window.enableNotifications = async function() {
+            try {
+                if (!window.fcmManager) {
+                    await initializeFCM();
+                }
+                
+                const success = await window.fcmManager.initialize();
+                if (success) {
+                    document.getElementById('notification-status').innerHTML = '✅ Aktiv';
+                    document.getElementById('enable-notifications-btn').style.display = 'none';
+                    document.getElementById('test-notification-btn').style.display = 'inline-block';
+                    document.getElementById('show-token-btn').style.display = 'inline-block';
+                    alert('Benachrichtigungen wurden erfolgreich aktiviert!');
+                } else {
+                    alert('Benachrichtigungen konnten nicht aktiviert werden. Bitte prüfen Sie Ihre Browser-Einstellungen.');
+                }
+            } catch (error) {
+                console.error('Fehler beim Aktivieren der Benachrichtigungen:', error);
+                alert('Fehler beim Aktivieren der Benachrichtigungen.');
+            }
+        };
+
+        window.testNotification = function() {
+            if (window.fcmManager && window.fcmManager.isInitialized) {
+                window.fcmManager.sendTestNotification();
+            } else {
+                alert('Benachrichtigungen sind nicht aktiviert.');
+            }
+        };
+
+        window.showNotificationToken = function() {
+            if (window.fcmManager && window.fcmManager.token) {
+                const token = window.fcmManager.token;
+                const textarea = document.createElement('textarea');
+                textarea.value = token;
+                textarea.style.cssText = 'position: fixed; left: -9999px;';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('FCM Token wurde in die Zwischenablage kopiert:\n\n' + token.substring(0, 50) + '...');
+            } else {
+                alert('Kein FCM Token verfügbar.');
+            }
+        };
+
+        window.saveNotificationSettings = async function() {
+            const notificationSettings = {
+                paymentReminders: document.getElementById('payment-reminders').checked,
+                lowBalanceAlerts: document.getElementById('low-balance-alerts').checked,
+                newPaymentNotifications: document.getElementById('new-payment-notifications').checked,
+                lastUpdated: Date.now()
+            };
+            
+            try {
+                await set(ref(database, 'notification-settings'), notificationSettings);
+                alert('Benachrichtigungseinstellungen gespeichert!');
+            } catch (error) {
+                console.error('Fehler beim Speichern der Benachrichtigungseinstellungen:', error);
+                alert('Fehler beim Speichern der Einstellungen.');
+            }
+        };
+
+        // Automatische Benachrichtigungen einrichten
+        function setupAutomaticNotifications() {
+            // Überwachung von Datenänderungen für automatische Benachrichtigungen
+            if (isAuthenticated) {
+                // Neue Zahlungen überwachen
+                const paymentsRef = ref(database, 'people');
+                onValue(paymentsRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const currentPeople = Object.values(snapshot.val());
+                        checkForNewPayments(currentPeople);
+                    }
+                });
+                
+                // Kassenstand überwachen
+                setInterval(checkLowBalance, 60000); // Jede Minute prüfen
+                
+                // Fällige Zahlungen täglich prüfen
+                setInterval(checkPaymentReminders, 24 * 60 * 60 * 1000); // Täglich
+                checkPaymentReminders(); // Sofort beim Start prüfen
+            }
+        }
+
+        // Neue Zahlungen prüfen
+        function checkForNewPayments(currentPeople) {
+            if (!window.fcmManager || !window.fcmManager.isInitialized) return;
+            
+            // Vergleiche mit vorherigen Daten
+            const previousPeople = people;
+            
+            currentPeople.forEach(person => {
+                const previousPerson = previousPeople.find(p => p.id === person.id);
+                if (previousPerson && person.payments && previousPerson.payments) {
+                    const newPayments = person.payments.filter(payment => 
+                        !previousPerson.payments.some(prevPayment => 
+                            prevPayment.date === payment.date && prevPayment.amount === payment.amount
+                        )
+                    );
+                    
+                    newPayments.forEach(payment => {
+                        sendNotification(
+                            'Neue Zahlung eingegangen',
+                            `${person.name} hat ${payment.amount}€ bezahlt`,
+                            {
+                                action: 'new_payment',
+                                personId: person.id,
+                                amount: payment.amount
+                            }
+                        );
+                    });
+                }
+            });
+        }
+
+        // Niedriger Kassenstand prüfen
+        function checkLowBalance() {
+            const balance = calculateTotalAmount();
+            
+            if (balance < 100 && window.fcmManager && window.fcmManager.isInitialized) {
+                // Prüfen ob bereits eine Warnung in den letzten 24h gesendet wurde
+                const lastWarning = localStorage.getItem('last-low-balance-warning');
+                const now = Date.now();
+                
+                if (!lastWarning || (now - parseInt(lastWarning)) > 24 * 60 * 60 * 1000) {
+                    sendNotification(
+                        'Niedriger Kassenstand',
+                        `Der aktuelle Kassenstand beträgt nur noch ${balance.toFixed(2)}€`,
+                        {
+                            action: 'low_balance',
+                            balance: balance
+                        }
+                    );
+                    localStorage.setItem('last-low-balance-warning', now.toString());
+                }
+            }
+        }
+
+        // Zahlungserinnerungen prüfen
+        function checkPaymentReminders() {
+            if (!window.fcmManager || !window.fcmManager.isInitialized) return;
+            
+            const now = new Date();
+            const fiveDaysFromNow = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+            
+            people.forEach(person => {
+                if (person.payments && person.payments.length > 0) {
+                    const lastPayment = new Date(person.payments[person.payments.length - 1].date);
+                    const nextDue = new Date(lastPayment);
+                    nextDue.setMonth(nextDue.getMonth() + 1);
+                    
+                    // Prüfen ob Zahlung in 5 Tagen fällig ist
+                    if (nextDue <= fiveDaysFromNow && nextDue > now) {
+                        const daysUntilDue = Math.ceil((nextDue - now) / (24 * 60 * 60 * 1000));
+                        
+                        sendNotification(
+                            'Zahlung wird fällig',
+                            `${person.name} sollte in ${daysUntilDue} Tag(en) zahlen`,
+                            {
+                                action: 'payment_reminder',
+                                personId: person.id,
+                                daysUntilDue: daysUntilDue
+                            }
+                        );
+                    }
+                }
+            });
+        }
+
+        // Benachrichtigung senden
+        function sendNotification(title, body, data = {}) {
+            if (window.fcmManager && window.fcmManager.isInitialized) {
+                window.fcmManager.showForegroundNotification({
+                    notification: { title, body },
+                    data: data
+                });
+            }
+        }
+
+        // URL Actions handhaben (von PWA Shortcuts)
+        function handleURLActions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            
+            if (action) {
+                // URL Parameter entfernen
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                // Action nach kurzer Verzögerung ausführen (damit UI geladen ist)
+                setTimeout(() => {
+                    switch (action) {
+                        case 'add_person':
+                            if (isAuthenticated && window.showAddPersonModal) {
+                                window.showAddPersonModal();
+                            }
+                            break;
+                        case 'show_balance':
+                            if (window.showTab) {
+                                window.showTab('overview');
+                                if (window.toggleKassenstandDetails) {
+                                    window.toggleKassenstandDetails();
+                                }
+                            }
+                            break;
+                    }
+                }, 500);
+            }
+        }
+
         // Initialize app
         document.addEventListener('DOMContentLoaded', async function() {
             // Initialize tab indicator
@@ -1420,8 +1719,14 @@
             // Check authentication on startup
             await checkAuthentication();
             
+            // Initialize FCM and notifications
+            await initializeFCM();
+            
             // Render initial kassenstand even without authentication
             renderKassenstand();
+            
+            // Handle URL actions (from PWA shortcuts)
+            handleURLActions();
         });
 
         // Authentication functions
@@ -2860,6 +3165,19 @@
             if (!floatingButton.contains(event.target) && !floatingMenu.contains(event.target)) {
                 hideFloatingMenu();
             }
+        }
+        
+        // Service Worker registrieren wenn nicht durch FCM gemacht
+        if ('serviceWorker' in navigator && !window.fcmManager) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/JuBa-Kasse/sw.js', {
+                    scope: '/JuBa-Kasse/'
+                }).then(function(registration) {
+                    console.log('ServiceWorker registriert: ', registration.scope);
+                }).catch(function(error) {
+                    console.log('ServiceWorker Registrierung fehlgeschlagen: ', error);
+                });
+            });
         }
     </script>
 </body>
