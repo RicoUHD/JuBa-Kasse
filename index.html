@@ -3170,8 +3170,13 @@
         // Service Worker registrieren wenn nicht durch FCM gemacht
         if ('serviceWorker' in navigator && !window.fcmManager) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/JuBa-Kasse/sw.js', {
-                    scope: '/JuBa-Kasse/'
+                // Dynamischen Service Worker Pfad basierend auf aktuellem Pfad
+                const currentPath = window.location.pathname;
+                const swPath = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/sw.js' : './sw.js';
+                const scope = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/' : './';
+                
+                navigator.serviceWorker.register(swPath, {
+                    scope: scope
                 }).then(function(registration) {
                     console.log('ServiceWorker registriert: ', registration.scope);
                 }).catch(function(error) {

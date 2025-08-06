@@ -1,21 +1,10 @@
 # Firebase Cloud Messaging (FCM) Setup für JuBa-Kasse
 
-## 1. VAPID Key generieren
+## ✅ **VAPID Key bereits konfiguriert!**
 
-Um Push-Benachrichtigungen zu versenden, benötigen Sie einen VAPID Key:
-
-### Über Firebase Console:
-1. Gehen Sie zur [Firebase Console](https://console.firebase.google.com/)
-2. Wählen Sie Ihr "juba-kasse" Projekt
-3. Gehen Sie zu **Projekteinstellungen** > **Cloud Messaging**
-4. Scrollen Sie zu "Web Push certificates"
-5. Klicken Sie auf "Generate key pair"
-6. Kopieren Sie den generierten Key
-
-### VAPID Key in der App einsetzen:
-Ersetzen Sie in `fcm.js` die Variable `VAPID_KEY`:
-```javascript
-const VAPID_KEY = "IHR_GENERIERTER_VAPID_KEY_HIER";
+Der öffentliche VAPID-Schlüssel ist bereits in `fcm.js` eingesetzt:
+```
+BJRqvPbTlLX5lTeCG6v8aCr-GJ9wvV2_r9VqJPbEFOCMgR_ecCzKMt15zVkQ0Aiq5Ick61g5GZXXw-kT2rUoew4
 ```
 
 ## 2. Firebase-Regeln aktualisieren

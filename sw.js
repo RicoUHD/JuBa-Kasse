@@ -23,13 +23,21 @@ const messaging = firebase.messaging();
 
 // Cache-Name für die PWA
 const CACHE_NAME = 'juba-kasse-v1.0.0';
-const urlsToCache = [
-    '/JuBa-Kasse/',
-    '/JuBa-Kasse/index.html',
-    '/JuBa-Kasse/manifest.json',
-    '/JuBa-Kasse/icon-512.png',
-    'https://www.ev-bg.de/wp-content/uploads/2021/03/Logo_blau_Serifen.svg'
-];
+
+// Dynamische URL-Liste basierend auf dem aktuellen Pfad
+const getUrlsToCache = () => {
+    const currentPath = self.location.pathname;
+    const basePath = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/' : './';
+    
+    return [
+        basePath,
+        basePath + 'index.html',
+        basePath + 'manifest.json',
+        basePath + 'icon-512.png',
+        basePath + 'icon-192.png',
+        'https://www.ev-bg.de/wp-content/uploads/2021/03/Logo_blau_Serifen.svg'
+    ];
+};
 
 // Install Event - Cache-Ressourcen
 self.addEventListener('install', event => {
@@ -38,6 +46,8 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('[SW] Cache wird geöffnet');
+                const urlsToCache = getUrlsToCache();
+                console.log('[SW] URLs zum Cachen:', urlsToCache);
                 return cache.addAll(urlsToCache);
             })
             .catch(error => {
@@ -127,10 +137,12 @@ messaging.onBackgroundMessage((payload) => {
     console.log('[SW] Background Message empfangen:', payload);
     
     const notificationTitle = payload.notification?.title || payload.data?.title || 'JuBa-Kasse';
+    const basePath = self.location.pathname.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/' : './';
+    
     const notificationOptions = {
         body: payload.notification?.body || payload.data?.body || 'Neue Benachrichtigung',
-        icon: '/JuBa-Kasse/icon-512.png',
-        badge: '/JuBa-Kasse/icon-512.png',
+        icon: basePath + 'icon-512.png',
+        badge: basePath + 'icon-512.png',
         tag: 'juba-kasse-notification',
         renotify: true,
         requireInteraction: false,
@@ -138,7 +150,7 @@ messaging.onBackgroundMessage((payload) => {
             {
                 action: 'open',
                 title: 'Öffnen',
-                icon: '/JuBa-Kasse/icon-512.png'
+                icon: basePath + 'icon-512.png'
             },
             {
                 action: 'dismiss',
@@ -146,7 +158,7 @@ messaging.onBackgroundMessage((payload) => {
             }
         ],
         data: {
-            url: payload.data?.url || '/JuBa-Kasse/',
+            url: payload.data?.url || basePath,
             ...payload.data
         },
         timestamp: Date.now(),

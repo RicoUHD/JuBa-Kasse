@@ -1,7 +1,7 @@
 // Firebase Cloud Messaging Konfiguration und Hilfsfunktionen
 
-// VAPID Key für Web Push (müssen Sie in der Firebase Console generieren)
-const VAPID_KEY = "BHm6h4NKQ8k2DZ1HzVJ7X8F9YxW3GqE2RtB5Kp7Mn4Vw9UrL0SoC6ZdR1fY3Eh8Qv2PcA7I9bNwO5KtJzXrG8m";
+// VAPID Key für Web Push (öffentlicher Schlüssel aus Firebase Console)
+const VAPID_KEY = "BJRqvPbTlLX5lTeCG6v8aCr-GJ9wvV2_r9VqJPbEFOCMgR_ecCzKMt15zVkQ0Aiq5Ick61g5GZXXw-kT2rUoew4";
 
 class FCMManager {
     constructor() {
@@ -70,8 +70,15 @@ class FCMManager {
     // Service Worker registrieren
     async registerServiceWorker() {
         try {
-            const registration = await navigator.serviceWorker.register('/JuBa-Kasse/sw.js', {
-                scope: '/JuBa-Kasse/'
+            // Dynamischen Service Worker Pfad basierend auf aktuellem Pfad
+            const currentPath = window.location.pathname;
+            const swPath = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/sw.js' : './sw.js';
+            const scope = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/' : './';
+            
+            console.log('Registriere Service Worker:', swPath, 'mit Scope:', scope);
+            
+            const registration = await navigator.serviceWorker.register(swPath, {
+                scope: scope
             });
             
             console.log('Service Worker registriert:', registration);
@@ -181,15 +188,19 @@ class FCMManager {
     }
 
     // Message Listener für Foreground Messages
-    setupMessageListener() {
-        const { onMessage } = import('https://www.gstatic.com/firebasejs/11.9.0/firebase-messaging.js').then(module => {
-            module.onMessage(this.messaging, (payload) => {
+    async setupMessageListener() {
+        try {
+            const { onMessage } = await import('https://www.gstatic.com/firebasejs/11.9.0/firebase-messaging.js');
+            
+            onMessage(this.messaging, (payload) => {
                 console.log('Foreground Message empfangen:', payload);
                 
                 // Custom Notification im Foreground anzeigen
                 this.showForegroundNotification(payload);
             });
-        });
+        } catch (error) {
+            console.error('Fehler beim Einrichten des Message Listeners:', error);
+        }
     }
 
     // Notification im Foreground anzeigen
@@ -197,12 +208,16 @@ class FCMManager {
         const title = payload.notification?.title || payload.data?.title || 'JuBa-Kasse';
         const body = payload.notification?.body || payload.data?.body || 'Neue Benachrichtigung';
         
+        // Dynamischen Icon-Pfad ermitteln
+        const currentPath = window.location.pathname;
+        const iconPath = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : './icon-512.png';
+        
         // System-Notification erstellen
         if (Notification.permission === 'granted') {
             const notification = new Notification(title, {
                 body: body,
-                icon: '/JuBa-Kasse/icon-512.png',
-                badge: '/JuBa-Kasse/icon-512.png',
+                icon: iconPath,
+                badge: iconPath,
                 tag: 'juba-kasse-foreground',
                 renotify: true,
                 data: payload.data
@@ -246,6 +261,10 @@ class FCMManager {
             document.body.appendChild(container);
         }
         
+        // Dynamischen Icon-Pfad ermitteln
+        const currentPath = window.location.pathname;
+        const iconPath = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : './icon-512.png';
+        
         // Notification Element erstellen
         const notification = document.createElement('div');
         notification.style.cssText = `
@@ -261,7 +280,7 @@ class FCMManager {
         
         notification.innerHTML = `
             <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <img src="/JuBa-Kasse/icon-512.png" alt="Icon" style="width: 32px; height: 32px; border-radius: 6px;">
+                <img src="${iconPath}" alt="Icon" style="width: 32px; height: 32px; border-radius: 6px;">
                 <div style="flex: 1;">
                     <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">${title}</div>
                     <div style="font-size: 14px; color: #64748b;">${body}</div>
@@ -347,12 +366,16 @@ class FCMManager {
             return;
         }
         
+        // Dynamischen Icon-Pfad ermitteln
+        const currentPath = window.location.pathname;
+        const iconPath = currentPath.includes('/JuBa-Kasse/') ? '/JuBa-Kasse/icon-512.png' : './icon-512.png';
+        
         // Test mit lokaler Notification
         if (Notification.permission === 'granted') {
             const notification = new Notification('JuBa-Kasse Test', {
                 body: 'Dies ist eine Test-Benachrichtigung!',
-                icon: '/JuBa-Kasse/icon-512.png',
-                badge: '/JuBa-Kasse/icon-512.png',
+                icon: iconPath,
+                badge: iconPath,
                 tag: 'test-notification'
             });
             
