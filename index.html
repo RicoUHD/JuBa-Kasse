@@ -35,28 +35,29 @@
 
         [data-theme="dark"] {
             /* Dark Theme Colors */
-            --primary-bg: #0f1419;
-            --secondary-bg: #1a1f2b;
-            --card-bg: #232937;
-            --primary-color: #ff8c00;
-            --secondary-color: #ffa500;
+            --primary-bg: #0a0a0a;
+            --secondary-bg: #1a1a1a;
+            --card-bg: #242424;
+            --primary-color: #ff6600;
+            --secondary-color: #ff8800;
             --text-primary: #ffffff;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border-color: #374151;
-            --border-light: #2d3748;
-            --shadow: rgba(0,0,0,0.2);
-            --shadow-lg: rgba(0,0,0,0.3);
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
+            --text-secondary: #e0e0e0;
+            --text-muted: #999999;
+            --border-color: #ff6600;
+            --border-light: #333333;
+            --shadow: rgba(0,0,0,0.3);
+            --shadow-lg: rgba(0,0,0,0.4);
+            --success: #00ff88;
+            --danger: #ff4444;
+            --warning: #ffaa00;
             
-            /* Orange-Yellow Gradient Colors for Dark Theme */
-            --gradient-primary: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
-            --gradient-success: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
-            --gradient-danger: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
-            --gradient-card: linear-gradient(135deg, #232937 0%, #1a1f2b 100%);
-            --gradient-kassenstand: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            /* Strong Orange Gradient Colors for Dark Theme */
+            --gradient-primary: linear-gradient(135deg, #ff6600 0%, #ff8800 50%, #ffaa00 100%);
+            --gradient-success: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+            --gradient-danger: linear-gradient(135deg, #ff4444 0%, #cc2222 100%);
+            --gradient-card: linear-gradient(135deg, #242424 0%, #1a1a1a 100%);
+            --gradient-kassenstand: linear-gradient(135deg, #2a1a0a 0%, #1a1a1a 100%);
+            --gradient-border: linear-gradient(135deg, #ff6600 0%, #ff8800 50%, #ffaa00 100%);
         }
 
         * {
@@ -205,6 +206,11 @@
             box-shadow: 0 2px 8px var(--shadow);
         }
 
+        [data-theme="dark"] .theme-toggle-btn.active {
+            background: var(--gradient-primary);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
         .theme-icon {
             font-size: 16px;
         }
@@ -241,11 +247,39 @@
             box-shadow: 0 4px 12px var(--shadow), 0 2px 4px var(--shadow);
             transition: all 0.3s ease;
             overflow: hidden;
+            position: relative;
+        }
+
+        [data-theme="dark"] .card {
+            background: var(--card-bg);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        [data-theme="dark"] .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-border);
+            border-radius: 16px;
+            padding: 2px;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: xor;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            z-index: -1;
         }
 
         .card:hover {
             box-shadow: 0 8px 24px var(--shadow-lg), 0 4px 8px var(--shadow);
             transform: translateY(-2px);
+        }
+
+        [data-theme="dark"] .card:hover {
+            box-shadow: 0 8px 24px var(--shadow-lg), 0 4px 8px var(--shadow);
         }
 
         .card-header {
@@ -360,8 +394,19 @@
             transform: translateY(-1px);
         }
 
+        [data-theme="dark"] .form-input:focus, 
+        [data-theme="dark"] .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0,0,0, 0.2);
+        }
+
         .form-input:hover, .form-select:hover {
             border-color: var(--primary-color);
+        }
+
+        [data-theme="dark"] .form-input:hover, 
+        [data-theme="dark"] .form-select:hover {
+            border-color: var(--secondary-color);
         }
 
         /* .form-select {
@@ -410,11 +455,25 @@
             background: var(--gradient-primary);
             color: white;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            position: relative;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        [data-theme="dark"] .btn-primary {
+            background: var(--gradient-primary);
+            box-shadow: 0 4px 12px var(--shadow);
+            border: 1px solid var(--primary-color);
         }
 
         .btn-primary:hover {
             box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
             transform: translateY(-2px);
+        }
+
+        [data-theme="dark"] .btn-primary:hover {
+            box-shadow: 0 6px 20px var(--shadow-lg);
+            border-color: var(--secondary-color);
         }
 
         .btn-secondary {
@@ -458,9 +517,18 @@
             transform: translateY(0);
         }
 
+        [data-theme="dark"] .person-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+        }
+
         .person-item:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 24px var(--shadow-lg), 0 4px 8px var(--shadow);
+        }
+
+        [data-theme="dark"] .person-item:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.2);
         }
 
         .person-item:active {
@@ -641,9 +709,21 @@
         }
 
         [data-theme="dark"] .status-geringverdiener {
-            background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
-            color: #fde68a;
-            border-color: #f59e0b;
+            background: linear-gradient(135deg, #ff6600 0%, #ff8800 100%);
+            color: #ffffff;
+            border-color: #ffaa00;
+        }
+
+        .status-keinverdiener {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            color: #0369a1;
+            border-color: #0ea5e9;
+        }
+
+        [data-theme="dark"] .status-keinverdiener {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: #cbd5e1;
+            border-color: #64748b;
         }
 
         .person-right {
@@ -745,9 +825,21 @@
             border: none;
         }
 
+        [data-theme="dark"] .floating-add {
+            background: var(--gradient-primary);
+            box-shadow: 0 8px 24px var(--shadow);
+            border: 2px solid var(--primary-color);
+        }
+
         .floating-add:hover {
             transform: scale(1.1);
             box-shadow: 0 12px 32px rgba(37, 99, 235, 0.4);
+        }
+
+        [data-theme="dark"] .floating-add:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 32px var(--shadow-lg);
+            border-color: var(--secondary-color);
         }
 
         .floating-add:active {
@@ -794,10 +886,38 @@
             align-items: center;
             gap: 12px;
             min-width: 160px;
+            position: relative;
+        }
+
+        [data-theme="dark"] .floating-menu-item {
+            background: var(--card-bg);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        [data-theme="dark"] .floating-menu-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-border);
+            border-radius: 12px;
+            padding: 2px;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: xor;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            z-index: -1;
         }
 
         .floating-menu-item:hover {
             transform: translateX(-8px) scale(1.05);
+            box-shadow: 0 8px 24px var(--shadow-lg);
+        }
+
+        [data-theme="dark"] .floating-menu-item:hover {
             box-shadow: 0 8px 24px var(--shadow-lg);
         }
 
@@ -970,6 +1090,30 @@
             transform: scale(0.7) translateY(50px);
             opacity: 0;
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        [data-theme="dark"] .modal-content {
+            background: var(--card-bg);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        [data-theme="dark"] .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-border);
+            border-radius: 20px;
+            padding: 2px;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: xor;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            z-index: -1;
         }
 
         .modal.show .modal-content {
@@ -1027,8 +1171,35 @@
             transform: translateY(0);
         }
 
+        [data-theme="dark"] .kassenstand-item {
+            background: var(--card-bg);
+            border: 3px solid transparent;
+            background-clip: padding-box;
+        }
+
+        [data-theme="dark"] .kassenstand-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-border);
+            border-radius: 20px;
+            padding: 3px;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: xor;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            z-index: -1;
+        }
+
         .kassenstand-item:hover {
             transform: translateY(-4px);
+            box-shadow: 0 12px 32px var(--shadow-lg), 0 6px 12px var(--shadow);
+        }
+
+        [data-theme="dark"] .kassenstand-item:hover {
             box-shadow: 0 12px 32px var(--shadow-lg), 0 6px 12px var(--shadow);
         }
 
