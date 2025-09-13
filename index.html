@@ -12,12 +12,12 @@
             --primary-bg: #f8fafc;
             --secondary-bg: #ffffff;
             --card-bg: #ffffff;
-            --primary-color: #0ea5e9;
-            --secondary-color: #06b6d4;
+            --primary-color: #3b82f6;
+            --secondary-color: #1d4ed8;
             --text-primary: #1e293b;
             --text-secondary: #64748b;
             --text-muted: #9ca3af;
-            --border-color: #0ea5e9;
+            --border-color: #3b82f6;
             --border-light: #f1f5f9;
             --shadow: rgba(0,0,0,0.05);
             --shadow-lg: rgba(0,0,0,0.1);
@@ -25,13 +25,13 @@
             --danger: #dc2626;
             --warning: #ea580c;
             
-            /* Green-Blue Gradient Colors for Light Theme */
-            --gradient-primary: linear-gradient(135deg, #059669 0%, #0ea5e9 50%, #06b6d4 100%);
+            /* Subtle Blue Gradient Colors for Light Theme */
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             --gradient-success: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
             --gradient-danger: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
             --gradient-card: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
             --gradient-kassenstand: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            --gradient-border: linear-gradient(135deg, #059669 0%, #0ea5e9 50%, #06b6d4 100%);
+            --gradient-border: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         }
 
         [data-theme="dark"] {
@@ -276,25 +276,7 @@
 
         [data-theme="light"] .card {
             background: var(--card-bg);
-            border: 2px solid transparent;
-            background-clip: padding-box;
-        }
-
-        [data-theme="light"] .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--gradient-border);
-            border-radius: 16px;
-            padding: 2px;
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: xor;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            z-index: -1;
+            border: 1px solid #e2e8f0;
         }
 
         .card:hover {
@@ -492,7 +474,7 @@
 
         [data-theme="light"] .btn-primary {
             background: var(--gradient-primary);
-            box-shadow: 0 4px 12px var(--shadow);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
             border: 1px solid var(--primary-color);
         }
 
@@ -878,8 +860,8 @@
 
         [data-theme="light"] .floating-add {
             background: var(--gradient-primary);
-            box-shadow: 0 8px 24px var(--shadow);
-            border: 2px solid var(--primary-color);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+            border: 1px solid var(--primary-color);
         }
 
         .floating-add:hover {
@@ -971,25 +953,7 @@
 
         [data-theme="light"] .floating-menu-item {
             background: var(--card-bg);
-            border: 2px solid transparent;
-            background-clip: padding-box;
-        }
-
-        [data-theme="light"] .floating-menu-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--gradient-border);
-            border-radius: 12px;
-            padding: 2px;
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: xor;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            z-index: -1;
+            border: 1px solid #e5e7eb;
         }
 
         .floating-menu-item:hover {
@@ -1198,25 +1162,7 @@
 
         [data-theme="light"] .modal-content {
             background: var(--card-bg);
-            border: 2px solid transparent;
-            background-clip: padding-box;
-        }
-
-        [data-theme="light"] .modal-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--gradient-border);
-            border-radius: 20px;
-            padding: 2px;
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: xor;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            z-index: -1;
+            border: 1px solid #e5e7eb;
         }
 
         .modal.show .modal-content {
@@ -1298,26 +1244,8 @@
         }
 
         [data-theme="light"] .kassenstand-item {
-            background: var(--card-bg);
-            border: 3px solid transparent;
-            background-clip: padding-box;
-        }
-
-        [data-theme="light"] .kassenstand-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--gradient-border);
-            border-radius: 20px;
-            padding: 3px;
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: xor;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            z-index: -1;
+            background: var(--gradient-kassenstand);
+            border: 1px solid #bae6fd;
         }
 
         .kassenstand-item:hover {
