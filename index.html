@@ -992,18 +992,43 @@
                 display: flex;
                 gap: 32px;
                 padding: 32px;
+                /* Wichtig für flexibles Scroll-Verhalten der Spalten */
+                flex: 1;
+                min-height: 0;
             }
 
             .overview-left {
                 flex: 1;
-                max-width: 600px;
+                max-width: 700px;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
             }
 
             .overview-right {
                 flex: 1;
-                max-height: calc(100vh - 280px);
+                /* Scrollbarer Bereich rechts */
                 overflow-y: auto;
                 padding-right: 12px;
+                max-height: none;
+                min-height: 0;
+            }
+
+            .overview-right > h3 {
+                position: sticky;
+                top: 0;
+                background: var(--secondary-bg);
+                z-index: 5;
+                padding-top: 8px;
+                margin-top: -8px;
+            }
+
+            #transaction-details-desktop::-webkit-scrollbar {
+                width: 8px;
+            }
+            #transaction-details-desktop::-webkit-scrollbar-thumb {
+                background: var(--border-color);
+                border-radius: 4px;
             }
 
             .overview-right::-webkit-scrollbar {
@@ -1034,13 +1059,25 @@
                 margin-bottom: 32px;
             }
 
-            /* Transaktionsdetails für Desktop */
-            .transaction-details.active {
-                max-height: 500px;
+            /* Kassenstand-Karte links soll die Höhe füllen */
+            #kassenstand-desktop {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                margin-bottom: 0;
+                min-height: 0;
             }
 
-            #transaction-list {
-                max-height: 300px;
+            /* Transaktionsdetails links sind eigenständig scrollbar und passen sich an */
+            #transaction-details-desktop {
+                flex: 1;
+                overflow-y: auto;
+                padding-right: 8px;
+            }
+
+            /* Begrenze nicht zusätzlich innerhalb – der Container scrollt bereits */
+            #transaction-list-desktop {
+                max-height: none;
             }
 
             /* Desktop-spezifische Person Items */
@@ -1601,7 +1638,7 @@
                 <!-- Linke Spalte: Kassenstand und Transaktionen -->
                 <div class="overview-left">
                     <!-- Kassenstand Desktop -->
-                    <div id="kassenstand-desktop" class="kassenstand-item" onclick="toggleKassenstandDetailsDesktop()">
+                    <div id="kassenstand-desktop" class="kassenstand-item">
                         <div class="kassenstand-content">
                             <div class="kassenstand-title">Kassenstand</div>
                             <div id="kassenstand-amount-desktop" class="kassenstand-amount">0,00 €</div>
@@ -1894,6 +1931,18 @@
             
             // Render initial kassenstand even without authentication
             renderKassenstand();
+
+            // Re-render lists when switching between mobile/desktop sizes
+            const mediaQuery = window.matchMedia('(min-width: 769px)');
+            mediaQuery.addEventListener('change', () => {
+                renderPeople();
+                // Desktop: wenn sichtbar, Transaktionen neuberechnen
+                const detailsDesktop = document.getElementById('transaction-details-desktop');
+                if (detailsDesktop && mediaQuery.matches) {
+                    detailsDesktop.classList.add('active');
+                    renderTransactionHistoryDesktop();
+                }
+            });
         });
 
         // Theme Management
@@ -2043,6 +2092,12 @@
                     const paymentDateEl = document.getElementById('payment-date');
                     if (paymentDateEl) {
                         paymentDateEl.value = new Date().toISOString().split('T')[0];
+                    }
+                    // Desktop-Transaktionen initial rendern
+                    const detailsDesktop = document.getElementById('transaction-details-desktop');
+                    if (detailsDesktop) {
+                        detailsDesktop.classList.add('active');
+                        renderTransactionHistoryDesktop();
                     }
                 });
             } else {
@@ -2598,37 +2653,46 @@
             }
         };
 
-        window.changePersonStatus = async function(personId) {
+    // Änderung der Verdienergruppe mit Gültig-ab-Datum
+    // - Bei Statuswechsel wird der bisherige Status in statusHistory aufgenommen (bis zum Gültig-ab-Datum)
+    // - Der neue Status gilt ab dem gewählten Datum (rückwirkend oder zukünftig)
+    // - statusHistory wird bei Berechnungen chronologisch ausgewertet
+    window.changePersonStatus = async function(personId) {
             if (isLoading || !isAuthenticated) return;
             
             const newStatus = document.getElementById(`status-select-${personId}`).value;
             const newMemberSince = document.getElementById(`member-since-${personId}`).value;
+            // Neues Feld: Gültig-ab-Datum (optional, default heute)
+            const effectiveDateInput = document.getElementById(`status-effective-${personId}`);
+            const today = new Date().toISOString().split('T')[0];
+            const effectiveDate = (effectiveDateInput && effectiveDateInput.value) ? effectiveDateInput.value : today;
             
             try {
                 const person = people.find(p => p.id === personId);
                 if (!person) return;
                 
-                const today = new Date().toISOString().split('T')[0];
-                
                 // Check if status is actually changing
                 if (person.status !== newStatus) {
+                    const previousStatus = person.status;
                     // Initialize statusHistory if it doesn't exist
                     if (!person.statusHistory) {
                         person.statusHistory = [];
                     }
                     
-                    // Add current status to history (ends today)
-                    person.statusHistory.push({
-                        status: person.status,
-                        startDate: person.memberSince,
-                        endDate: today
-                    });
+                    // Add current status to history only if the effective date is after current start
+                    if (new Date(effectiveDate) > new Date(person.memberSince)) {
+                        person.statusHistory.push({
+                            status: person.status,
+                            startDate: person.memberSince,
+                            endDate: effectiveDate
+                        });
+                    }
                     
-                    // Set new status starting from today
+                    // Set new status starting from effective date (kann rückwirkend oder zukünftig sein)
                     person.status = newStatus;
-                    person.memberSince = today;
+                    person.memberSince = effectiveDate;
                     
-                    const message = `Status von ${getStatusDisplayName(person.statusHistory[person.statusHistory.length - 1].status)} zu ${getStatusDisplayName(newStatus)} geändert. Der neue Status gilt ab heute (${new Date(today).toLocaleDateString('de-DE')}).`;
+                    const message = `Status von ${getStatusDisplayName(previousStatus)} zu ${getStatusDisplayName(newStatus)} geändert. Gültig ab ${new Date(effectiveDate).toLocaleDateString('de-DE')}.`;
                     
                     await savePeople();
                     renderPeople();
@@ -2715,8 +2779,9 @@
             
             // Process status history chronologically
             if (person.statusHistory && person.statusHistory.length > 0) {
-                for (let i = 0; i < person.statusHistory.length; i++) {
-                    const historyEntry = person.statusHistory[i];
+                const historySorted = person.statusHistory.slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                for (let i = 0; i < historySorted.length; i++) {
+                    const historyEntry = historySorted[i];
                     const startDate = new Date(historyEntry.startDate);
                     const endDate = new Date(historyEntry.endDate);
                     const monthlyRate = settings[historyEntry.status];
@@ -3146,13 +3211,17 @@
             renderKassenstand();
 
             if (people.length === 0) {
-                if (container) {
-                    container.innerHTML = '';
-                    emptyState.style.display = 'block';
-                }
-                if (containerDesktop) {
-                    containerDesktop.innerHTML = '';
-                    emptyStateDesktop.style.display = 'block';
+                const isDesktopVisible = window.matchMedia('(min-width: 769px)').matches;
+                if (isDesktopVisible) {
+                    if (containerDesktop) containerDesktop.innerHTML = '';
+                    if (emptyStateDesktop) emptyStateDesktop.style.display = 'block';
+                    if (container) container.innerHTML = '';
+                    if (emptyState) emptyState.style.display = 'none';
+                } else {
+                    if (container) container.innerHTML = '';
+                    if (emptyState) emptyState.style.display = 'block';
+                    if (containerDesktop) containerDesktop.innerHTML = '';
+                    if (emptyStateDesktop) emptyStateDesktop.style.display = 'none';
                 }
                 return;
             }
@@ -3211,9 +3280,19 @@
                 `;
             }
 
-            // Beide Container aktualisieren
-            if (container) container.innerHTML = html;
-            if (containerDesktop) containerDesktop.innerHTML = html;
+            // Nur in sichtbare Ansicht rendern, um doppelte IDs zu vermeiden
+            const isDesktopVisible = window.matchMedia('(min-width: 769px)').matches;
+            if (isDesktopVisible) {
+                if (containerDesktop) containerDesktop.innerHTML = html;
+                if (container) container.innerHTML = '';
+                if (emptyState) emptyState.style.display = 'none';
+                if (emptyStateDesktop) emptyStateDesktop.style.display = 'none';
+            } else {
+                if (container) container.innerHTML = html;
+                if (containerDesktop) containerDesktop.innerHTML = '';
+                if (emptyStateDesktop) emptyStateDesktop.style.display = 'none';
+                if (emptyState) emptyState.style.display = 'none';
+            }
         }
 
         function generatePersonHTML(person) {
@@ -3260,10 +3339,12 @@
                                     <option value="geringverdiener" ${person.status === 'geringverdiener' ? 'selected' : ''}>Geringverdiener</option>
                                     <option value="keinverdiener" ${person.status === 'keinverdiener' ? 'selected' : ''}>Keinverdiener</option>
                                 </select>
+                                <input type="date" id="status-effective-${person.id}" class="form-input" value="${new Date().toISOString().split('T')[0]}" title="Gültig ab" style="max-width: 160px;">
                                 <button class="btn btn-secondary btn-small" onclick="changePersonStatus('${person.id}')">
                                     Ändern
                                 </button>
                             </div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 6px;">Gültig ab Datum kann in der Vergangenheit oder Zukunft liegen.</div>
                         </div>
                         
                         ${person.statusHistory && person.statusHistory.length > 0 ? `
