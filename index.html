@@ -2677,9 +2677,14 @@
                 const person = people.find(p => p.id === personId);
                 if (!person) return;
                 
-                // Check if status is actually changing
-                if (person.status !== newStatus) {
+                // Check if status is changing OR if date is different (allow date correction)
+                const isStatusChanging = person.status !== newStatus;
+                const isDateChanging = person.memberSince !== effectiveDate;
+                
+                if (isStatusChanging || isDateChanging) {
                     const previousStatus = person.status;
+                    const previousDate = person.memberSince;
+                    
                     // Initialize statusHistory if it doesn't exist
                     if (!person.statusHistory) {
                         person.statusHistory = [];
@@ -2690,26 +2695,48 @@
                         person.originalMemberSince = person.memberSince;
                     }
                     
-                    // Add current status to history only if the effective date is after current start
-                    if (new Date(effectiveDate) > new Date(person.memberSince)) {
-                        person.statusHistory.push({
-                            status: person.status,
-                            startDate: person.memberSince,
-                            endDate: effectiveDate
-                        });
+                    // If status is changing (not just date correction)
+                    if (isStatusChanging) {
+                        // Add current status to history only if the effective date is after current start
+                        if (new Date(effectiveDate) > new Date(person.memberSince)) {
+                            person.statusHistory.push({
+                                status: person.status,
+                                startDate: person.memberSince,
+                                endDate: effectiveDate
+                            });
+                        }
+                        
+                        // Set new status starting from effective date
+                        person.status = newStatus;
+                        person.memberSince = effectiveDate;
+                        
+                        const message = `Status von ${getStatusDisplayName(previousStatus)} zu ${getStatusDisplayName(newStatus)} geändert. Gültig ab ${new Date(effectiveDate).toLocaleDateString('de-DE')}.`;
+                        
+                        await savePeople();
+                        renderPeople();
+                        alert(message);
+                    } else {
+                        // Only date is changing (same status, different date)
+                        // Need to update the last history entry's endDate if it exists
+                        if (person.statusHistory && person.statusHistory.length > 0) {
+                            // Find the history entry that ends at the old date (previousDate)
+                            const lastHistoryEntry = person.statusHistory.find(h => h.endDate === previousDate);
+                            if (lastHistoryEntry) {
+                                // Update the endDate to the new effective date
+                                lastHistoryEntry.endDate = effectiveDate;
+                            }
+                        }
+                        
+                        person.memberSince = effectiveDate;
+                        
+                        const message = `Gültigkeitsdatum für ${getStatusDisplayName(newStatus)} auf ${new Date(effectiveDate).toLocaleDateString('de-DE')} aktualisiert.`;
+                        
+                        await savePeople();
+                        renderPeople();
+                        alert(message);
                     }
-                    
-                    // Set new status starting from effective date (kann rückwirkend oder zukünftig sein)
-                    person.status = newStatus;
-                    person.memberSince = effectiveDate;
-                    
-                    const message = `Status von ${getStatusDisplayName(previousStatus)} zu ${getStatusDisplayName(newStatus)} geändert. Gültig ab ${new Date(effectiveDate).toLocaleDateString('de-DE')}.`;
-                    
-                    await savePeople();
-                    renderPeople();
-                    alert(message);
                 } else {
-                    alert('Status ist bereits ausgewählt.');
+                    alert('Status und Datum sind bereits so eingestellt. Keine Änderung notwendig.');
                 }
             } catch (error) {
                 console.error('Fehler beim Aktualisieren des Status:', error);
@@ -2790,6 +2817,61 @@
                 case 'keinverdiener': return 'Keinverdiener';
                 default: return status;
             }
+        }
+
+        // Neue Hilfsfunktion: Ermittelt den aktuell gültigen Status einer Person
+        function getCurrentStatus(person) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalisiere auf Tagesbeginn
+            
+            // Wenn der aktuelle status.memberSince in der Zukunft liegt, ist es noch nicht gültig
+            if (person.memberSince && new Date(person.memberSince) > today) {
+                // Suche in der Statushistorie nach dem aktuell gültigen Status
+                if (person.statusHistory && person.statusHistory.length > 0) {
+                    // Sortiere Historie chronologisch
+                    const historySorted = person.statusHistory.slice().sort((a, b) => 
+                        new Date(b.endDate) - new Date(a.endDate)
+                    );
+                    
+                    // Finde den neuesten Eintrag, dessen endDate >= heute ist
+                    for (let history of historySorted) {
+                        const endDate = new Date(history.endDate);
+                        endDate.setHours(0, 0, 0, 0);
+                        if (endDate >= today) {
+                            return history.status;
+                        }
+                    }
+                }
+            }
+            
+            // Standard: Der in person.status gespeicherte Wert
+            return person.status;
+        }
+
+        // Neue Hilfsfunktion: Ermittelt das Startdatum des aktuell gültigen Status
+        function getCurrentStatusStartDate(person) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Wenn der aktuelle status.memberSince in der Zukunft liegt
+            if (person.memberSince && new Date(person.memberSince) > today) {
+                // Suche in der Statushistorie nach dem aktuell gültigen Status
+                if (person.statusHistory && person.statusHistory.length > 0) {
+                    const historySorted = person.statusHistory.slice().sort((a, b) => 
+                        new Date(b.endDate) - new Date(a.endDate)
+                    );
+                    
+                    for (let history of historySorted) {
+                        const endDate = new Date(history.endDate);
+                        endDate.setHours(0, 0, 0, 0);
+                        if (endDate >= today) {
+                            return history.startDate;
+                        }
+                    }
+                }
+            }
+            
+            return person.memberSince;
         }
 
         window.showDeleteConfirm = function(personId) {
@@ -3385,14 +3467,23 @@
             // Use originalMemberSince if available, otherwise use memberSince
             const displayMemberSince = person.originalMemberSince || person.memberSince;
             
+            // Ermittle den aktuell gültigen Status (berücksichtigt zukünftige Statuswechsel)
+            const currentStatus = getCurrentStatus(person);
+            const currentStatusStartDate = getCurrentStatusStartDate(person);
+            
+            // Check if there's a future status change
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const hasFutureStatusChange = person.memberSince && new Date(person.memberSince) > today;
+            
             return `
                 <div class="person-item" onclick="togglePersonDetails('${person.id}')">
                     <div class="person-pill">
                         <div class="person-left">
                             <div class="person-name">${person.name}</div>
-                            <div class="person-status status-${person.status}">
-                                ${person.status === 'vollverdiener' ? 'Vollverdiener' : 
-                                  person.status === 'geringverdiener' ? 'Geringverdiener' : 'Keinverdiener'}
+                            <div class="person-status status-${currentStatus}">
+                                ${currentStatus === 'vollverdiener' ? 'Vollverdiener' : 
+                                  currentStatus === 'geringverdiener' ? 'Geringverdiener' : 'Keinverdiener'}
                             </div>
                         </div>
                         <div class="person-right">
@@ -3439,18 +3530,41 @@
                             <div style="font-size: 12px; color: #64748b; margin-top: 6px;">Gültig ab Datum kann in der Vergangenheit oder Zukunft liegen.</div>
                         </div>
                         
+                        ${hasFutureStatusChange ? `
+                            <div class="detail-section">
+                                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fbbf24; border-radius: 12px; padding: 12px;">
+                                    <div style="font-size: 12px; font-weight: 600; color: #92400e; margin-bottom: 4px;">📅 GEPLANTER STATUSWECHSEL</div>
+                                    <div style="font-size: 14px; color: #78350f;">
+                                        Wechsel zu <strong>${getStatusDisplayName(person.status)}</strong> am <strong>${new Date(person.memberSince).toLocaleDateString('de-DE')}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
                         ${person.statusHistory && person.statusHistory.length > 0 ? `
                             <div class="detail-section">
                                 <h4>Statushistorie</h4>
-                                <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Vergangene Status-Änderungen:</div>
-                                ${person.statusHistory.map(history => `
-                                    <div style="font-size: 12px; color: #6b7280; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
-                                        ${getStatusDisplayName(history.status)} vom ${new Date(history.startDate).toLocaleDateString('de-DE')} bis ${new Date(history.endDate).toLocaleDateString('de-DE')}
+                                <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Vergangene und zukünftige Status-Änderungen:</div>
+                                ${person.statusHistory.map(history => {
+                                    const historyEndDate = new Date(history.endDate);
+                                    historyEndDate.setHours(0, 0, 0, 0);
+                                    const isPast = historyEndDate < today;
+                                    return `
+                                        <div style="font-size: 12px; color: ${isPast ? '#6b7280' : '#059669'}; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
+                                            ${getStatusDisplayName(history.status)} vom ${new Date(history.startDate).toLocaleDateString('de-DE')} bis ${new Date(history.endDate).toLocaleDateString('de-DE')}
+                                            ${!isPast ? ' (aktuell)' : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                                ${!hasFutureStatusChange ? `
+                                    <div style="font-size: 12px; color: #059669; padding: 4px 0; font-weight: 600;">
+                                        ${getStatusDisplayName(currentStatus)} seit ${new Date(currentStatusStartDate).toLocaleDateString('de-DE')} (aktuell)
                                     </div>
-                                `).join('')}
-                                <div style="font-size: 12px; color: #059669; padding: 4px 0; font-weight: 600;">
-                                    ${getStatusDisplayName(person.status)} seit ${new Date(person.memberSince).toLocaleDateString('de-DE')} (aktuell)
-                                </div>
+                                ` : `
+                                    <div style="font-size: 12px; color: #fbbf24; padding: 4px 0; font-weight: 600;">
+                                        ${getStatusDisplayName(person.status)} ab ${new Date(person.memberSince).toLocaleDateString('de-DE')} (geplant)
+                                    </div>
+                                `}
                             </div>
                         ` : ''}
                         
