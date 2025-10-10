@@ -2661,7 +2661,6 @@
             if (isLoading || !isAuthenticated) return;
             
             const newStatus = document.getElementById(`status-select-${personId}`).value;
-            const newMemberSince = document.getElementById(`member-since-${personId}`).value;
             // Neues Feld: Gültig-ab-Datum (optional, default heute)
             const effectiveDateInput = document.getElementById(`status-effective-${personId}`);
             const today = new Date().toISOString().split('T')[0];
@@ -2698,15 +2697,85 @@
                     renderPeople();
                     alert(message);
                 } else {
-                    // Only update memberSince if status hasn't changed
-                    person.memberSince = newMemberSince;
-                    
-                    await savePeople();
-                    renderPeople();
-                    alert('Startdatum aktualisiert!');
+                    // Status hasn't changed
+                    alert('Bitte wählen Sie einen anderen Status aus, um ihn zu ändern.');
                 }
             } catch (error) {
                 console.error('Fehler beim Aktualisieren des Status:', error);
+                alert('Fehler beim Speichern der Änderungen in Firebase');
+            }
+        };
+
+        window.saveMemberSince = async function(personId) {
+            if (isLoading || !isAuthenticated) return;
+            
+            const newMemberSince = document.getElementById(`member-since-${personId}`).value;
+            
+            if (!newMemberSince) {
+                alert('Bitte ein gültiges Datum eingeben');
+                return;
+            }
+            
+            try {
+                const person = people.find(p => p.id === personId);
+                if (!person) return;
+                
+                const oldMemberSince = person.memberSince;
+                
+                // Check if the date is actually changing
+                if (oldMemberSince === newMemberSince) {
+                    alert('Das Datum hat sich nicht geändert.');
+                    return;
+                }
+                
+                // Initialize statusHistory if it doesn't exist
+                if (!person.statusHistory) {
+                    person.statusHistory = [];
+                }
+                
+                const newDate = new Date(newMemberSince);
+                const oldDate = new Date(oldMemberSince);
+                
+                // If moving the date backward (earlier)
+                if (newDate < oldDate) {
+                    // Update the earliest status history entry or create one
+                    if (person.statusHistory.length > 0) {
+                        // Sort history by start date
+                        const historySorted = person.statusHistory.slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                        const earliestHistory = historySorted[0];
+                        
+                        // Update the earliest history entry to start from the new date
+                        const historyIndex = person.statusHistory.findIndex(h => h.startDate === earliestHistory.startDate);
+                        if (historyIndex !== -1) {
+                            person.statusHistory[historyIndex].startDate = newMemberSince;
+                        }
+                    }
+                    // Update memberSince to the new (earlier) date
+                    person.memberSince = newMemberSince;
+                } else {
+                    // Moving date forward (later)
+                    // Need to update status history
+                    if (person.statusHistory.length > 0) {
+                        // Remove any history entries that would now be before the new start date
+                        person.statusHistory = person.statusHistory.filter(h => new Date(h.endDate) > newDate);
+                        
+                        // Update remaining history entries
+                        person.statusHistory = person.statusHistory.map(h => {
+                            if (new Date(h.startDate) < newDate) {
+                                return {...h, startDate: newMemberSince};
+                            }
+                            return h;
+                        });
+                    }
+                    // Update memberSince to the new (later) date
+                    person.memberSince = newMemberSince;
+                }
+                
+                await savePeople();
+                renderPeople();
+                alert(`Startdatum von ${new Date(oldMemberSince).toLocaleDateString('de-DE')} zu ${new Date(newMemberSince).toLocaleDateString('de-DE')} aktualisiert!`);
+            } catch (error) {
+                console.error('Fehler beim Aktualisieren des Startdatums:', error);
                 alert('Fehler beim Speichern der Änderungen in Firebase');
             }
         };
@@ -3328,7 +3397,12 @@
                         
                         <div class="detail-section">
                             <h4>Zahlt seit</h4>
-                            <input type="date" id="member-since-${person.id}" class="form-input" value="${person.memberSince}" style="margin-bottom: 12px;">
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                <input type="date" id="member-since-${person.id}" class="form-input" value="${person.memberSince}" style="flex: 1;">
+                                <button class="btn btn-secondary btn-small" onclick="saveMemberSince('${person.id}')" style="white-space: nowrap;">
+                                    Speichern
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="detail-section">
