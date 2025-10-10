@@ -2182,6 +2182,10 @@
                     if (!person.memberSince) {
                         person.memberSince = new Date().toISOString().split('T')[0];
                     }
+                    // Initialize originalMemberSince if not present
+                    if (!person.originalMemberSince) {
+                        person.originalMemberSince = person.memberSince;
+                    }
                 });
                 
                 isLoading = false;
@@ -2475,13 +2479,15 @@
             }
 
             try {
+                const memberSinceDate = new Date().toISOString().split('T')[0];
                 const person = {
                     id: Date.now().toString(),
                     name: name,
                     status: status,
                     payments: [],
                     totalPaid: 0,
-                    memberSince: new Date().toISOString().split('T')[0] // Heute als Startdatum
+                    memberSince: memberSinceDate, // Heute als Startdatum
+                    originalMemberSince: memberSinceDate // Ursprüngliches "Zahlt seit" Datum
                 };
 
                 // Automatically add a 0€ "Nutzerbestätigung" payment
@@ -2657,11 +2663,11 @@
     // - Bei Statuswechsel wird der bisherige Status in statusHistory aufgenommen (bis zum Gültig-ab-Datum)
     // - Der neue Status gilt ab dem gewählten Datum (rückwirkend oder zukünftig)
     // - statusHistory wird bei Berechnungen chronologisch ausgewertet
+    // - Das ursprüngliche memberSince (Zahlt seit) Datum bleibt erhalten
     window.changePersonStatus = async function(personId) {
             if (isLoading || !isAuthenticated) return;
             
             const newStatus = document.getElementById(`status-select-${personId}`).value;
-            const newMemberSince = document.getElementById(`member-since-${personId}`).value;
             // Neues Feld: Gültig-ab-Datum (optional, default heute)
             const effectiveDateInput = document.getElementById(`status-effective-${personId}`);
             const today = new Date().toISOString().split('T')[0];
@@ -2677,6 +2683,11 @@
                     // Initialize statusHistory if it doesn't exist
                     if (!person.statusHistory) {
                         person.statusHistory = [];
+                    }
+                    
+                    // Store original memberSince if not already stored
+                    if (!person.originalMemberSince) {
+                        person.originalMemberSince = person.memberSince;
                     }
                     
                     // Add current status to history only if the effective date is after current start
@@ -2698,15 +2709,39 @@
                     renderPeople();
                     alert(message);
                 } else {
-                    // Only update memberSince if status hasn't changed
-                    person.memberSince = newMemberSince;
-                    
-                    await savePeople();
-                    renderPeople();
-                    alert('Startdatum aktualisiert!');
+                    alert('Status ist bereits ausgewählt.');
                 }
             } catch (error) {
                 console.error('Fehler beim Aktualisieren des Status:', error);
+                alert('Fehler beim Speichern der Änderungen in Firebase');
+            }
+        };
+
+        // Neue Funktion zum Speichern des "Zahlt seit" Datums
+        window.saveMemberSince = async function(personId) {
+            if (isLoading || !isAuthenticated) return;
+            
+            const newMemberSince = document.getElementById(`member-since-${personId}`).value;
+            
+            if (!newMemberSince) {
+                alert('Bitte ein gültiges Datum eingeben');
+                return;
+            }
+            
+            try {
+                const person = people.find(p => p.id === personId);
+                if (!person) return;
+                
+                // Update the original member since date
+                person.originalMemberSince = newMemberSince;
+                
+                const message = `"Zahlt seit" Datum auf ${new Date(newMemberSince).toLocaleDateString('de-DE')} aktualisiert.`;
+                
+                await savePeople();
+                renderPeople();
+                alert(message);
+            } catch (error) {
+                console.error('Fehler beim Aktualisieren des "Zahlt seit" Datums:', error);
                 alert('Fehler beim Speichern der Änderungen in Firebase');
             }
         };
@@ -2775,21 +2810,23 @@
             }
 
             let remainingAmount = person.totalPaid;
-            let currentDate = person.memberSince ? new Date(person.memberSince) : new Date();
+            // Use originalMemberSince if available, otherwise use memberSince
+            const startDate = person.originalMemberSince || person.memberSince;
+            let currentDate = startDate ? new Date(startDate) : new Date();
             
             // Process status history chronologically
             if (person.statusHistory && person.statusHistory.length > 0) {
                 const historySorted = person.statusHistory.slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
                 for (let i = 0; i < historySorted.length; i++) {
                     const historyEntry = historySorted[i];
-                    const startDate = new Date(historyEntry.startDate);
+                    const historyStartDate = new Date(historyEntry.startDate);
                     const endDate = new Date(historyEntry.endDate);
                     const monthlyRate = settings[historyEntry.status];
                     
                     if (!monthlyRate) continue;
                     
                     // Calculate months in this status period
-                    const monthsInPeriod = calculateMonthsBetween(startDate, endDate);
+                    const monthsInPeriod = calculateMonthsBetween(historyStartDate, endDate);
                     const costForPeriod = monthsInPeriod * monthlyRate;
                     
                     if (remainingAmount >= costForPeriod) {
@@ -2799,7 +2836,7 @@
                     } else {
                         // Can only afford part of this period
                         const monthsAffordable = Math.floor(remainingAmount / monthlyRate);
-                        const finalDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthsAffordable, startDate.getDate());
+                        const finalDate = new Date(historyStartDate.getFullYear(), historyStartDate.getMonth() + monthsAffordable, historyStartDate.getDate());
                         return finalDate;
                     }
                 }
@@ -3299,6 +3336,9 @@
             const paymentStatus = formatPaidUntilStatus(person);
             const timeRemaining = calculateTimeRemaining(person);
             
+            // Use originalMemberSince if available, otherwise use memberSince
+            const displayMemberSince = person.originalMemberSince || person.memberSince;
+            
             return `
                 <div class="person-item" onclick="togglePersonDetails('${person.id}')">
                     <div class="person-pill">
@@ -3328,7 +3368,13 @@
                         
                         <div class="detail-section">
                             <h4>Zahlt seit</h4>
-                            <input type="date" id="member-since-${person.id}" class="form-input" value="${person.memberSince}" style="margin-bottom: 12px;">
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                                <input type="date" id="member-since-${person.id}" class="form-input" value="${displayMemberSince}" style="flex: 1;">
+                                <button class="btn btn-secondary btn-small" onclick="saveMemberSince('${person.id}')" style="white-space: nowrap;">
+                                    Speichern
+                                </button>
+                            </div>
+                            <div style="font-size: 12px; color: #64748b;">Das ursprüngliche Datum, seit dem die Person allgemein zahlt.</div>
                         </div>
                         
                         <div class="detail-section">
