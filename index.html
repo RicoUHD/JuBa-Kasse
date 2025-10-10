@@ -2732,10 +2732,47 @@
                 const person = people.find(p => p.id === personId);
                 if (!person) return;
                 
-                // Update the original member since date
+                const oldDate = person.originalMemberSince || person.memberSince;
+                
+                // Check if there's a status history
+                if (person.statusHistory && person.statusHistory.length > 0) {
+                    // Warn user about status history implications
+                    const confirmChange = confirm(
+                        `Diese Person hat bereits Statuswechsel in der Historie.\n\n` +
+                        `Das "Zahlt seit" Datum wird von ${new Date(oldDate).toLocaleDateString('de-DE')} ` +
+                        `auf ${new Date(newMemberSince).toLocaleDateString('de-DE')} geändert.\n\n` +
+                        `Die Statushistorie wird entsprechend angepasst (der erste Status beginnt am neuen Datum).\n\n` +
+                        `Möchten Sie fortfahren?`
+                    );
+                    
+                    if (!confirmChange) {
+                        return;
+                    }
+                    
+                    // Adjust the first status history entry
+                    const historySorted = person.statusHistory.slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                    if (historySorted.length > 0) {
+                        // Find and update the first history entry's start date
+                        const firstHistoryOriginal = historySorted[0];
+                        const firstHistory = person.statusHistory.find(h => 
+                            h.startDate === firstHistoryOriginal.startDate && 
+                            h.status === firstHistoryOriginal.status
+                        );
+                        if (firstHistory) {
+                            firstHistory.startDate = newMemberSince;
+                        }
+                    }
+                }
+                
+                // Update both originalMemberSince and memberSince
                 person.originalMemberSince = newMemberSince;
                 
-                const message = `"Zahlt seit" Datum auf ${new Date(newMemberSince).toLocaleDateString('de-DE')} aktualisiert.`;
+                // If no status history, also update memberSince (current status start date)
+                if (!person.statusHistory || person.statusHistory.length === 0) {
+                    person.memberSince = newMemberSince;
+                }
+                
+                const message = `"Zahlt seit" Datum erfolgreich auf ${new Date(newMemberSince).toLocaleDateString('de-DE')} aktualisiert.\n\nDie Zahlungsberechnungen wurden rückwirkend angepasst.`;
                 
                 await savePeople();
                 renderPeople();
@@ -2840,9 +2877,18 @@
                         return finalDate;
                     }
                 }
+            } else {
+                // No status history - use current status from the start date
+                const currentMonthlyRate = settings[person.status];
+                if (currentMonthlyRate && remainingAmount > 0) {
+                    const monthsAffordable = Math.floor(remainingAmount / currentMonthlyRate);
+                    const finalDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + monthsAffordable, currentDate.getDate());
+                    return finalDate;
+                }
+                return currentDate;
             }
             
-            // Process current status period
+            // Process current status period (starting from where history ended)
             const currentMonthlyRate = settings[person.status];
             if (currentMonthlyRate && remainingAmount > 0) {
                 const additionalMonths = Math.floor(remainingAmount / currentMonthlyRate);
