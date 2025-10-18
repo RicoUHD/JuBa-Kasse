@@ -2931,69 +2931,82 @@
             let remainingAmount = person.totalPaid;
             // Use originalMemberSince if available, otherwise use memberSince
             const startDate = person.originalMemberSince || person.memberSince;
-            let currentDate = startDate ? new Date(startDate) : new Date();
+            if (!startDate) {
+                return null;
+            }
+            
+            let currentYear = new Date(startDate).getFullYear();
+            let currentMonth = new Date(startDate).getMonth();
             
             // Process status history chronologically
             if (person.statusHistory && person.statusHistory.length > 0) {
                 const historySorted = person.statusHistory.slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
                 for (let i = 0; i < historySorted.length; i++) {
                     const historyEntry = historySorted[i];
-                    const historyStartDate = new Date(historyEntry.startDate);
-                    const endDate = new Date(historyEntry.endDate);
                     const monthlyRate = settings[historyEntry.status];
                     
                     if (!monthlyRate) continue;
                     
                     // Calculate months in this status period
-                    const monthsInPeriod = calculateMonthsBetween(historyStartDate, endDate);
+                    const monthsInPeriod = calculateMonthsBetween(historyEntry.startDate, historyEntry.endDate);
                     const costForPeriod = monthsInPeriod * monthlyRate;
                     
                     if (remainingAmount >= costForPeriod) {
                         // Can afford this entire period
                         remainingAmount -= costForPeriod;
-                        currentDate = new Date(endDate);
+                        const endDate = new Date(historyEntry.endDate);
+                        currentYear = endDate.getFullYear();
+                        currentMonth = endDate.getMonth();
                     } else {
                         // Can only afford part of this period
                         const monthsAffordable = Math.floor(remainingAmount / monthlyRate);
-                        const finalDate = new Date(historyStartDate.getFullYear(), historyStartDate.getMonth() + monthsAffordable, historyStartDate.getDate());
-                        return finalDate;
+                        const startYear = new Date(historyEntry.startDate).getFullYear();
+                        const startMonth = new Date(historyEntry.startDate).getMonth();
+                        
+                        // Calculate end month
+                        let endMonth = startMonth + monthsAffordable;
+                        let endYear = startYear;
+                        while (endMonth > 11) {
+                            endMonth -= 12;
+                            endYear++;
+                        }
+                        
+                        // Return the last day of the last paid month
+                        return new Date(endYear, endMonth + 1, 0);
                     }
                 }
-            } else {
-                // No status history - use current status from the start date
-                const currentMonthlyRate = settings[person.status];
-                if (currentMonthlyRate && remainingAmount > 0) {
-                    const monthsAffordable = Math.floor(remainingAmount / currentMonthlyRate);
-                    const finalDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + monthsAffordable, currentDate.getDate());
-                    return finalDate;
-                }
-                return currentDate;
             }
             
-            // Process current status period (starting from where history ended)
+            // Process current status period (starting from where history ended or from start)
             const currentMonthlyRate = settings[person.status];
             if (currentMonthlyRate && remainingAmount > 0) {
                 const additionalMonths = Math.floor(remainingAmount / currentMonthlyRate);
-                const finalDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + additionalMonths, currentDate.getDate());
-                return finalDate;
+                
+                // Add months to current position
+                let endMonth = currentMonth + additionalMonths;
+                let endYear = currentYear;
+                while (endMonth > 11) {
+                    endMonth -= 12;
+                    endYear++;
+                }
+                
+                // Return the last day of the last paid month
+                return new Date(endYear, endMonth + 1, 0);
             }
             
-            return currentDate;
+            // No additional months can be afforded, return current position
+            return new Date(currentYear, currentMonth + 1, 0);
         }
 
         function calculateMonthsBetween(startDate, endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
             
-            let months = 0;
-            const current = new Date(start);
+            // Calculate complete months between dates
+            const yearsDiff = end.getFullYear() - start.getFullYear();
+            const monthsDiff = end.getMonth() - start.getMonth();
             
-            while (current < end) {
-                months++;
-                current.setMonth(current.getMonth() + 1);
-            }
-            
-            return months;
+            return yearsDiff * 12 + monthsDiff;
         }
 
         function calculateTimeRemaining(person) {
@@ -3003,32 +3016,36 @@
             }
 
             const today = new Date();
-            const diffTime = paidUntil.getTime() - today.getTime();
-            const isOverdue = diffTime < 0;
+            // Calculate month difference (paid month is still valid)
+            const monthsDiff = (paidUntil.getFullYear() - today.getFullYear()) * 12 + 
+                               (paidUntil.getMonth() - today.getMonth());
+            
+            // Only overdue if we're past the paid month
+            const isOverdue = monthsDiff < 0;
             
             if (isOverdue) {
-                const overdueDays = Math.abs(Math.floor(diffTime / (1000 * 60 * 60 * 24)));
-                if (overdueDays < 60) {
-                    return { text: `${overdueDays} Tag${overdueDays !== 1 ? 'e' : ''} überfällig`, isOverdue: true, isSoonDue: false };
-                } else {
-                    const overdueMonths = Math.floor(overdueDays / 30);
-                    return { text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`, isOverdue: true, isSoonDue: false };
-                }
+                const overdueMonths = Math.abs(monthsDiff);
+                return { 
+                    text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`, 
+                    isOverdue: true, 
+                    isSoonDue: false 
+                };
             }
 
-            const remainingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            const remainingWeeks = Math.floor(remainingDays / 7);
-            const remainingMonths = Math.floor(remainingDays / 30);
+            // Check if payment is due next month (isSoonDue means only 1 month left after current)
+            const isSoonDue = monthsDiff === 1;
 
-            // Check if payment is due within 30 days
-            const isSoonDue = remainingDays <= 30;
-
-            if (remainingDays < 14) {
-                return { text: `noch ${remainingDays} Tag${remainingDays !== 1 ? 'e' : ''}`, isOverdue: false, isSoonDue: isSoonDue };
-            } else if (remainingDays < 60) {
-                return { text: `noch ${remainingWeeks} Woche${remainingWeeks !== 1 ? 'n' : ''}`, isOverdue: false, isSoonDue: isSoonDue };
+            if (monthsDiff === 0) {
+                // Currently in the paid month - still valid but warn
+                return { text: 'läuft diesen Monat ab', isOverdue: false, isSoonDue: true };
+            } else if (monthsDiff === 1) {
+                return { text: 'läuft nächsten Monat ab', isOverdue: false, isSoonDue: true };
             } else {
-                return { text: `noch ${remainingMonths} Monat${remainingMonths !== 1 ? 'e' : ''}`, isOverdue: false, isSoonDue: false };
+                return { 
+                    text: `noch ${monthsDiff} Monat${monthsDiff !== 1 ? 'e' : ''}`, 
+                    isOverdue: false, 
+                    isSoonDue: false 
+                };
             }
         }
 
@@ -3039,11 +3056,19 @@
             }
 
             const today = new Date();
-            const isOverdue = paidUntil < today;
+            // Compare only year and month (the paid month is still valid)
+            const todayMonth = today.getFullYear() * 12 + today.getMonth();
+            const paidMonth = paidUntil.getFullYear() * 12 + paidUntil.getMonth();
+            const isOverdue = paidMonth < todayMonth;
             const className = isOverdue ? 'overdue' : 'paid-until';
             
+            // Format as "Month Year" (e.g., "Juni 2025")
+            const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
+                                'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+            const monthYear = `${monthNames[paidUntil.getMonth()]} ${paidUntil.getFullYear()}`;
+            
             return { 
-                date: paidUntil.toLocaleDateString('de-DE'),
+                date: monthYear,
                 className: className
             };
         }
