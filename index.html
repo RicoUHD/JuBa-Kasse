@@ -1572,6 +1572,27 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* Toggle Switch Styles */
+        .switch input:checked + .slider {
+            background: var(--gradient-primary);
+        }
+
+        .switch .slider:before {
+            content: "";
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        .switch input:checked + .slider:before {
+            transform: translateX(24px);
+        }
     </style>
 </head>
 <body>
@@ -1737,6 +1758,28 @@
             </div>
 
             <div class="card" style="margin-top: 20px;">
+                <div class="card-header">Biometrische Authentifizierung</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Biometrisches Entsperren verwenden</label>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                            <label class="switch" style="position: relative; display: inline-block; width: 52px; height: 28px;">
+                                <input type="checkbox" id="biometric-toggle" onchange="toggleBiometric()" style="opacity: 0; width: 0; height: 0;">
+                                <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-light); transition: .4s; border-radius: 28px; border: 2px solid var(--border-color);"></span>
+                            </label>
+                            <span id="biometric-status-text" style="font-size: 14px; color: var(--text-secondary);">Deaktiviert</span>
+                        </div>
+                        <div id="biometric-info" style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: none;">
+                            Mit biometrischer Authentifizierung können Sie die App mit Fingerabdruck oder Face ID entsperren.
+                        </div>
+                        <div id="biometric-not-supported" style="font-size: 12px; color: var(--danger); margin-top: 8px; display: none;">
+                            ⚠️ Ihr Browser oder Gerät unterstützt keine biometrische Authentifizierung.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
                 <div class="card-header">Passwort ändern</div>
                 <div class="card-body">
                     <div class="form-group">
@@ -1878,13 +1921,30 @@
             <div class="modal-header">
                 🔐 JuBa-Kasse Login
             </div>
-            <div class="form-group">
-                <label class="form-label">Passwort</label>
-                <input type="password" id="login-password" class="form-input" placeholder="Passwort eingeben">
+            <div id="password-login-section">
+                <div class="form-group">
+                    <label class="form-label">Passwort</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="Passwort eingeben">
+                </div>
+                <button class="btn btn-primary" onclick="attemptLogin()" style="width: 100%;">Anmelden</button>
+                <div id="login-error" style="color: #dc2626; margin-top: 12px; font-size: 14px; display: none;">
+                    Falsches Passwort. Bitte versuchen Sie es erneut.
+                </div>
             </div>
-            <button class="btn btn-primary" onclick="attemptLogin()" style="width: 100%;">Anmelden</button>
-            <div id="login-error" style="color: #dc2626; margin-top: 12px; font-size: 14px; display: none;">
-                Falsches Passwort. Bitte versuchen Sie es erneut.
+            <div id="biometric-login-section" style="display: none;">
+                <div style="text-align: center; padding: 20px 0;">
+                    <div style="font-size: 64px; margin-bottom: 16px;">🔒</div>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Entsperren Sie die App mit Ihrer biometrischen Authentifizierung</p>
+                    <button class="btn btn-primary" onclick="attemptBiometricLogin()" style="width: 100%; margin-bottom: 12px;">
+                        🔓 Biometrisch entsperren
+                    </button>
+                    <button class="btn btn-secondary" onclick="switchToPasswordLogin()" style="width: 100%;">
+                        Mit Passwort anmelden
+                    </button>
+                    <div id="biometric-login-error" style="color: #dc2626; margin-top: 12px; font-size: 14px; display: none;">
+                        Biometrische Authentifizierung fehlgeschlagen.
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1917,6 +1977,7 @@
         let isAuthenticated = false;
         let donations = [];
         let expenses = [];
+        let biometricCredentialId = null;
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', async function() {
@@ -1925,8 +1986,11 @@
             
             // Initialize tab indicator
             updateTabIndicator('overview');
+            
+            // Initialize biometric UI
+            await initializeBiometricUI();
 
-            // Check authentication on startup
+            // Check authentication on startup (now always required on app open)
             await checkAuthentication();
             
             // Render initial kassenstand even without authentication
@@ -1972,43 +2036,23 @@
 
         // Authentication functions
         async function checkAuthentication() {
-            const loginExpiry = localStorage.getItem('juba-login-expiry');
-            const storedPasswordHash = localStorage.getItem('juba-password-hash');
-            
             // Ensure default password exists in Firebase
             await ensureDefaultPassword();
             
-            // Check if user has a valid login session
-            if (loginExpiry && new Date().getTime() < parseInt(loginExpiry)) {
-                // Additional check: verify if stored password still matches Firebase
-                const currentPassword = await getPasswordFromFirebase();
-                const currentPasswordHash = await hashPassword(currentPassword);
-                
-                if (storedPasswordHash === currentPasswordHash) {
-                    // Password still matches, login is valid
-                    isAuthenticated = true;
-                    loadDataFromFirebase().then(() => {
-                        // Set default payment date only if the element exists
-                        const paymentDateEl = document.getElementById('payment-date');
-                        if (paymentDateEl) {
-                            paymentDateEl.value = new Date().toISOString().split('T')[0];
-                        }
-                    });
-                } else {
-                    // Password has been changed, force re-login
-                    localStorage.removeItem('juba-login-expiry');
-                    localStorage.removeItem('juba-password-hash');
-                    showLoginModal();
-                    renderKassenstand();
-                }
+            // Always require authentication on app open (no 24h session anymore)
+            // Check if biometric is enabled
+            const biometricEnabled = localStorage.getItem('juba-biometric-enabled') === 'true';
+            
+            if (biometricEnabled && await isBiometricAvailable()) {
+                // Show biometric login
+                showLoginModal(true);
             } else {
-                // Clear expired session
-                localStorage.removeItem('juba-login-expiry');
-                localStorage.removeItem('juba-password-hash');
-                showLoginModal();
-                // Show initial kassenstand with 0
-                renderKassenstand();
+                // Show password login
+                showLoginModal(false);
             }
+            
+            // Show initial kassenstand with 0
+            renderKassenstand();
         }
 
         // Simple hash function to store password hash locally
@@ -2045,19 +2089,35 @@
             }
         }
 
-        function showLoginModal() {
+        function showLoginModal(useBiometric = false) {
             const modal = document.getElementById('login-modal');
+            const passwordSection = document.getElementById('password-login-section');
+            const biometricSection = document.getElementById('biometric-login-section');
+            
+            if (useBiometric) {
+                passwordSection.style.display = 'none';
+                biometricSection.style.display = 'block';
+            } else {
+                passwordSection.style.display = 'block';
+                biometricSection.style.display = 'none';
+            }
+            
             modal.style.display = 'flex';
             setTimeout(() => {
                 modal.classList.add('show');
-            }, 10);
-            document.getElementById('login-password').focus();
-            // Add enter key listener
-            document.getElementById('login-password').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    attemptLogin();
+                if (!useBiometric) {
+                    document.getElementById('login-password').focus();
                 }
-            });
+            }, 10);
+            
+            // Add enter key listener for password login
+            if (!useBiometric) {
+                document.getElementById('login-password').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        attemptLogin();
+                    }
+                });
+            }
         }
 
         function hideLoginModal() {
@@ -2076,13 +2136,7 @@
             if (enteredPassword === storedPassword) {
                 isAuthenticated = true;
                 
-                // Set login expiry to 24 hours from now
-                const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000);
-                localStorage.setItem('juba-login-expiry', expiryTime.toString());
-                
-                // Store password hash for future verification
-                const passwordHash = await hashPassword(storedPassword);
-                localStorage.setItem('juba-password-hash', passwordHash);
+                // No longer storing login expiry - authentication required on every app open
                 
                 hideLoginModal();
                 
@@ -2131,16 +2185,251 @@
                 document.getElementById('new-password').value = '';
                 document.getElementById('confirm-password').value = '';
                 
-                alert('Passwort erfolgreich geändert! Sie werden automatisch abgemeldet und müssen sich mit dem neuen Passwort anmelden.');
+                alert('Passwort erfolgreich geändert! Sie müssen sich mit dem neuen Passwort erneut anmelden.');
                 
                 // Force logout and show login modal
                 isAuthenticated = false;
-                showLoginModal();
+                showLoginModal(false);
             } catch (error) {
                 console.error('Fehler beim Speichern des Passworts:', error);
                 alert('Fehler beim Speichern des neuen Passworts in Firebase');
             }
         };
+
+        // Biometric Authentication Functions
+        
+        // Check if WebAuthn is available
+        async function isBiometricAvailable() {
+            return window.PublicKeyCredential !== undefined && 
+                   navigator.credentials !== undefined &&
+                   typeof navigator.credentials.create === 'function';
+        }
+
+        // Initialize biometric UI on load
+        async function initializeBiometricUI() {
+            const isAvailable = await isBiometricAvailable();
+            const toggle = document.getElementById('biometric-toggle');
+            const statusText = document.getElementById('biometric-status-text');
+            const infoDiv = document.getElementById('biometric-info');
+            const notSupportedDiv = document.getElementById('biometric-not-supported');
+            
+            if (!isAvailable) {
+                toggle.disabled = true;
+                toggle.checked = false;
+                notSupportedDiv.style.display = 'block';
+                infoDiv.style.display = 'none';
+                statusText.textContent = 'Nicht verfügbar';
+                return;
+            }
+            
+            infoDiv.style.display = 'block';
+            notSupportedDiv.style.display = 'none';
+            
+            // Check if biometric is enabled
+            const biometricEnabled = localStorage.getItem('juba-biometric-enabled') === 'true';
+            toggle.checked = biometricEnabled;
+            statusText.textContent = biometricEnabled ? 'Aktiviert' : 'Deaktiviert';
+        }
+
+        // Toggle biometric authentication
+        window.toggleBiometric = async function() {
+            const toggle = document.getElementById('biometric-toggle');
+            const statusText = document.getElementById('biometric-status-text');
+            
+            if (toggle.checked) {
+                // User wants to enable biometric
+                try {
+                    // First verify password
+                    const password = prompt('Bitte geben Sie Ihr Passwort ein, um biometrische Authentifizierung zu aktivieren:');
+                    if (!password) {
+                        toggle.checked = false;
+                        return;
+                    }
+                    
+                    const storedPassword = await getPasswordFromFirebase();
+                    if (password !== storedPassword) {
+                        alert('Falsches Passwort. Biometrische Authentifizierung wurde nicht aktiviert.');
+                        toggle.checked = false;
+                        return;
+                    }
+                    
+                    // Register biometric credential
+                    const success = await registerBiometric();
+                    if (success) {
+                        localStorage.setItem('juba-biometric-enabled', 'true');
+                        statusText.textContent = 'Aktiviert';
+                        alert('✓ Biometrische Authentifizierung erfolgreich aktiviert!');
+                    } else {
+                        toggle.checked = false;
+                        statusText.textContent = 'Deaktiviert';
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Aktivieren der biometrischen Authentifizierung:', error);
+                    alert('Fehler beim Aktivieren der biometrischen Authentifizierung.');
+                    toggle.checked = false;
+                    statusText.textContent = 'Deaktiviert';
+                }
+            } else {
+                // User wants to disable biometric
+                localStorage.setItem('juba-biometric-enabled', 'false');
+                localStorage.removeItem('juba-biometric-credential-id');
+                statusText.textContent = 'Deaktiviert';
+                alert('Biometrische Authentifizierung wurde deaktiviert.');
+            }
+        };
+
+        // Register biometric credential
+        async function registerBiometric() {
+            try {
+                // Generate a random challenge
+                const challenge = new Uint8Array(32);
+                crypto.getRandomValues(challenge);
+                
+                // User ID (can be app-specific)
+                const userId = new Uint8Array(16);
+                crypto.getRandomValues(userId);
+                
+                const publicKeyOptions = {
+                    challenge: challenge,
+                    rp: {
+                        name: "JuBa-Kasse",
+                        id: window.location.hostname
+                    },
+                    user: {
+                        id: userId,
+                        name: "juba-user",
+                        displayName: "JuBa-Kasse Benutzer"
+                    },
+                    pubKeyCredParams: [
+                        { alg: -7, type: "public-key" },  // ES256
+                        { alg: -257, type: "public-key" } // RS256
+                    ],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform",
+                        userVerification: "required"
+                    },
+                    timeout: 60000,
+                    attestation: "none"
+                };
+
+                const credential = await navigator.credentials.create({
+                    publicKey: publicKeyOptions
+                });
+
+                if (credential) {
+                    // Store credential ID
+                    const credentialId = arrayBufferToBase64(credential.rawId);
+                    localStorage.setItem('juba-biometric-credential-id', credentialId);
+                    
+                    // Store public key for verification
+                    const publicKeyBytes = arrayBufferToBase64(credential.response.getPublicKey());
+                    localStorage.setItem('juba-biometric-public-key', publicKeyBytes);
+                    
+                    return true;
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('Biometric registration error:', error);
+                if (error.name === 'NotAllowedError') {
+                    alert('Biometrische Registrierung wurde abgebrochen oder abgelehnt.');
+                } else {
+                    alert('Fehler bei der biometrischen Registrierung: ' + error.message);
+                }
+                return false;
+            }
+        }
+
+        // Attempt biometric login
+        window.attemptBiometricLogin = async function() {
+            try {
+                const credentialId = localStorage.getItem('juba-biometric-credential-id');
+                if (!credentialId) {
+                    document.getElementById('biometric-login-error').textContent = 
+                        'Keine biometrischen Daten gefunden. Bitte verwenden Sie die Passwort-Anmeldung.';
+                    document.getElementById('biometric-login-error').style.display = 'block';
+                    return;
+                }
+                
+                // Generate a random challenge
+                const challenge = new Uint8Array(32);
+                crypto.getRandomValues(challenge);
+                
+                const publicKeyOptions = {
+                    challenge: challenge,
+                    rpId: window.location.hostname,
+                    allowCredentials: [{
+                        id: base64ToArrayBuffer(credentialId),
+                        type: 'public-key',
+                        transports: ['internal']
+                    }],
+                    userVerification: "required",
+                    timeout: 60000
+                };
+
+                const assertion = await navigator.credentials.get({
+                    publicKey: publicKeyOptions
+                });
+
+                if (assertion) {
+                    // Biometric authentication successful
+                    isAuthenticated = true;
+                    hideLoginModal();
+                    
+                    // Load data after successful login
+                    loadDataFromFirebase().then(() => {
+                        const paymentDateEl = document.getElementById('payment-date');
+                        if (paymentDateEl) {
+                            paymentDateEl.value = new Date().toISOString().split('T')[0];
+                        }
+                        const detailsDesktop = document.getElementById('transaction-details-desktop');
+                        if (detailsDesktop) {
+                            detailsDesktop.classList.add('active');
+                            renderTransactionHistoryDesktop();
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Biometric authentication error:', error);
+                const errorDiv = document.getElementById('biometric-login-error');
+                
+                if (error.name === 'NotAllowedError') {
+                    errorDiv.textContent = 'Biometrische Authentifizierung wurde abgebrochen.';
+                } else if (error.name === 'InvalidStateError') {
+                    errorDiv.textContent = 'Ungültige biometrische Daten. Bitte verwenden Sie die Passwort-Anmeldung.';
+                } else {
+                    errorDiv.textContent = 'Biometrische Authentifizierung fehlgeschlagen.';
+                }
+                
+                errorDiv.style.display = 'block';
+            }
+        };
+
+        // Switch to password login
+        window.switchToPasswordLogin = function() {
+            document.getElementById('password-login-section').style.display = 'block';
+            document.getElementById('biometric-login-section').style.display = 'none';
+            document.getElementById('login-password').focus();
+        };
+
+        // Helper functions for ArrayBuffer conversion
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
 
         // Firebase data loading and saving functions
         async function loadDataFromFirebase() {
