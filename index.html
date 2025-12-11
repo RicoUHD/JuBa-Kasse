@@ -497,9 +497,9 @@
         <div class="form-group">
             <label class="form-label">Status</label>
             <select id="new-person-status" class="form-select">
-                <option value="vollverdiener">Vollverdiener</option>
-                <option value="geringverdiener">Geringverdiener</option>
-                <option value="keinverdiener">Keinverdiener</option>
+                <option value="vollverdiener">💼 Vollverdiener</option>
+                <option value="geringverdiener">📉 Geringverdiener</option>
+                <option value="keinverdiener">🎓 Keinverdiener</option>
             </select>
         </div>
         <button class="btn btn-primary" onclick="addPerson()">Hinzufügen</button>
@@ -512,19 +512,20 @@
         <div class="form-group">
             <label class="form-label">Neuer Status</label>
             <select id="change-status-select" class="form-select">
-                <option value="vollverdiener">Vollverdiener</option>
-                <option value="geringverdiener">Geringverdiener</option>
-                <option value="keinverdiener">Keinverdiener</option>
+                <option value="vollverdiener">💼 Vollverdiener</option>
+                <option value="geringverdiener">📉 Geringverdiener</option>
+                <option value="keinverdiener">🎓 Keinverdiener</option>
             </select>
         </div>
         <div class="form-group">
             <label class="form-label">Gültig ab</label>
             <input type="date" id="change-status-date" class="form-input">
             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
-                Auch rückwirkend oder in der Zukunft möglich.
+                <strong>Rückwirkend:</strong> Korrigiert die Berechnung ab dem angegebenen Datum.<br>
+                <strong>Zukünftig:</strong> Der neue Status gilt ab dem Datum (bisherige Berechnung bleibt).
             </div>
         </div>
-        <button class="btn btn-primary" onclick="saveStatusChange()">Speichern</button>
+        <button class="btn btn-primary" onclick="saveStatusChange()">Status Ändern</button>
     </div>
 </div>
 
@@ -678,86 +679,143 @@
         }
     };
 
-    // --- MATHEMATIK & LOGIK ---
+    // --- MATHEMATIK & LOGIK (VEREINFACHT & STABIL) ---
 
-    function calculateMonthsBetween(startDate, endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const yearsDiff = end.getFullYear() - start.getFullYear();
-        const monthsDiff = end.getMonth() - start.getMonth();
-        return yearsDiff * 12 + monthsDiff;
-    }
-
-    function calculatePaidUntil(person) {
-        // CASE 1: No payments made yet
-        if (!person.totalPaid || person.totalPaid === 0) {
-            const start = new Date(person.originalMemberSince || person.memberSince);
-            // Return the last day of the PREVIOUS month
-            return new Date(start.getFullYear(), start.getMonth(), 0);
+    /**
+     * Gibt den Status einer Person für einen bestimmten Monat zurück.
+     * Berücksichtigt die komplette Statushistorie inkl. rückwirkender/zukünftiger Änderungen.
+     * @param {Object} person - Die Person
+     * @param {number} year - Das Jahr
+     * @param {number} month - Der Monat (0-11)
+     * @returns {string|null} - Der Status oder null wenn vor Mitgliedschaft
+     */
+    function getStatusForMonth(person, year, month) {
+        const targetDate = new Date(year, month, 15); // Mitte des Monats als Referenz
+        const memberSince = new Date(person.originalMemberSince || person.memberSince);
+        
+        // Vor Mitgliedschaft? Kein Status
+        if (targetDate < new Date(memberSince.getFullYear(), memberSince.getMonth(), 1)) {
+            return null;
         }
-
-        let remainingAmount = person.totalPaid;
-        const startDate = person.originalMemberSince || person.memberSince;
-        if (!startDate) return null;
         
-        let currentYear = new Date(startDate).getFullYear();
-        // FIX: Start counting from the month BEFORE they joined (-1).
-        let currentMonth = new Date(startDate).getMonth() - 1; 
+        // Statushistorie verarbeiten (sortiert nach Startdatum)
+        const history = safeList(person.statusHistory).slice().sort(
+            (a, b) => new Date(a.startDate) - new Date(b.startDate)
+        );
         
-        // This processes the closed history intervals
-        if (person.statusHistory && safeList(person.statusHistory).length > 0) {
-            const historySorted = safeList(person.statusHistory).slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-            for (let i = 0; i < historySorted.length; i++) {
-                const historyEntry = historySorted[i];
-                const monthlyRate = settings[historyEntry.status];
-                
-                if (!monthlyRate) continue;
-                
-                if (historyEntry.endDate) {
-                    const monthsInPeriod = calculateMonthsBetween(historyEntry.startDate, historyEntry.endDate);
-                    const costForPeriod = monthsInPeriod * monthlyRate;
-                    
-                    if (remainingAmount >= costForPeriod) {
-                        remainingAmount -= costForPeriod;
-                        const endDate = new Date(historyEntry.endDate);
-                        currentYear = endDate.getFullYear();
-                        // Fix for history: sync to endDate month - 1
-                        currentMonth = endDate.getMonth() - 1;
-                    } else {
-                        const monthsAffordable = Math.floor(remainingAmount / monthlyRate);
-                        const startYear = new Date(historyEntry.startDate).getFullYear();
-                        // Fix for history calculation start
-                        const startMonth = new Date(historyEntry.startDate).getMonth() - 1;
-                        
-                        let endMonth = startMonth + monthsAffordable;
-                        let endYear = startYear;
-                        
-                        while (endMonth > 11) { endMonth -= 12; endYear++; }
-                        while (endMonth < 0) { endMonth += 12; endYear--; }
-
-                        return new Date(endYear, endMonth + 1, 0);
-                    }
-                }
+        // Alle Statusperioden durchgehen
+        for (const entry of history) {
+            const start = new Date(entry.startDate);
+            const end = entry.endDate ? new Date(entry.endDate) : null;
+            
+            // Ist das Zieldatum in diesem Zeitraum?
+            const startMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+            const endMonth = end ? new Date(end.getFullYear(), end.getMonth() + 1, 0) : null;
+            
+            if (targetDate >= startMonth && (!endMonth || targetDate < new Date(end.getFullYear(), end.getMonth(), 1))) {
+                return entry.status;
             }
         }
         
-        // This processes the current open interval
-        const currentMonthlyRate = settings[person.status];
-        if (currentMonthlyRate) {
-            const additionalMonths = Math.floor(remainingAmount / currentMonthlyRate);
-            
-            let endMonth = currentMonth + additionalMonths;
-            let endYear = currentYear;
-            
-            while (endMonth > 11) { endMonth -= 12; endYear++; }
-            while (endMonth < 0) { endMonth += 12; endYear--; }
-            
-            return new Date(endYear, endMonth + 1, 0);
-        }
-        
-        return new Date(currentYear, currentMonth + 1, 0);
+        // Kein Treffer in Historie? Aktueller Status gilt
+        return person.status;
     }
 
+    /**
+     * Berechnet die Gesamtkosten für alle Monate seit Mitgliedschaft bis zu einem Zieldatum.
+     * @param {Object} person - Die Person
+     * @param {Date} untilDate - Bis zu welchem Datum berechnen
+     * @returns {number} - Gesamtkosten in Euro
+     */
+    function calculateTotalCostUntil(person, untilDate) {
+        const memberSince = new Date(person.originalMemberSince || person.memberSince);
+        let totalCost = 0;
+        
+        let year = memberSince.getFullYear();
+        let month = memberSince.getMonth();
+        
+        while (new Date(year, month, 1) <= untilDate) {
+            const status = getStatusForMonth(person, year, month);
+            if (status && settings[status]) {
+                totalCost += settings[status];
+            }
+            
+            // Nächster Monat
+            month++;
+            if (month > 11) {
+                month = 0;
+                year++;
+            }
+        }
+        
+        return totalCost;
+    }
+
+    /**
+     * Berechnet das "Bezahlt bis" Datum basierend auf einfacher Logik:
+     * Geht Monat für Monat durch und zieht den jeweiligen Beitrag ab,
+     * bis das Guthaben aufgebraucht ist.
+     * @param {Object} person - Die Person
+     * @returns {Date|null} - Das Datum bis zu dem bezahlt wurde
+     */
+    function calculatePaidUntil(person) {
+        const totalPaid = person.totalPaid || 0;
+        
+        // Fall 1: Keine Zahlungen
+        if (totalPaid === 0) {
+            const start = new Date(person.originalMemberSince || person.memberSince);
+            // Letzter Tag des Vormonats
+            return new Date(start.getFullYear(), start.getMonth(), 0);
+        }
+
+        const memberSince = new Date(person.originalMemberSince || person.memberSince);
+        let remainingCredit = totalPaid;
+        
+        let year = memberSince.getFullYear();
+        let month = memberSince.getMonth();
+        
+        // Maximal 120 Monate (10 Jahre) in die Zukunft prüfen
+        const maxIterations = 120;
+        let iterations = 0;
+        
+        while (remainingCredit > 0 && iterations < maxIterations) {
+            const status = getStatusForMonth(person, year, month);
+            const monthlyRate = status ? (settings[status] || 0) : 0;
+            
+            if (monthlyRate > 0) {
+                if (remainingCredit >= monthlyRate) {
+                    remainingCredit -= monthlyRate;
+                } else {
+                    // Nicht genug für den vollen Monat - Vormonat ist bezahlt
+                    break;
+                }
+            }
+            
+            // Nächster Monat
+            month++;
+            if (month > 11) {
+                month = 0;
+                year++;
+            }
+            iterations++;
+        }
+        
+        // Der letzte vollständig bezahlte Monat ist der Vormonat
+        month--;
+        if (month < 0) {
+            month = 11;
+            year--;
+        }
+        
+        // Letzter Tag dieses Monats
+        return new Date(year, month + 1, 0);
+    }
+
+    /**
+     * Berechnet den verbleibenden Zeitraum und Status für eine Person.
+     * @param {Object} person - Die Person
+     * @returns {Object} - { text, isOverdue, isSoonDue }
+     */
     function calculateTimeRemaining(person) {
         const paidUntil = calculatePaidUntil(person);
         if (!paidUntil) {
@@ -765,25 +823,86 @@
         }
 
         const today = new Date();
-        const monthsDiff = (paidUntil.getFullYear() - today.getFullYear()) * 12 + 
-                           (paidUntil.getMonth() - today.getMonth());
+        const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const paidMonth = new Date(paidUntil.getFullYear(), paidUntil.getMonth(), 1);
         
-        const isOverdue = monthsDiff < 0;
+        // Differenz in Monaten berechnen
+        const monthsDiff = (paidMonth.getFullYear() - currentMonth.getFullYear()) * 12 
+                         + (paidMonth.getMonth() - currentMonth.getMonth());
         
-        if (isOverdue) {
+        if (monthsDiff < 0) {
             const overdueMonths = Math.abs(monthsDiff);
             return { 
                 text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`, 
-                isOverdue: true, isSoonDue: false 
+                isOverdue: true, 
+                isSoonDue: false 
             };
         }
 
-        if (monthsDiff === 0) return { text: 'läuft diesen Monat ab', isOverdue: false, isSoonDue: true };
-        else if (monthsDiff === 1) return { text: 'läuft nächsten Monat ab', isOverdue: false, isSoonDue: true };
-        else return { text: `noch ${monthsDiff} Monat${monthsDiff !== 1 ? 'e' : ''}`, isOverdue: false, isSoonDue: false };
+        if (monthsDiff === 0) {
+            return { text: 'läuft diesen Monat ab', isOverdue: false, isSoonDue: true };
+        } else if (monthsDiff === 1) {
+            return { text: 'läuft nächsten Monat ab', isOverdue: false, isSoonDue: true };
+        } else {
+            return { text: `noch ${monthsDiff} Monat${monthsDiff !== 1 ? 'e' : ''}`, isOverdue: false, isSoonDue: false };
+        }
     }
 
-    // --- ENDE ORIGINAL LOGIK ---
+    /**
+     * Generiert HTML für die Statushistorie einer Person.
+     * @param {Object} person - Die Person
+     * @returns {string} - HTML String
+     */
+    function generateStatusHistoryHTML(person) {
+        const history = safeList(person.statusHistory).slice().sort(
+            (a, b) => new Date(b.startDate) - new Date(a.startDate)
+        );
+        
+        // Aktueller Status hinzufügen (offen)
+        const currentStatusStart = history.length > 0 
+            ? history[0].endDate 
+            : (person.originalMemberSince || person.memberSince);
+        
+        const statusLabels = {
+            'vollverdiener': '💼 Vollverdiener',
+            'geringverdiener': '📉 Geringverdiener',
+            'keinverdiener': '🎓 Keinverdiener'
+        };
+        
+        let html = `
+            <div class="trans-item" style="background: rgba(6, 182, 212, 0.05); margin: -5px; padding: 12px; border-radius: 8px;">
+                <div class="trans-left">
+                    <span style="font-weight:600;">${statusLabels[person.status] || person.status}</span>
+                    <div class="trans-meta">Seit ${new Date(currentStatusStart).toLocaleDateString('de-DE')} • Aktuell</div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--success); font-weight:600;">AKTIV</div>
+            </div>
+        `;
+        
+        if (history.length === 0) {
+            return html;
+        }
+        
+        html += history.map(entry => {
+            const start = new Date(entry.startDate).toLocaleDateString('de-DE');
+            const end = entry.endDate ? new Date(entry.endDate).toLocaleDateString('de-DE') : 'Offen';
+            const rate = settings[entry.status] || 0;
+            
+            return `
+                <div class="trans-item">
+                    <div class="trans-left">
+                        <span>${statusLabels[entry.status] || entry.status}</span>
+                        <div class="trans-meta">${start} – ${end}</div>
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--text-secondary);">${rate}€/Monat</div>
+                </div>
+            `;
+        }).join('');
+        
+        return html;
+    }
+
+    // --- ENDE MATHEMATIK & LOGIK ---
 
     async function loadData() {
         const dbRef = ref(db);
@@ -891,7 +1010,11 @@
                             <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">Status Ändern</button>
                             <button class="btn btn-danger" style="width:auto" onclick="deletePerson('${p.id}')">🗑️</button>
                         </div>
-                        <h4 style="margin-bottom:10px; font-size:0.85rem; color:var(--text-secondary);">Zahlungshistorie</h4>
+                        
+                        <h4 style="margin-bottom:10px; font-size:0.85rem; color:var(--text-secondary);">📋 Statushistorie</h4>
+                        ${generateStatusHistoryHTML(p)}
+                        
+                        <h4 style="margin-bottom:10px; margin-top:20px; font-size:0.85rem; color:var(--text-secondary);">💳 Zahlungshistorie</h4>
                         ${paymentsList.length > 0 ? paymentsList.slice().reverse().map(pay => `
                             <div class="trans-item">
                                 <div class="trans-left">
@@ -1064,34 +1187,75 @@
         
         if(p) {
             const newStatus = document.getElementById('change-status-select').value;
-            const newDate = document.getElementById('change-status-date').value;
+            const changeDate = document.getElementById('change-status-date').value;
             
-            // LOGIK AUS DEM ORIGINAL (index.html), aber angepasst auf meine Modal-Inputs
+            if (!changeDate) {
+                alert("Bitte ein Datum angeben.");
+                return;
+            }
+            
             p.statusHistory = safeList(p.statusHistory);
             
-            // 1. Determine start date of the current status
-            let currentStatusStart;
-            if (p.statusHistory.length > 0) {
-                const sorted = p.statusHistory.sort((a,b) => new Date(a.endDate) - new Date(b.endDate));
-                currentStatusStart = sorted[sorted.length - 1].endDate;
-            } else {
-                currentStatusStart = p.originalMemberSince || p.memberSince;
+            const changeDateObj = new Date(changeDate);
+            const memberSinceDate = new Date(p.originalMemberSince || p.memberSince);
+            
+            // Validierung: Änderung darf nicht vor Mitgliedschaft liegen
+            if (changeDateObj < memberSinceDate) {
+                alert("Das Änderungsdatum kann nicht vor dem Mitgliedschaftsbeginn liegen.");
+                return;
             }
-
-            // 2. Create archive entry for the status we are leaving
-            const archiveEntry = {
-                status: p.status,
-                startDate: currentStatusStart,
-                endDate: newDate
-            };
             
-            // 3. Save to history
-            p.statusHistory.push(archiveEntry);
+            // Alle bestehenden Einträge entfernen, die nach dem Änderungsdatum starten
+            p.statusHistory = p.statusHistory.filter(entry => {
+                const entryStart = new Date(entry.startDate);
+                return entryStart < changeDateObj;
+            });
             
-            // 4. Update current status to new status (Open ended)
+            // Bestehende Einträge anpassen, die über das Änderungsdatum hinausgehen
+            p.statusHistory = p.statusHistory.map(entry => {
+                if (entry.endDate) {
+                    const entryEnd = new Date(entry.endDate);
+                    if (entryEnd > changeDateObj) {
+                        // Eintrag endet nach dem Änderungsdatum - kürzen
+                        return { ...entry, endDate: changeDate };
+                    }
+                }
+                return entry;
+            });
+            
+            // Aktuellen Status ermitteln, der zum Änderungsdatum gültig war
+            let currentStatusAtChangeDate = p.status;
+            let currentStatusStartDate = p.originalMemberSince || p.memberSince;
+            
+            // Den zuletzt endenden Eintrag finden
+            if (p.statusHistory.length > 0) {
+                const sortedHistory = p.statusHistory.slice().sort(
+                    (a, b) => new Date(b.endDate || 0) - new Date(a.endDate || 0)
+                );
+                const lastEntry = sortedHistory[0];
+                if (lastEntry && lastEntry.endDate) {
+                    currentStatusStartDate = lastEntry.endDate;
+                }
+            }
+            
+            // Neuen Archiv-Eintrag für den bisherigen Status erstellen
+            // (nur wenn der bisherige Status nicht gleich dem neuen ist und ein Zeitraum existiert)
+            if (new Date(currentStatusStartDate) < changeDateObj) {
+                const archiveEntry = {
+                    status: p.status,
+                    startDate: currentStatusStartDate,
+                    endDate: changeDate
+                };
+                p.statusHistory.push(archiveEntry);
+            }
+            
+            // Aktuellen Status auf den neuen setzen
             p.status = newStatus;
             
-            if(!p.originalMemberSince) p.originalMemberSince = p.memberSince;
+            // Sicherstellen, dass originalMemberSince gesetzt ist
+            if (!p.originalMemberSince) {
+                p.originalMemberSince = p.memberSince;
+            }
 
             await savePeople();
             renderAll();
