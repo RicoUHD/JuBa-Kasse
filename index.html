@@ -258,6 +258,31 @@
         
         .details-content { padding: 20px; }
 
+        /* --- New Details UI --- */
+        .details-status-card {
+            background: var(--surface-alt);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        .details-status-card.danger { background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.2); }
+        .details-status-card.success { background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2); }
+        
+        .details-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.95rem; }
+        .details-row:last-child { margin-bottom: 0; }
+        .details-label { color: var(--text-secondary); font-weight: 500; }
+        .details-value { font-weight: 700; color: var(--text); }
+        
+        .details-actions { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-bottom: 25px; }
+        .details-actions .btn { font-size: 0.9rem; padding: 10px; }
+        
+        .history-header { 
+            font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); 
+            margin: 25px 0 10px; letter-spacing: 0.5px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+        }
+        .history-header::after { content: ''; flex: 1; height: 1px; background: var(--border); opacity: 0.5; }
+
         /* --- Forms --- */
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
@@ -849,6 +874,23 @@
     }
 
     /**
+     * Berechnet den fehlenden Betrag in Euro bis zum Ende des aktuellen Monats.
+     * @param {Object} person - Die Person
+     * @returns {number} - Fehlender Betrag (0 wenn ausgeglichen oder Guthaben)
+     */
+    function calculateOverdueAmount(person) {
+        const today = new Date();
+        // Ziel: Ende des aktuellen Monats
+        const targetDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        const totalCost = calculateTotalCostUntil(person, targetDate);
+        const totalPaid = person.totalPaid || 0;
+        
+        const missing = totalCost - totalPaid;
+        return missing > 0 ? missing : 0;
+    }
+
+    /**
      * Generiert HTML für die Statushistorie einer Person.
      * @param {Object} person - Die Person
      * @returns {string} - HTML String
@@ -978,11 +1020,18 @@
     function generatePersonHTML(p) {
         const paidUntil = calculatePaidUntil(p);
         const statusMeta = calculateTimeRemaining(p);
+        const overdueAmount = calculateOverdueAmount(p);
         
         let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
         let pillClass = 'status-ok';
-        if(statusMeta.isOverdue) pillClass = 'status-err';
-        else if(statusMeta.isSoonDue) pillClass = 'status-warn';
+        let cardClass = 'success';
+        
+        if(statusMeta.isOverdue) {
+            pillClass = 'status-err';
+            cardClass = 'danger';
+        } else if(statusMeta.isSoonDue) {
+            pillClass = 'status-warn';
+        }
 
         const paymentsList = safeList(p.payments);
         
@@ -1005,16 +1054,34 @@
                 </div>
                 <div id="drawer-${p.id}" class="person-details">
                     <div class="details-content">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:15px; gap:10px;">
-                            <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">Zahlung</button>
-                            <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">Status Ändern</button>
-                            <button class="btn btn-danger" style="width:auto" onclick="deletePerson('${p.id}')">🗑️</button>
+                        
+                        <div class="details-status-card ${cardClass}">
+                            <div class="details-row">
+                                <span class="details-label">Bezahlt bis</span>
+                                <span class="details-value">${dateText}</span>
+                            </div>
+                            <div class="details-row">
+                                <span class="details-label">Status</span>
+                                <span class="details-value" style="text-transform:capitalize">${p.status}</span>
+                            </div>
+                            ${statusMeta.isOverdue ? `
+                            <div class="details-row" style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.05)">
+                                <span class="details-label text-danger">Offener Betrag</span>
+                                <span class="details-value text-danger">${overdueAmount.toFixed(2)} €</span>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="details-actions">
+                            <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
+                            <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
+                            <button class="btn btn-danger" onclick="deletePerson('${p.id}')">🗑️</button>
                         </div>
                         
-                        <h4 style="margin-bottom:10px; font-size:0.85rem; color:var(--text-secondary);">📋 Statushistorie</h4>
+                        <div class="history-header">📋 Statushistorie</div>
                         ${generateStatusHistoryHTML(p)}
                         
-                        <h4 style="margin-bottom:10px; margin-top:20px; font-size:0.85rem; color:var(--text-secondary);">💳 Zahlungshistorie</h4>
+                        <div class="history-header">💳 Zahlungshistorie</div>
                         ${paymentsList.length > 0 ? paymentsList.slice().reverse().map(pay => `
                             <div class="trans-item">
                                 <div class="trans-left">
