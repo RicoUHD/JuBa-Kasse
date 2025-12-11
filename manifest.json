@@ -4,8 +4,8 @@
   "description": "Kassenverwaltung für die Jugendarbeit",
   "start_url": "/JuBa-Kasse/index.html",
   "display": "standalone",
-  "background_color": "#2563eb",
-  "theme_color": "#2563eb",
+  "background_color": "#06b6d4",
+  "theme_color": "#06b6d4",
   "orientation": "portrait",
   "icons": [
     {
