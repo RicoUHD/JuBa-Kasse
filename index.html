@@ -369,15 +369,6 @@
         input:checked + .slider { background: var(--gradient-primary); }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* Privacy Overlay */
-        #privacy-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 99999; display: none;
-            align-items: center; justify-content: center;
-            backdrop-filter: blur(10px);
-        }
-        #privacy-overlay.active { display: flex; }
-
         @media (min-width: 769px) {
             .container { max-width: 1200px; display: grid; grid-template-columns: 350px 1fr; gap: 30px; align-items: start; }
             .hero-card, .stats-grid { grid-column: 1; }
@@ -604,14 +595,6 @@
     </div>
 </div>
 
-<div id="privacy-overlay">
-    <div style="text-align:center">
-        <div style="font-size:4rem; margin-bottom:20px;">🛡️</div>
-        <h2 style="color:var(--primary); margin-bottom:10px;">JuBa-Kasse</h2>
-        <p style="color:var(--text-secondary);">Inhalt ausgeblendet</p>
-    </div>
-</div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
     import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
@@ -673,16 +656,6 @@
         ['payment-date', 'donation-date', 'expense-date', 'change-status-date', 'new-person-start'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.value = today;
-        });
-
-        // Privacy Mode Listener
-        document.addEventListener("visibilitychange", () => {
-            const overlay = document.getElementById('privacy-overlay');
-            if (document.visibilityState === "hidden") {
-                overlay.classList.add('active');
-            } else {
-                overlay.classList.remove('active');
-            }
         });
     });
 
