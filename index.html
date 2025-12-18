@@ -391,21 +391,6 @@
         input:checked + .slider { background: var(--gradient-primary); }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* NEU: Loading Overlay */
-        #loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(5px);
-            z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column;
-            transition: opacity 0.3s;
-        }
-        [data-theme="dark"] #loading-overlay { background: rgba(15, 23, 42, 0.8); }
-        .spinner {
-            width: 50px; height: 50px; border: 5px solid var(--border);
-            border-top-color: var(--primary); border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 15px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
         @media (min-width: 769px) {
             .container { max-width: 1200px; display: grid; grid-template-columns: 350px 1fr; gap: 30px; align-items: start; }
             .hero-card, .stats-grid { grid-column: 1; }
@@ -418,11 +403,6 @@
     </style>
 </head>
 <body>
-
-<div id="loading-overlay">
-    <div class="spinner"></div>
-    <div style="font-weight:600; color:var(--text)">Lade Daten...</div>
-</div>
 
 <div class="container">
     <div class="header">
@@ -792,8 +772,6 @@
     // Optimistic UI: Check if we expect to be logged in to avoid flash of login screen
     if (localStorage.getItem('juba-is-logged-in') === 'true') {
         document.getElementById('login-modal').classList.remove('show');
-        const loader = document.getElementById('loading-overlay');
-        if(loader) loader.style.display = 'flex';
     }
 </script>
 
@@ -812,7 +790,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getDatabase, ref, set, get, child, onValue, update } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -834,6 +812,7 @@
     let expenses = [];
     let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, reportStartDate: null };
     let currentPersonId = null;
+    let isAuthenticated = false;
     let currentUser = null;
 
     window.showLogin = () => {
@@ -889,6 +868,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         initTheme();
         initBiometric();
+        checkAuth();
         
         const today = new Date().toISOString().split('T')[0];
         ['payment-date', 'donation-date', 'expense-date', 'change-status-date', 'new-person-start'].forEach(id => {
@@ -1221,114 +1201,93 @@
     let requests = [];
 
     async function loadData() {
-        // Ladebildschirm anzeigen
-        const loader = document.getElementById('loading-overlay');
-        if(loader) loader.style.display = 'flex';
-
         const dbRef = ref(db);
 
-        try {
-            // Non-admin: fetch only what is needed via QUERY (Much faster)
-            if (currentUser && !currentUser.admin) {
-                // 1. Versuche direkten Zugriff über UID (Schnell)
-                const peopleQuery = query(child(dbRef, 'people'), orderByChild('uid'), equalTo(currentUser.uid));
-                const requestsQuery = query(child(dbRef, 'requests'), orderByChild('userId'), equalTo(currentUser.uid));
+        // Non-admin: fetch only what is needed for their view (people + settings + their requests)
+        if (currentUser && !currentUser.admin) {
+            const [pSnap, sSnap, rSnap] = await Promise.all([
+                get(child(dbRef, 'people')),
+                get(child(dbRef, 'settings')),
+                get(child(dbRef, 'requests'))
+            ]);
 
-                const [pSnap, sSnap, rSnap] = await Promise.all([
-                    get(peopleQuery),
-                    get(child(dbRef, 'settings')),
-                    get(requestsQuery)
-                ]);
+            people = safeList(pSnap.val());
+            requests = safeList(rSnap.val());
+            if (sSnap.exists()) settings = sSnap.val();
 
-                let myPeople = safeList(pSnap.val());
-                requests = safeList(rSnap.val());
-                if (sSnap.exists()) settings = sSnap.val();
+            // Filter people to show only the current user (UID match or name fallback)
+            const fullName = `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase();
+            people = people.filter(p => p.uid === currentUser.uid || p.name.toLowerCase() === fullName);
 
-                // 2. Fallback: Wenn keine Person mit UID gefunden wurde (Altdaten), lade alles und filtere nach Name (Langsam, aber sicher)
-                if (myPeople.length === 0) {
-                    console.log("Fallback: Suche nach Name...");
-                    const allPeopleSnap = await get(child(dbRef, 'people'));
-                    const allPeople = safeList(allPeopleSnap.val());
-                    const fullName = `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase();
-                    myPeople = allPeople.filter(p => p.name.toLowerCase() === fullName);
-                }
+            // UI toggles
+            document.getElementById('admin-view').style.display = 'none';
+            document.getElementById('user-view').style.display = 'block';
+            const adminNav = document.querySelector('.container > .tab-nav');
+            if(adminNav) adminNav.style.display = 'none';
+            document.getElementById('settings').style.display = 'none';
+            const fab = document.querySelector('.fab');
+            if(fab) fab.style.display = 'none';
 
-                people = myPeople;
+            // Populate User View basic info
+            document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
+            document.getElementById('user-email-display').innerText = currentUser.email;
 
-                // UI toggles
-                document.getElementById('admin-view').style.display = 'none';
-                document.getElementById('user-view').style.display = 'block';
-                const adminNav = document.querySelector('.container > .tab-nav');
-                if(adminNav) adminNav.style.display = 'none';
-                document.getElementById('settings').style.display = 'none';
-                const fab = document.querySelector('.fab');
-                if(fab) fab.style.display = 'none';
-
-                // Populate User View basic info
-                document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
-                document.getElementById('user-email-display').innerText = currentUser.email;
-
-                // Sync biometric toggle
-                const savedId = localStorage.getItem('juba-bio-id');
-                if(savedId) {
-                    const userBioToggle = document.getElementById('user-biometric-toggle');
-                    if(userBioToggle) userBioToggle.checked = true;
-                    const userBioStatus = document.getElementById('user-biometric-status');
-                    if(userBioStatus) userBioStatus.innerText = 'Aktiv';
-                }
-
-                setTimeout(updateTabIndicator, 50);
-
-            } else {
-                // Admin: fetch full dataset
-                const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap] = await Promise.all([
-                    get(child(dbRef, 'people')),
-                    get(child(dbRef, 'donations')),
-                    get(child(dbRef, 'expenses')),
-                    get(child(dbRef, 'settings')),
-                    get(child(dbRef, 'system/inviteCode')),
-                    get(child(dbRef, 'requests'))
-                ]);
-
-                people = safeList(pSnap.val());
-                donations = safeList(dSnap.val());
-                expenses = safeList(eSnap.val());
-                requests = safeList(rSnap.val());
-                if (sSnap.exists()) settings = sSnap.val();
-
-                // Show Invite Code
-                const code = cSnap.exists() ? cSnap.val() : '123456';
-                const codeInput = document.getElementById('admin-invite-code');
-                if(codeInput) codeInput.value = code;
-
-                // UI toggles
-                document.getElementById('admin-view').style.display = 'block';
-                document.getElementById('user-view').style.display = 'none';
-                const adminNav = document.querySelector('.container > .tab-nav');
-                if(adminNav) adminNav.style.display = 'flex';
-                document.getElementById('settings').style.display = '';
-                const fab = document.querySelector('.fab');
-                if(fab) fab.style.display = 'flex';
-
-                setTimeout(updateTabIndicator, 50);
+            // Sync biometric toggle for user view
+            const savedId = localStorage.getItem('juba-bio-id');
+            if(savedId) {
+                const userBioToggle = document.getElementById('user-biometric-toggle');
+                if(userBioToggle) userBioToggle.checked = true;
+                const userBioStatus = document.getElementById('user-biometric-status');
+                if(userBioStatus) userBioStatus.innerText = 'Aktiv';
             }
 
-            // Normalize people data
-            people.forEach(person => {
-                if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
-                if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
-                person.payments = safeList(person.payments);
-                person.statusHistory = safeList(person.statusHistory);
-            });
+            // Initialize User Tabs Indicator
+            setTimeout(updateTabIndicator, 50);
 
-            renderAll();
-        } catch (err) {
-            console.error("Ladefehler:", err);
-            alert("Fehler beim Laden der Daten. Bitte Seite neu laden.");
-        } finally {
-            // Ladebildschirm ausblenden
-            if(loader) loader.style.display = 'none';
+        } else {
+            // Admin: fetch full dataset
+            const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap] = await Promise.all([
+                get(child(dbRef, 'people')),
+                get(child(dbRef, 'donations')),
+                get(child(dbRef, 'expenses')),
+                get(child(dbRef, 'settings')),
+                get(child(dbRef, 'system/inviteCode')),
+                get(child(dbRef, 'requests'))
+            ]);
+
+            people = safeList(pSnap.val());
+            donations = safeList(dSnap.val());
+            expenses = safeList(eSnap.val());
+            requests = safeList(rSnap.val());
+            if (sSnap.exists()) settings = sSnap.val();
+
+            // Show Invite Code
+            const code = cSnap.exists() ? cSnap.val() : '123456';
+            const codeInput = document.getElementById('admin-invite-code');
+            if(codeInput) codeInput.value = code;
+
+            // UI toggles
+            document.getElementById('admin-view').style.display = 'block';
+            document.getElementById('user-view').style.display = 'none';
+            const adminNav = document.querySelector('.container > .tab-nav');
+            if(adminNav) adminNav.style.display = 'flex';
+            document.getElementById('settings').style.display = '';
+            const fab = document.querySelector('.fab');
+            if(fab) fab.style.display = 'flex';
+
+            // Initialize Admin Tabs Indicator
+            setTimeout(updateTabIndicator, 50);
         }
+
+        // Normalize people data
+        people.forEach(person => {
+            if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
+            if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
+            person.payments = safeList(person.payments);
+            person.statusHistory = safeList(person.statusHistory);
+        });
+
+        renderAll();
     }
 
     function renderAll() {
@@ -2005,10 +1964,6 @@
     // Auth Listener
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Ensure spinner is visible while fetching user profile
-            const loader = document.getElementById('loading-overlay');
-            if(loader) loader.style.display = 'flex';
-
             localStorage.setItem('juba-is-logged-in', 'true');
             const userSnap = await get(ref(db, 'users/' + user.uid));
             if(userSnap.exists()) {
@@ -2019,18 +1974,20 @@
             }
             
             document.getElementById('login-modal').classList.remove('show');
+            isAuthenticated = true;
             loadData();
         } else {
-            // Hide spinner if we are not logged in (e.g. session expired)
-            const loader = document.getElementById('loading-overlay');
-            if(loader) loader.style.display = 'none';
-
             localStorage.removeItem('juba-is-logged-in');
+            isAuthenticated = false;
             currentUser = null;
             document.getElementById('login-modal').classList.add('show');
             showLogin();
         }
     });
+
+    function checkAuth() { 
+        // Initial check handled by onAuthStateChanged
+    }
 
     window.logout = async () => {
         try {
@@ -2317,6 +2274,7 @@
             await navigator.credentials.get({ publicKey });
             
             document.getElementById('login-modal').classList.remove('show');
+            isAuthenticated = true;
             loadData();
 
         } catch (err) {
