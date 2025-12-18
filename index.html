@@ -812,7 +812,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getDatabase, ref, set, get, child, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -834,7 +834,6 @@
     let expenses = [];
     let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, reportStartDate: null };
     let currentPersonId = null;
-    let isAuthenticated = false;
     let currentUser = null;
 
     window.showLogin = () => {
@@ -890,7 +889,6 @@
     document.addEventListener('DOMContentLoaded', async () => {
         initTheme();
         initBiometric();
-        checkAuth();
         
         const today = new Date().toISOString().split('T')[0];
         ['payment-date', 'donation-date', 'expense-date', 'change-status-date', 'new-person-start'].forEach(id => {
@@ -2021,7 +2019,6 @@
             }
             
             document.getElementById('login-modal').classList.remove('show');
-            isAuthenticated = true;
             loadData();
         } else {
             // Hide spinner if we are not logged in (e.g. session expired)
@@ -2029,16 +2026,11 @@
             if(loader) loader.style.display = 'none';
 
             localStorage.removeItem('juba-is-logged-in');
-            isAuthenticated = false;
             currentUser = null;
             document.getElementById('login-modal').classList.add('show');
             showLogin();
         }
     });
-
-    function checkAuth() { 
-        // Initial check handled by onAuthStateChanged
-    }
 
     window.logout = async () => {
         try {
@@ -2325,7 +2317,6 @@
             await navigator.credentials.get({ publicKey });
             
             document.getElementById('login-modal').classList.remove('show');
-            isAuthenticated = true;
             loadData();
 
         } catch (err) {
