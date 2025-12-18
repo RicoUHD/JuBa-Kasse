@@ -768,6 +768,26 @@
     </div>
 </div>
 
+<script>
+    // Optimistic UI: Check if we expect to be logged in to avoid flash of login screen
+    if (localStorage.getItem('juba-is-logged-in') === 'true') {
+        document.getElementById('login-modal').classList.remove('show');
+    }
+</script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+        });
+    }
+</script>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
     import { getDatabase, ref, set, get, child, onValue, update } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
@@ -1944,6 +1964,7 @@
     // Auth Listener
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            localStorage.setItem('juba-is-logged-in', 'true');
             const userSnap = await get(ref(db, 'users/' + user.uid));
             if(userSnap.exists()) {
                 currentUser = userSnap.val();
@@ -1956,6 +1977,7 @@
             isAuthenticated = true;
             loadData();
         } else {
+            localStorage.removeItem('juba-is-logged-in');
             isAuthenticated = false;
             currentUser = null;
             document.getElementById('login-modal').classList.add('show');
@@ -1979,6 +2001,7 @@
         const email = document.getElementById('login-email').value;
         const pass = document.getElementById('login-password').value;
         const errDiv = document.getElementById('auth-error');
+        const btn = document.querySelector('#login-form button');
         
         if(!email || !pass) {
             errDiv.innerText = "Bitte E-Mail und Passwort eingeben.";
@@ -1986,12 +2009,18 @@
             return;
         }
 
+        const originalText = btn.innerText;
+        btn.innerText = "Anmelden...";
+        btn.disabled = true;
+
         try {
             await signInWithEmailAndPassword(auth, email, pass);
         } catch (error) {
             console.error(error);
             errDiv.innerText = "Login fehlgeschlagen: " + error.message;
             errDiv.style.display = 'block';
+            btn.innerText = originalText;
+            btn.disabled = false;
         }
     };
 
