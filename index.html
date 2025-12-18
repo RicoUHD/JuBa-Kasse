@@ -391,6 +391,21 @@
         input:checked + .slider { background: var(--gradient-primary); }
         input:checked + .slider:before { transform: translateX(22px); }
 
+        /* NEU: Loading Overlay */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(5px);
+            z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column;
+            transition: opacity 0.3s;
+        }
+        [data-theme="dark"] #loading-overlay { background: rgba(15, 23, 42, 0.8); }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid var(--border);
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         @media (min-width: 769px) {
             .container { max-width: 1200px; display: grid; grid-template-columns: 350px 1fr; gap: 30px; align-items: start; }
             .hero-card, .stats-grid { grid-column: 1; }
@@ -403,6 +418,11 @@
     </style>
 </head>
 <body>
+
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="font-weight:600; color:var(--text)">Lade Daten...</div>
+</div>
 
 <div class="container">
     <div class="header">
@@ -772,6 +792,8 @@
     // Optimistic UI: Check if we expect to be logged in to avoid flash of login screen
     if (localStorage.getItem('juba-is-logged-in') === 'true') {
         document.getElementById('login-modal').classList.remove('show');
+        const loader = document.getElementById('loading-overlay');
+        if(loader) loader.style.display = 'flex';
     }
 </script>
 
@@ -1201,9 +1223,14 @@
     let requests = [];
 
     async function loadData() {
+        // Ladebildschirm anzeigen
+        const loader = document.getElementById('loading-overlay');
+        if(loader) loader.style.display = 'flex';
+
         const dbRef = ref(db);
 
-        // Non-admin: fetch only what is needed for their view (people + settings + their requests)
+        try {
+            // Non-admin: fetch only what is needed for their view (people + settings + their requests)
         if (currentUser && !currentUser.admin) {
             const [pSnap, sSnap, rSnap] = await Promise.all([
                 get(child(dbRef, 'people')),
@@ -1288,6 +1315,13 @@
         });
 
         renderAll();
+        } catch (err) {
+            console.error("Ladefehler:", err);
+            alert("Fehler beim Laden der Daten. Bitte Seite neu laden.");
+        } finally {
+            // Ladebildschirm ausblenden
+            if(loader) loader.style.display = 'none';
+        }
     }
 
     function renderAll() {
@@ -1964,6 +1998,10 @@
     // Auth Listener
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            // Ensure spinner is visible while fetching user profile
+            const loader = document.getElementById('loading-overlay');
+            if(loader) loader.style.display = 'flex';
+
             localStorage.setItem('juba-is-logged-in', 'true');
             const userSnap = await get(ref(db, 'users/' + user.uid));
             if(userSnap.exists()) {
@@ -1977,6 +2015,10 @@
             isAuthenticated = true;
             loadData();
         } else {
+            // Hide spinner if we are not logged in (e.g. session expired)
+            const loader = document.getElementById('loading-overlay');
+            if(loader) loader.style.display = 'none';
+
             localStorage.removeItem('juba-is-logged-in');
             isAuthenticated = false;
             currentUser = null;
