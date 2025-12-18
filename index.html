@@ -307,6 +307,18 @@
         .btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
         .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
         .btn-small { padding: 8px 16px; font-size: 0.85rem; width: auto; }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
         
         /* FAB */
         .fab {
@@ -402,6 +414,7 @@
         <div class="tab-nav-container">
             <div class="tab-indicator" id="tabIndicator"></div>
             <button class="tab-btn active" onclick="switchTab('overview', this)">Übersicht</button>
+            <button class="tab-btn" onclick="switchTab('requests', this)">Anfragen <span id="req-badge" style="background:var(--danger); color:white; border-radius:50%; padding:2px 6px; font-size:0.7rem; display:none;">0</span></button>
             <button class="tab-btn" onclick="switchTab('settings', this)">Einstellung</button>
         </div>
     </div>
@@ -431,6 +444,15 @@
                 <div id="emptyState" style="text-align:center; padding:40px; color:var(--text-secondary); display:none;">
                     <div style="font-size:3rem; margin-bottom:10px;">👥</div>
                     <p>Noch keine Mitglieder.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="requests" class="tab-content">
+            <div id="admin-requests-list">
+                <div style="text-align:center; padding:40px; color:var(--text-secondary);">
+                    <div style="font-size:3rem; margin-bottom:10px;">📭</div>
+                    <p>Keine offenen Anfragen.</p>
                 </div>
             </div>
         </div>
@@ -527,68 +549,100 @@
 
     <!-- USER VIEW (Non-Admin) -->
     <div id="user-view" style="display:none;">
-        <div class="hero-card" style="cursor:default;">
-            <span class="hero-label">Willkommen</span>
-            <div class="hero-amount" id="user-name-display">—</div>
-            <div class="hero-subtitle" id="user-email-display">—</div>
-        </div>
-
-        <div class="card" style="margin-top: 20px;">
-            <div class="card-header">📊 Mein Status</div>
-            <div class="card-body" id="user-status-card">
-                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                    Lade Daten...
-                </div>
+        <div class="tab-nav">
+            <div class="tab-nav-container">
+                <div class="tab-indicator" id="userTabIndicator"></div>
+                <button class="tab-btn active" onclick="switchTab('user-overview', this)">Übersicht</button>
+                <button class="tab-btn" onclick="switchTab('user-settings', this)">Einstellungen</button>
             </div>
         </div>
 
-        <div class="card" style="margin-top: 20px;">
-            <div class="card-header">📋 Statushistorie</div>
-            <div class="card-body" id="user-status-history">
-                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                    Keine Historie vorhanden.
-                </div>
+        <div id="user-overview" class="tab-content active">
+            <div class="hero-card" style="cursor:default;">
+                <span class="hero-label">Willkommen</span>
+                <div class="hero-amount" id="user-name-display">—</div>
+                <div class="hero-subtitle" id="user-email-display">—</div>
             </div>
-        </div>
 
-        <div class="card" style="margin-top: 20px;">
-            <div class="card-header">💳 Zahlungshistorie</div>
-            <div class="card-body" id="user-payment-history">
-                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                    Keine Zahlungen vorhanden.
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top: 20px;">
-            <div class="card-header">⚙️ Einstellungen</div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label class="form-label">Farbschema</label>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
-                        <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">⚡ Aktionen</div>
+                <div class="card-body">
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="openUserRequestModal('payment')">💰 Zahlung melden</button>
+                        <button class="btn btn-secondary" onclick="openUserRequestModal('status')">🔄 Status ändern</button>
+                        <button class="btn btn-secondary" onclick="openUserRequestModal('expense')">💸 Ausgabe melden</button>
                     </div>
                 </div>
-                <div class="form-group" style="margin-top:20px;">
-                    <label class="form-label">Biometrischer Login (Passkey)</label>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <label class="switch">
-                            <input type="checkbox" id="user-biometric-toggle" onchange="toggleBiometric()">
-                            <span class="slider"></span>
-                        </label>
-                        <span id="user-biometric-status" style="font-size:0.9rem; color:var(--text-secondary);">Deaktiviert</span>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">📨 Meine Anfragen</div>
+                <div class="card-body" id="user-requests-list">
+                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                        Keine offenen Anfragen.
                     </div>
                 </div>
-                <div class="form-group" style="margin-top:20px;">
-                    <label class="form-label">Passwort ändern</label>
-                    <input type="password" id="user-new-password" class="form-input" placeholder="Neues Passwort">
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">📊 Mein Status</div>
+                <div class="card-body" id="user-status-card">
+                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                        Lade Daten...
+                    </div>
                 </div>
-                <button class="btn btn-secondary" onclick="changePassword(true)">Passwort ändern</button>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">📋 Statushistorie</div>
+                <div class="card-body" id="user-status-history">
+                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                        Keine Historie vorhanden.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">💳 Zahlungshistorie</div>
+                <div class="card-body" id="user-payment-history">
+                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                        Keine Zahlungen vorhanden.
+                    </div>
+                </div>
             </div>
         </div>
 
-        <button class="btn btn-danger" onclick="logout()" style="width:100%; margin-top: 20px;">🚪 Abmelden</button>
+        <div id="user-settings" class="tab-content">
+            <div class="card">
+                <div class="card-header">⚙️ Einstellungen</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Farbschema</label>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
+                            <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:20px;">
+                        <label class="form-label">Biometrischer Login (Passkey)</label>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label class="switch">
+                                <input type="checkbox" id="user-biometric-toggle" onchange="toggleBiometric()">
+                                <span class="slider"></span>
+                            </label>
+                            <span id="user-biometric-status" style="font-size:0.9rem; color:var(--text-secondary);">Deaktiviert</span>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:20px;">
+                        <label class="form-label">Passwort ändern</label>
+                        <input type="password" id="user-new-password" class="form-input" placeholder="Neues Passwort">
+                    </div>
+                    <button class="btn btn-secondary" onclick="changePassword(true)">Passwort ändern</button>
+                </div>
+            </div>
+
+            <button class="btn btn-danger" onclick="logout()" style="width:100%; margin-top: 20px;">🚪 Abmelden</button>
+        </div>
     </div>
 
 </div>
@@ -675,6 +729,14 @@
     <div class="modal-content">
         <div class="modal-header">Verlauf <span onclick="closeModal('transaction-modal')" style="cursor:pointer">&times;</span></div>
         <div id="full-transaction-list"></div>
+    </div>
+</div>
+
+<div id="user-request-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><span id="req-modal-title">Anfrage</span> <span onclick="closeModal('user-request-modal')" style="cursor:pointer">&times;</span></div>
+        <div id="req-form-content"></div>
+        <button class="btn btn-primary" onclick="submitUserRequest()" style="margin-top:15px; width:100%">Absenden</button>
     </div>
 </div>
 
@@ -804,14 +866,46 @@
         });
     });
 
+    function updateTabIndicator() {
+        // Find the visible tab container
+        const visibleContainer = Array.from(document.querySelectorAll('.tab-nav-container')).find(el => el.offsetParent !== null);
+        
+        if (visibleContainer) {
+            const activeBtn = visibleContainer.querySelector('.tab-btn.active');
+            const indicator = visibleContainer.querySelector('.tab-indicator');
+            
+            if (activeBtn && indicator) {
+                indicator.style.width = activeBtn.offsetWidth + 'px';
+                indicator.style.transform = `translateX(${activeBtn.offsetLeft - 5}px)`;
+            }
+        }
+    }
+
+    window.addEventListener('resize', updateTabIndicator);
+
     window.switchTab = function(tabName, btn) {
+        // Hide all tab contents
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        btn.classList.add('active');
-        const indicator = document.getElementById('tabIndicator');
-        indicator.style.width = btn.offsetWidth + 'px';
-        indicator.style.transform = `translateX(${btn.offsetLeft - 5}px)`;
+        
+        // Show the selected tab content. 
+        // Note: We need to be careful if we have multiple tab groups (admin vs user).
+        // But currently IDs are unique globally.
+        const targetContent = document.getElementById(tabName);
+        if(targetContent) targetContent.classList.add('active');
+
+        // Update buttons in the same container
+        const container = btn.closest('.tab-nav-container');
+        if(container) {
+            container.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Update indicator in this container
+            const indicator = container.querySelector('.tab-indicator');
+            if(indicator) {
+                indicator.style.width = btn.offsetWidth + 'px';
+                indicator.style.transform = `translateX(${btn.offsetLeft - 5}px)`;
+            }
+        }
     };
     
     setTimeout(() => {
@@ -1091,19 +1185,23 @@
 
     // --- ENDE MATHEMATIK & LOGIK ---
 
+    let requests = [];
+
     async function loadData() {
         const dbRef = ref(db);
-        const [pSnap, dSnap, eSnap, sSnap, cSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
-            get(child(dbRef, 'system/inviteCode'))
+            get(child(dbRef, 'system/inviteCode')),
+            get(child(dbRef, 'requests'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
+        requests = safeList(rSnap.val());
         if(sSnap.exists()) settings = sSnap.val();
 
         // RBAC Filtering
@@ -1116,7 +1214,11 @@
             // Show User View, Hide Admin View
             document.getElementById('admin-view').style.display = 'none';
             document.getElementById('user-view').style.display = 'block';
-            document.querySelector('.tab-nav').style.display = 'none';
+            
+            // Hide Admin Tab Nav
+            const adminNav = document.querySelector('.container > .tab-nav');
+            if(adminNav) adminNav.style.display = 'none';
+
             document.getElementById('settings').style.display = 'none';
             
             // Hide FAB
@@ -1135,11 +1237,21 @@
                 const userBioStatus = document.getElementById('user-biometric-status');
                 if(userBioStatus) userBioStatus.innerText = 'Aktiv';
             }
+
+            // Initialize User Tabs Indicator
+            setTimeout(() => updateTabIndicator(), 50);
+
         } else {
             // Show Admin View, Hide User View
             document.getElementById('admin-view').style.display = 'block';
             document.getElementById('user-view').style.display = 'none';
-            document.querySelector('.tab-nav').style.display = 'block';
+            
+            // Show Admin Tab Nav
+            const adminNav = document.querySelector('.container > .tab-nav');
+            if(adminNav) adminNav.style.display = 'flex';
+            
+            // Initialize Admin Tabs Indicator
+            setTimeout(() => updateTabIndicator(), 50);
             document.getElementById('settings').style.display = '';
             
             const fab = document.querySelector('.fab');
@@ -1167,12 +1279,141 @@
         } else {
             renderPeople();
             renderStats();
+            renderAdminRequests();
             document.getElementById('rate-vollverdiener').value = settings.vollverdiener;
             document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
             document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
             document.getElementById('report-start-date').value = settings.reportStartDate || '';
         }
     }
+
+    function renderAdminRequests() {
+        const pending = requests.filter(r => r.status === 'pending');
+        const badge = document.getElementById('req-badge');
+        
+        if(pending.length > 0) {
+            badge.innerText = pending.length;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+
+        const list = document.getElementById('admin-requests-list');
+        if(pending.length === 0) {
+            list.innerHTML = `
+                <div style="text-align:center; padding:40px; color:var(--text-secondary);">
+                    <div style="font-size:3rem; margin-bottom:10px;">📭</div>
+                    <p>Keine offenen Anfragen.</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = pending.map(req => {
+            let typeLabel = '';
+            let details = '';
+            
+            if(req.type === 'payment') {
+                typeLabel = '💰 Zahlung';
+                details = `${parseFloat(req.data.amount).toFixed(2)} € am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+                if(req.data.note) details += `<br><small>"${req.data.note}"</small>`;
+            } else if(req.type === 'status') {
+                typeLabel = '🔄 Statusänderung';
+                details = `Neu: <strong>${req.data.newStatus}</strong> ab ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            } else if(req.type === 'expense') {
+                typeLabel = '💸 Ausgabe';
+                details = `${parseFloat(req.data.amount).toFixed(2)} € für "${req.data.description}" am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            }
+
+            return `
+                <div class="card" style="margin-bottom: 15px;">
+                    <div class="card-body">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <span style="font-weight:bold;">${typeLabel}</span>
+                            <span style="font-size:0.8rem; color:var(--text-secondary);">${new Date(req.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            Von: <strong>${req.personName}</strong><br>
+                            ${details}
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-sm btn-success" onclick="approveRequest('${req.id}')">Genehmigen</button>
+                            <button class="btn btn-sm btn-danger" onclick="rejectRequest('${req.id}')">Ablehnen</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.approveRequest = async (reqId) => {
+        const req = requests.find(r => r.id === reqId);
+        if(!req) return;
+
+        if(req.type === 'payment') {
+            const person = people.find(p => p.id === req.personId);
+            if(person) {
+                const newPayment = {
+                    id: Date.now().toString(),
+                    amount: parseFloat(req.data.amount),
+                    date: req.data.date,
+                    description: req.data.note || 'Zahlung (Genehmigt)'
+                };
+                if(!person.payments) person.payments = [];
+                person.payments.push(newPayment);
+                await savePeople();
+            }
+        } else if(req.type === 'status') {
+            const person = people.find(p => p.id === req.personId);
+            if(person) {
+                const changeDate = req.data.date;
+                const newStatus = req.data.newStatus;
+                const changeDateObj = new Date(changeDate);
+                
+                // Logic from saveStatusChange
+                let currentStatusStartDate = person.originalMemberSince || person.memberSince;
+                if (person.statusHistory && person.statusHistory.length > 0) {
+                    const sortedHistory = person.statusHistory.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+                    currentStatusStartDate = sortedHistory[0].endDate; 
+                }
+
+                if (new Date(currentStatusStartDate) < changeDateObj) {
+                    const archiveEntry = {
+                        status: person.status,
+                        startDate: currentStatusStartDate,
+                        endDate: changeDate
+                    };
+                    if(!person.statusHistory) person.statusHistory = [];
+                    person.statusHistory.push(archiveEntry);
+                }
+                person.status = newStatus;
+                await savePeople();
+            }
+        } else if(req.type === 'expense') {
+            const newExpense = {
+                id: Date.now().toString(),
+                amount: parseFloat(req.data.amount),
+                description: req.data.description + ` (Von: ${req.personName})`,
+                date: req.data.date
+            };
+            expenses.push(newExpense);
+            await set(ref(db, 'expenses'), expenses);
+        }
+
+        await update(ref(db, 'requests/' + reqId), { status: 'approved' });
+        loadData();
+    };
+
+    window.rejectRequest = async (reqId) => {
+        const reason = prompt("Grund für Ablehnung:");
+        if(reason === null) return; // Cancelled
+
+        await update(ref(db, 'requests/' + reqId), { 
+            status: 'rejected',
+            rejectionReason: reason || 'Kein Grund angegeben'
+        });
+        loadData();
+    };
 
     function renderUserView() {
         if (people.length === 0) {
@@ -1257,6 +1498,38 @@
             document.getElementById('user-payment-history').innerHTML = `
                 <div style="text-align:center; padding: 20px; color: var(--text-secondary); font-style: italic;">
                     Keine Zahlungen vorhanden.
+                </div>
+            `;
+        }
+
+        // User Requests List
+        const myRequests = requests.filter(r => r.userId === currentUser.uid && r.status !== 'approved').sort((a,b) => b.timestamp - a.timestamp);
+        const reqList = document.getElementById('user-requests-list');
+        
+        if(myRequests.length > 0) {
+            reqList.innerHTML = myRequests.map(req => {
+                let statusBadge = '<span class="badge badge-warning">⏳ Warten</span>';
+                if(req.status === 'rejected') statusBadge = '<span class="badge badge-danger">❌ Abgelehnt</span>';
+                
+                let typeLabel = req.type === 'payment' ? 'Zahlung' : (req.type === 'status' ? 'Status' : 'Ausgabe');
+                let details = '';
+                if(req.status === 'rejected') details = `<div style="color:var(--danger); font-size:0.8rem; margin-top:5px;">Grund: ${req.rejectionReason}</div>`;
+
+                return `
+                    <div class="trans-item">
+                        <div class="trans-left">
+                            <span style="font-weight:600;">${typeLabel}</span>
+                            <div class="trans-meta">${new Date(req.timestamp).toLocaleDateString('de-DE')}</div>
+                            ${details}
+                        </div>
+                        <div>${statusBadge}</div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            reqList.innerHTML = `
+                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                    Keine offenen Anfragen.
                 </div>
             `;
         }
@@ -1687,6 +1960,14 @@
         // Initial check handled by onAuthStateChanged
     }
 
+    window.logout = async () => {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error("Logout Error:", error);
+        }
+    };
+
     window.attemptLogin = async () => {
         const email = document.getElementById('login-email').value;
         const pass = document.getElementById('login-password').value;
@@ -1789,9 +2070,112 @@
         }
     };
     
-    window.logout = async () => {
-        await signOut(auth);
-        location.reload();
+    let currentRequestType = null;
+
+    window.openUserRequestModal = (type) => {
+        currentRequestType = type;
+        const container = document.getElementById('req-form-content');
+        const title = document.getElementById('req-modal-title');
+        
+        if(type === 'payment') {
+            title.innerText = "Zahlung melden";
+            container.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">Betrag (€)</label>
+                    <input type="number" id="req-amount" class="form-input" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Datum</label>
+                    <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notiz (Optional)</label>
+                    <input type="text" id="req-note" class="form-input">
+                </div>
+            `;
+        } else if(type === 'status') {
+            title.innerText = "Statusänderung beantragen";
+            container.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">Neuer Status</label>
+                    <select id="req-status" class="form-select">
+                        <option value="vollverdiener">💼 Vollverdiener</option>
+                        <option value="geringverdiener">📉 Geringverdiener</option>
+                        <option value="keinverdiener">🎓 Keinverdiener</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Gültig ab</label>
+                    <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+            `;
+        } else if(type === 'expense') {
+            title.innerText = "Ausgabe melden";
+            container.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">Betrag (€)</label>
+                    <input type="number" id="req-amount" class="form-input" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Beschreibung</label>
+                    <input type="text" id="req-desc" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Datum</label>
+                    <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+            `;
+        }
+        
+        openModal('user-request-modal');
+    };
+
+    window.submitUserRequest = async () => {
+        if(!currentUser) return;
+        
+        // Find person ID linked to current user
+        const person = people.find(p => p.uid === currentUser.uid);
+        if(!person) { alert("Kein Personenprofil gefunden."); return; }
+
+        const reqData = {};
+        const date = document.getElementById('req-date').value;
+        
+        if(currentRequestType === 'payment') {
+            const amount = document.getElementById('req-amount').value;
+            const note = document.getElementById('req-note').value;
+            if(!amount || !date) { alert("Bitte alle Felder ausfüllen"); return; }
+            reqData.amount = amount;
+            reqData.date = date;
+            reqData.note = note;
+        } else if(currentRequestType === 'status') {
+            const status = document.getElementById('req-status').value;
+            if(!status || !date) { alert("Bitte alle Felder ausfüllen"); return; }
+            reqData.newStatus = status;
+            reqData.date = date;
+        } else if(currentRequestType === 'expense') {
+            const amount = document.getElementById('req-amount').value;
+            const desc = document.getElementById('req-desc').value;
+            if(!amount || !desc || !date) { alert("Bitte alle Felder ausfüllen"); return; }
+            reqData.amount = amount;
+            reqData.description = desc;
+            reqData.date = date;
+        }
+
+        const newReq = {
+            id: Date.now().toString(),
+            type: currentRequestType,
+            userId: currentUser.uid,
+            personId: person.id,
+            personName: person.name,
+            data: reqData,
+            status: 'pending',
+            timestamp: Date.now()
+        };
+
+        await set(ref(db, 'requests/' + newReq.id), newReq);
+        closeModal('user-request-modal');
+        alert("Anfrage gesendet! Ein Administrator wird sie prüfen.");
+        loadData(); // Reload to show in list
     };
 
     window.generateNewCode = async () => {
