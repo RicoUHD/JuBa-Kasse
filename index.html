@@ -406,37 +406,162 @@
         </div>
     </div>
 
-    <div id="overview" class="tab-content active">
-        <div class="hero-card" onclick="showTransactionModal()">
-            <span class="hero-label">Aktueller Kassenstand</span>
-            <div class="hero-amount" id="heroAmount">0,00 €</div>
-            <div class="hero-subtitle">Tippen für Details</div>
+    <!-- ADMIN VIEW -->
+    <div id="admin-view">
+        <div id="overview" class="tab-content active">
+            <div class="hero-card" onclick="showTransactionModal()">
+                <span class="hero-label">Aktueller Kassenstand</span>
+                <div class="hero-amount" id="heroAmount">0,00 €</div>
+                <div class="hero-subtitle">Tippen für Details</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Einnahmen</div>
+                    <div class="stat-value text-success" id="totalIncome">0,00 €</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Ausgaben</div>
+                    <div class="stat-value text-danger" id="totalExpenses">0,00 €</div>
+                </div>
+            </div>
+
+            <div class="overview-right">
+                <div id="peopleList"></div>
+                <div id="emptyState" style="text-align:center; padding:40px; color:var(--text-secondary); display:none;">
+                    <div style="font-size:3rem; margin-bottom:10px;">👥</div>
+                    <p>Noch keine Mitglieder.</p>
+                </div>
+            </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div class="stat-label">Einnahmen</div>
-                <div class="stat-value text-success" id="totalIncome">0,00 €</div>
+        <div id="settings" class="tab-content">
+            
+            <div class="card card-settings" id="card-design">
+                <div class="card-header">Design</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Farbschema</label>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
+                            <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">Ausgaben</div>
-                <div class="stat-value text-danger" id="totalExpenses">0,00 €</div>
-            </div>
-        </div>
 
-        <div class="overview-right">
-            <div id="peopleList"></div>
-            <div id="emptyState" style="text-align:center; padding:40px; color:var(--text-secondary); display:none;">
-                <div style="font-size:3rem; margin-bottom:10px;">👥</div>
-                <p>Noch keine Mitglieder.</p>
+            <div class="card card-settings" id="card-rates">
+                <div class="card-header">Monatliche Beiträge</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Vollverdiener (€)</label>
+                        <input type="number" id="rate-vollverdiener" class="form-input" value="50">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Geringverdiener (€)</label>
+                        <input type="number" id="rate-geringverdiener" class="form-input" value="25">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Keinverdiener (€)</label>
+                        <input type="number" id="rate-keinverdiener" class="form-input" value="10">
+                    </div>
+                </div>
             </div>
+
+            <div class="card card-settings" id="card-report">
+                <div class="card-header">Berichtszeitraum</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Startdatum für Berechnung</label>
+                        <input type="date" id="report-start-date" class="form-input">
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                            Einnahmen und Ausgaben werden erst ab diesem Datum in der Übersicht gezählt.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-settings" id="card-invite">
+                <div class="card-header">Registrierungscode</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Aktueller Code</label>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="admin-invite-code" class="form-input" readonly>
+                            <button class="btn btn-secondary" onclick="generateNewCode()">Neu</button>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                            Dieser Code wird für neue Registrierungen benötigt.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-settings" id="card-security">
+                <div class="card-header">Sicherheit</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Biometrischer Login (Passkey)</label>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label class="switch">
+                                <input type="checkbox" id="biometric-toggle" onchange="toggleBiometric()">
+                                <span class="slider"></span>
+                            </label>
+                            <span id="biometric-status" style="font-size:0.9rem; color:var(--text-secondary);">Deaktiviert</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                            Erfordert HTTPS. Speichert einen Passkey auf diesem Gerät (FaceID/Fingerprint).
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:20px;">
+                        <label class="form-label">Passwort ändern</label>
+                        <input type="password" id="new-password" class="form-input" placeholder="Neues Passwort">
+                    </div>
+                    <button class="btn btn-secondary" onclick="changePassword()">Passwort ändern</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveSettings()" style="margin-bottom:30px;">Alle Einstellungen Speichern</button>
         </div>
     </div>
 
-    <div id="settings" class="tab-content">
-        
-        <div class="card card-settings">
-            <div class="card-header">Design</div>
+    <!-- USER VIEW (Non-Admin) -->
+    <div id="user-view" style="display:none;">
+        <div class="hero-card" style="cursor:default;">
+            <span class="hero-label">Willkommen</span>
+            <div class="hero-amount" id="user-name-display">—</div>
+            <div class="hero-subtitle" id="user-email-display">—</div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">📊 Mein Status</div>
+            <div class="card-body" id="user-status-card">
+                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                    Lade Daten...
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">📋 Statushistorie</div>
+            <div class="card-body" id="user-status-history">
+                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                    Keine Historie vorhanden.
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">💳 Zahlungshistorie</div>
+            <div class="card-body" id="user-payment-history">
+                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                    Keine Zahlungen vorhanden.
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">⚙️ Einstellungen</div>
             <div class="card-body">
                 <div class="form-group">
                     <label class="form-label">Farbschema</label>
@@ -445,65 +570,25 @@
                         <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="card card-settings">
-            <div class="card-header">Monatliche Beiträge</div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label class="form-label">Vollverdiener (€)</label>
-                    <input type="number" id="rate-vollverdiener" class="form-input" value="50">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Geringverdiener (€)</label>
-                    <input type="number" id="rate-geringverdiener" class="form-input" value="25">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Keinverdiener (€)</label>
-                    <input type="number" id="rate-keinverdiener" class="form-input" value="10">
-                </div>
-            </div>
-        </div>
-
-        <div class="card card-settings">
-            <div class="card-header">Berichtszeitraum</div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label class="form-label">Startdatum für Berechnung</label>
-                    <input type="date" id="report-start-date" class="form-input">
-                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
-                        Einnahmen und Ausgaben werden erst ab diesem Datum in der Übersicht gezählt.
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card card-settings">
-            <div class="card-header">Sicherheit</div>
-            <div class="card-body">
-                <div class="form-group">
+                <div class="form-group" style="margin-top:20px;">
                     <label class="form-label">Biometrischer Login (Passkey)</label>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <label class="switch">
-                            <input type="checkbox" id="biometric-toggle" onchange="toggleBiometric()">
+                            <input type="checkbox" id="user-biometric-toggle" onchange="toggleBiometric()">
                             <span class="slider"></span>
                         </label>
-                        <span id="biometric-status" style="font-size:0.9rem; color:var(--text-secondary);">Deaktiviert</span>
-                    </div>
-                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
-                        Erfordert HTTPS. Speichert einen Passkey auf diesem Gerät (FaceID/Fingerprint).
+                        <span id="user-biometric-status" style="font-size:0.9rem; color:var(--text-secondary);">Deaktiviert</span>
                     </div>
                 </div>
                 <div class="form-group" style="margin-top:20px;">
                     <label class="form-label">Passwort ändern</label>
-                    <input type="password" id="new-password" class="form-input" placeholder="Neues Passwort">
+                    <input type="password" id="user-new-password" class="form-input" placeholder="Neues Passwort">
                 </div>
-                <button class="btn btn-secondary" onclick="changePassword()">Passwort ändern</button>
+                <button class="btn btn-secondary" onclick="changePassword(true)">Passwort ändern</button>
             </div>
         </div>
 
-        <button class="btn btn-primary" onclick="saveSettings()" style="margin-bottom:30px;">Alle Einstellungen Speichern</button>
+        <button class="btn btn-danger" onclick="logout()" style="width:100%; margin-top: 20px;">🚪 Abmelden</button>
     </div>
 
 </div>
@@ -594,20 +679,46 @@
 </div>
 
 <div id="login-modal" class="modal show" style="z-index:2000;">
-    <div class="modal-content" style="text-align:center;">
-        <h3>JuBa-Kasse Login</h3>
-        <p style="margin:20px 0; font-size:3rem;">🔒</p>
-        <input type="password" id="login-password" class="form-input" placeholder="Passwort" style="margin-bottom:15px;">
-        <button class="btn btn-primary" onclick="attemptLogin()">Anmelden</button>
-        <div style="margin-top:20px;">
-            <button class="btn btn-secondary" id="bio-login-btn" onclick="attemptBiometricLogin()" style="display:none;">👆 Biometrisch</button>
+    <div class="modal-content" style="max-width: 400px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 id="auth-title" style="margin-bottom: 15px;">Anmelden</h2>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+                <button class="btn btn-sm btn-primary" onclick="showLogin()" id="btn-show-login">Login</button>
+                <button class="btn btn-sm btn-secondary" onclick="showRegister()" id="btn-show-register">Registrieren</button>
+            </div>
         </div>
+
+        <!-- Login Form -->
+        <div id="login-form">
+            <input type="email" id="login-email" class="form-input" placeholder="E-Mail" style="margin-bottom:10px;">
+            <input type="password" id="login-password" class="form-input" placeholder="Passwort" style="margin-bottom:15px;">
+            <button class="btn btn-primary" onclick="attemptLogin()" style="width:100%">Anmelden</button>
+        </div>
+
+        <!-- Register Form -->
+        <div id="register-form" style="display:none;">
+            <div style="background: var(--surface-alt); padding: 10px; border-radius: 10px; margin-bottom: 15px; font-size: 0.9rem;">
+                <p>Bitte geben Sie den aktuellen 6-stelligen Registrierungscode ein.</p>
+            </div>
+            <input type="text" id="reg-code" class="form-input" placeholder="6-stelliger Code" style="margin-bottom:10px;" maxlength="6">
+            <input type="email" id="reg-email" class="form-input" placeholder="E-Mail" style="margin-bottom:10px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="reg-firstname" class="form-input" placeholder="Vorname">
+                <input type="text" id="reg-lastname" class="form-input" placeholder="Nachname">
+            </div>
+            <input type="password" id="reg-pass1" class="form-input" placeholder="Passwort (min 6)" style="margin-bottom:10px;">
+            <input type="password" id="reg-pass2" class="form-input" placeholder="Passwort wiederholen" style="margin-bottom:15px;">
+            <button class="btn btn-primary" onclick="attemptRegister()" style="width:100%">Registrieren</button>
+        </div>
+        
+        <div id="auth-error" style="color: var(--danger); text-align: center; margin-top: 15px; display: none; font-weight: bold;"></div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getDatabase, ref, set, get, child, onValue, update } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyD5z2-ND8Ukx46wDhYJlUQhiUqHITrLxy0",
@@ -621,6 +732,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const auth = getAuth(app);
 
     let people = [];
     let donations = [];
@@ -628,6 +740,29 @@
     let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, reportStartDate: null };
     let currentPersonId = null;
     let isAuthenticated = false;
+    let currentUser = null;
+
+    window.showLogin = () => {
+        document.getElementById('login-form').style.display = 'block';
+        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('auth-title').innerText = 'Anmelden';
+        document.getElementById('btn-show-login').classList.add('btn-primary');
+        document.getElementById('btn-show-login').classList.remove('btn-secondary');
+        document.getElementById('btn-show-register').classList.add('btn-secondary');
+        document.getElementById('btn-show-register').classList.remove('btn-primary');
+        document.getElementById('auth-error').style.display = 'none';
+    };
+
+    window.showRegister = () => {
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('register-form').style.display = 'block';
+        document.getElementById('auth-title').innerText = 'Registrieren';
+        document.getElementById('btn-show-register').classList.add('btn-primary');
+        document.getElementById('btn-show-register').classList.remove('btn-secondary');
+        document.getElementById('btn-show-login').classList.add('btn-secondary');
+        document.getElementById('btn-show-login').classList.remove('btn-primary');
+        document.getElementById('auth-error').style.display = 'none';
+    };
 
     // Helper: Firebase can return lists as objects {0:.., 1:..}, this fixes that.
     function safeList(val) {
@@ -958,17 +1093,63 @@
 
     async function loadData() {
         const dbRef = ref(db);
-        const [pSnap, dSnap, eSnap, sSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
-            get(child(dbRef, 'settings'))
+            get(child(dbRef, 'settings')),
+            get(child(dbRef, 'system/inviteCode'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         if(sSnap.exists()) settings = sSnap.val();
+
+        // RBAC Filtering
+        if (currentUser && !currentUser.admin) {
+            // Filter people to show only the current user
+            // Match by UID OR Name (if UID not yet linked)
+            const fullName = `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase();
+            people = people.filter(p => p.uid === currentUser.uid || p.name.toLowerCase() === fullName);
+            
+            // Show User View, Hide Admin View
+            document.getElementById('admin-view').style.display = 'none';
+            document.getElementById('user-view').style.display = 'block';
+            document.querySelector('.tab-nav').style.display = 'none';
+            document.getElementById('settings').style.display = 'none';
+            
+            // Hide FAB
+            const fab = document.querySelector('.fab');
+            if(fab) fab.style.display = 'none';
+            
+            // Populate User View
+            document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
+            document.getElementById('user-email-display').innerText = currentUser.email;
+            
+            // Sync biometric toggle for user view
+            const savedId = localStorage.getItem('juba-bio-id');
+            if(savedId) {
+                const userBioToggle = document.getElementById('user-biometric-toggle');
+                if(userBioToggle) userBioToggle.checked = true;
+                const userBioStatus = document.getElementById('user-biometric-status');
+                if(userBioStatus) userBioStatus.innerText = 'Aktiv';
+            }
+        } else {
+            // Show Admin View, Hide User View
+            document.getElementById('admin-view').style.display = 'block';
+            document.getElementById('user-view').style.display = 'none';
+            document.querySelector('.tab-nav').style.display = 'block';
+            document.getElementById('settings').style.display = '';
+            
+            const fab = document.querySelector('.fab');
+            if(fab) fab.style.display = 'flex';
+
+            // Show Invite Code
+            const code = cSnap.exists() ? cSnap.val() : '123456';
+            const codeInput = document.getElementById('admin-invite-code');
+            if(codeInput) codeInput.value = code;
+        }
 
         people.forEach(person => {
             if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
@@ -981,12 +1162,104 @@
     }
 
     function renderAll() {
-        renderPeople();
-        renderStats();
-        document.getElementById('rate-vollverdiener').value = settings.vollverdiener;
-        document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
-        document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
-        document.getElementById('report-start-date').value = settings.reportStartDate || '';
+        if (currentUser && !currentUser.admin) {
+            renderUserView();
+        } else {
+            renderPeople();
+            renderStats();
+            document.getElementById('rate-vollverdiener').value = settings.vollverdiener;
+            document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
+            document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
+            document.getElementById('report-start-date').value = settings.reportStartDate || '';
+        }
+    }
+
+    function renderUserView() {
+        if (people.length === 0) {
+            document.getElementById('user-status-card').innerHTML = `
+                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                    Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.
+                </div>
+            `;
+            return;
+        }
+
+        const p = people[0]; // User has only one person (themselves)
+        const paidUntil = calculatePaidUntil(p);
+        const statusMeta = calculateTimeRemaining(p);
+        const overdueAmount = calculateOverdueAmount(p);
+        
+        let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {day:'numeric', month:'long', year:'numeric'}) : 'Nie';
+        
+        const statusLabels = {
+            'vollverdiener': '💼 Vollverdiener',
+            'geringverdiener': '📉 Geringverdiener',
+            'keinverdiener': '🎓 Keinverdiener'
+        };
+        
+        let statusColor = 'var(--success)';
+        let statusIcon = '✅';
+        if (statusMeta.isOverdue) {
+            statusColor = 'var(--danger)';
+            statusIcon = '⚠️';
+        } else if (statusMeta.isSoonDue) {
+            statusColor = 'var(--warning)';
+            statusIcon = '⏳';
+        }
+
+        document.getElementById('user-status-card').innerHTML = `
+            <div style="display: grid; gap: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
+                    <span style="color: var(--text-secondary);">Mitgliedsstatus</span>
+                    <span style="font-weight: 600;">${statusLabels[p.status] || p.status}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
+                    <span style="color: var(--text-secondary);">Monatlicher Beitrag</span>
+                    <span style="font-weight: 600;">${settings[p.status] || 0} €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
+                    <span style="color: var(--text-secondary);">Bezahlt bis</span>
+                    <span style="font-weight: 600; color: ${statusColor};">${statusIcon} ${dateText}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
+                    <span style="color: var(--text-secondary);">Verbleibend</span>
+                    <span style="font-weight: 600; color: ${statusColor};">${statusMeta.text}</span>
+                </div>
+                ${statusMeta.isOverdue ? `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid var(--danger);">
+                    <span style="color: var(--danger); font-weight: 600;">Offener Betrag</span>
+                    <span style="font-weight: 700; color: var(--danger);">${overdueAmount.toFixed(2)} €</span>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
+                    <span style="color: var(--text-secondary);">Mitglied seit</span>
+                    <span style="font-weight: 600;">${new Date(p.originalMemberSince || p.memberSince).toLocaleDateString('de-DE')}</span>
+                </div>
+            </div>
+        `;
+
+        // Status History
+        document.getElementById('user-status-history').innerHTML = generateStatusHistoryHTML(p);
+
+        // Payment History
+        const paymentsList = safeList(p.payments);
+        if (paymentsList.length > 0) {
+            document.getElementById('user-payment-history').innerHTML = paymentsList.slice().reverse().map(pay => `
+                <div class="trans-item">
+                    <div class="trans-left">
+                        <span>${pay.description || 'Zahlung'}</span>
+                        <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
+                    </div>
+                    <div class="trans-amount text-success">+${parseFloat(pay.amount).toFixed(2)}€</div>
+                </div>
+            `).join('');
+        } else {
+            document.getElementById('user-payment-history').innerHTML = `
+                <div style="text-align:center; padding: 20px; color: var(--text-secondary); font-style: italic;">
+                    Keine Zahlungen vorhanden.
+                </div>
+            `;
+        }
     }
 
     function renderPeople() {
@@ -1082,7 +1355,7 @@
                             ` : ''}
                         </div>
 
-                        <div class="details-actions">
+                        <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                             <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                             <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
                             <button class="btn btn-danger" onclick="deletePerson('${p.id}')">🗑️</button>
@@ -1349,9 +1622,28 @@
         renderAll(); alert("Gespeichert");
     };
 
-    window.changePassword = async () => {
-        const pw = document.getElementById('new-password').value;
-        if(pw) { await set(ref(db, 'auth/password'), pw); alert("Passwort geändert"); }
+    window.changePassword = async (isUser = false) => {
+        const inputId = isUser ? 'user-new-password' : 'new-password';
+        const pw = document.getElementById(inputId).value;
+        
+        if(!pw || pw.length < 6) {
+            alert("Passwort muss mindestens 6 Zeichen lang sein.");
+            return;
+        }
+
+        try {
+            const user = auth.currentUser;
+            if(user) {
+                await updatePassword(user, pw);
+                alert("Passwort erfolgreich geändert.");
+                document.getElementById(inputId).value = '';
+            } else {
+                alert("Kein Benutzer angemeldet.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Fehler beim Ändern des Passworts: " + error.message);
+        }
     };
 
     async function savePeople() {
@@ -1369,17 +1661,143 @@
         document.querySelector('meta[name="theme-color"]').content = t==='dark' ? '#0f172a' : '#06b6d4';
     };
 
-    function checkAuth() { document.getElementById('login-modal').classList.add('show'); }
-
-    window.attemptLogin = async () => {
-        const inp = document.getElementById('login-password').value;
-        const snap = await get(ref(db, 'auth/password'));
-        const real = snap.exists() ? snap.val() : 'admin123';
-        if(inp === real) {
+    // Auth Listener
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userSnap = await get(ref(db, 'users/' + user.uid));
+            if(userSnap.exists()) {
+                currentUser = userSnap.val();
+                currentUser.uid = user.uid;
+            } else {
+                currentUser = { role: 'user', email: user.email };
+            }
+            
             document.getElementById('login-modal').classList.remove('show');
             isAuthenticated = true;
             loadData();
-        } else { alert("Falsch"); }
+        } else {
+            isAuthenticated = false;
+            currentUser = null;
+            document.getElementById('login-modal').classList.add('show');
+            showLogin();
+        }
+    });
+
+    function checkAuth() { 
+        // Initial check handled by onAuthStateChanged
+    }
+
+    window.attemptLogin = async () => {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-password').value;
+        const errDiv = document.getElementById('auth-error');
+        
+        if(!email || !pass) {
+            errDiv.innerText = "Bitte E-Mail und Passwort eingeben.";
+            errDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+        } catch (error) {
+            console.error(error);
+            errDiv.innerText = "Login fehlgeschlagen: " + error.message;
+            errDiv.style.display = 'block';
+        }
+    };
+
+    window.attemptRegister = async () => {
+        const code = document.getElementById('reg-code').value;
+        const email = document.getElementById('reg-email').value;
+        const first = document.getElementById('reg-firstname').value;
+        const last = document.getElementById('reg-lastname').value;
+        const p1 = document.getElementById('reg-pass1').value;
+        const p2 = document.getElementById('reg-pass2').value;
+        const errDiv = document.getElementById('auth-error');
+
+        if(!code || !email || !first || !last || !p1 || !p2) {
+            errDiv.innerText = "Bitte alle Felder ausfüllen.";
+            errDiv.style.display = 'block';
+            return;
+        }
+        if(p1.length < 6) {
+            errDiv.innerText = "Passwort muss mindestens 6 Zeichen lang sein.";
+            errDiv.style.display = 'block';
+            return;
+        }
+        if(p1 !== p2) {
+            errDiv.innerText = "Passwörter stimmen nicht überein.";
+            errDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const codeSnap = await get(ref(db, 'system/inviteCode'));
+            const validCode = codeSnap.exists() ? codeSnap.val() : '123456';
+            
+            if(code !== String(validCode)) {
+                errDiv.innerText = "Ungültiger Registrierungscode.";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            const userCredential = await createUserWithEmailAndPassword(auth, email, p1);
+            const user = userCredential.user;
+            const fullName = `${first} ${last}`;
+
+            // Save User Profile
+            await set(ref(db, 'users/' + user.uid), {
+                email: email,
+                firstName: first,
+                lastName: last,
+                role: 'user',
+                admin: false
+            });
+
+            // Link to Person in People List
+            const pSnap = await get(ref(db, 'people'));
+            let currentPeople = safeList(pSnap.val());
+            
+            let person = currentPeople.find(p => p.name.toLowerCase() === fullName.toLowerCase());
+            
+            if(person) {
+                person.uid = user.uid;
+                person.email = email;
+            } else {
+                person = {
+                    id: Date.now().toString(),
+                    name: fullName,
+                    status: 'vollverdiener',
+                    memberSince: new Date().toISOString().split('T')[0],
+                    originalMemberSince: new Date().toISOString().split('T')[0],
+                    totalPaid: 0,
+                    statusHistory: [],
+                    payments: [],
+                    uid: user.uid,
+                    email: email
+                };
+                currentPeople.push(person);
+            }
+            
+            await set(ref(db, 'people'), currentPeople);
+
+        } catch (error) {
+            console.error(error);
+            errDiv.innerText = "Registrierung fehlgeschlagen: " + error.message;
+            errDiv.style.display = 'block';
+        }
+    };
+    
+    window.logout = async () => {
+        await signOut(auth);
+        location.reload();
+    };
+
+    window.generateNewCode = async () => {
+        const newCode = Math.floor(100000 + Math.random() * 900000);
+        await set(ref(db, 'system/inviteCode'), newCode);
+        document.getElementById('admin-invite-code').value = newCode;
     };
 
     // --- Biometric Implementation ---
