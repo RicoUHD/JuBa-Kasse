@@ -414,7 +414,6 @@
         <div class="tab-nav-container">
             <div class="tab-indicator" id="tabIndicator"></div>
             <button class="tab-btn active" onclick="switchTab('overview', this)">Übersicht</button>
-            <button class="tab-btn" onclick="switchTab('requests', this)">Anfragen <span id="req-badge" style="background:var(--danger); color:white; border-radius:50%; padding:2px 6px; font-size:0.7rem; display:none;">0</span></button>
             <button class="tab-btn" onclick="switchTab('settings', this)">Einstellung</button>
         </div>
     </div>
@@ -440,19 +439,11 @@
             </div>
 
             <div class="overview-right">
+                <div id="admin-requests-inline"></div>
                 <div id="peopleList"></div>
                 <div id="emptyState" style="text-align:center; padding:40px; color:var(--text-secondary); display:none;">
                     <div style="font-size:3rem; margin-bottom:10px;">👥</div>
                     <p>Noch keine Mitglieder.</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="requests" class="tab-content">
-            <div id="admin-requests-list">
-                <div style="text-align:center; padding:40px; color:var(--text-secondary);">
-                    <div style="font-size:3rem; margin-bottom:10px;">📭</div>
-                    <p>Keine offenen Anfragen.</p>
                 </div>
             </div>
         </div>
@@ -884,34 +875,36 @@
     window.addEventListener('resize', updateTabIndicator);
 
     window.switchTab = function(tabName, btn) {
-        // Hide all tab contents
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        
-        // Show the selected tab content. 
-        // Note: We need to be careful if we have multiple tab groups (admin vs user).
-        // But currently IDs are unique globally.
-        const targetContent = document.getElementById(tabName);
-        if(targetContent) targetContent.classList.add('active');
+        const isUserTabs = !!btn.closest('#user-view');
+        const scope = isUserTabs ? document.getElementById('user-view') : document.getElementById('admin-view');
+        if (!scope) return;
 
-        // Update buttons in the same container
+        // Hide only the tab contents inside the current scope (admin vs user)
+        scope.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+
+        // Show the selected tab content only if it belongs to the same scope
+        const targetContent = document.getElementById(tabName);
+        if (targetContent && scope.contains(targetContent)) {
+            targetContent.classList.add('active');
+        }
+
+        // Update buttons in the same tab nav container
         const container = btn.closest('.tab-nav-container');
-        if(container) {
+        if (container) {
             container.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             btn.classList.add('active');
-            
+
             // Update indicator in this container
             const indicator = container.querySelector('.tab-indicator');
-            if(indicator) {
+            if (indicator) {
                 indicator.style.width = btn.offsetWidth + 'px';
                 indicator.style.transform = `translateX(${btn.offsetLeft - 5}px)`;
             }
         }
     };
-    
-    setTimeout(() => {
-        const activeBtn = document.querySelector('.tab-btn.active');
-        if(activeBtn) window.switchTab('overview', activeBtn);
-    }, 200);
+
+    // Initial indicator sync (avoid switching tabs globally)
+    setTimeout(updateTabIndicator, 200);
 
     window.toggleFab = function() {
         document.getElementById('fabMenu').classList.toggle('show');
@@ -1289,61 +1282,71 @@
 
     function renderAdminRequests() {
         const pending = requests.filter(r => r.status === 'pending');
-        const badge = document.getElementById('req-badge');
-        
-        if(pending.length > 0) {
-            badge.innerText = pending.length;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
+        const target = document.getElementById('admin-requests-inline');
+        if (!target) return;
 
-        const list = document.getElementById('admin-requests-list');
-        if(pending.length === 0) {
-            list.innerHTML = `
-                <div style="text-align:center; padding:40px; color:var(--text-secondary);">
-                    <div style="font-size:3rem; margin-bottom:10px;">📭</div>
-                    <p>Keine offenen Anfragen.</p>
-                </div>
-            `;
+        if (pending.length === 0) {
+            target.innerHTML = '';
             return;
         }
 
-        list.innerHTML = pending.map(req => {
+        const grouped = pending.reduce((acc, req) => {
+            const key = req.personName || 'Unbekannt';
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(req);
+            return acc;
+        }, {});
+
+        const renderReq = (req) => {
             let typeLabel = '';
             let details = '';
-            
-            if(req.type === 'payment') {
+
+            if (req.type === 'payment') {
                 typeLabel = '💰 Zahlung';
                 details = `${parseFloat(req.data.amount).toFixed(2)} € am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
-                if(req.data.note) details += `<br><small>"${req.data.note}"</small>`;
-            } else if(req.type === 'status') {
+                if (req.data.note) details += `<br><small>"${req.data.note}"</small>`;
+            } else if (req.type === 'status') {
                 typeLabel = '🔄 Statusänderung';
                 details = `Neu: <strong>${req.data.newStatus}</strong> ab ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
-            } else if(req.type === 'expense') {
+            } else if (req.type === 'expense') {
                 typeLabel = '💸 Ausgabe';
                 details = `${parseFloat(req.data.amount).toFixed(2)} € für "${req.data.description}" am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
             }
 
             return `
-                <div class="card" style="margin-bottom: 15px;">
-                    <div class="card-body">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <span style="font-weight:bold;">${typeLabel}</span>
-                            <span style="font-size:0.8rem; color:var(--text-secondary);">${new Date(req.timestamp).toLocaleString()}</span>
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            Von: <strong>${req.personName}</strong><br>
-                            ${details}
-                        </div>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn btn-sm btn-success" onclick="approveRequest('${req.id}')">Genehmigen</button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectRequest('${req.id}')">Ablehnen</button>
-                        </div>
+                <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 8px 0;">
+                    <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:8px; align-items:flex-start;">
+                        <span style="font-weight:800;">${typeLabel}</span>
+                        <span style="font-size:0.8rem; color:var(--text-secondary); white-space:nowrap;">${new Date(req.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div style="margin-bottom:10px;">${details}</div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-primary btn-small" style="width:auto;" onclick="approveRequest('${req.id}')">Genehmigen</button>
+                        <button class="btn btn-danger btn-small" style="width:auto;" onclick="rejectRequest('${req.id}')">Ablehnen</button>
                     </div>
                 </div>
             `;
-        }).join('');
+        };
+
+        const groupBlocks = Object.entries(grouped)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([personName, items]) => {
+                const sorted = items.slice().sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                return `
+                    <div style="margin-top: 12px;">
+                        <div style="font-weight: 900; margin-bottom: 6px;">${personName}</div>
+                        ${sorted.map(renderReq).join('')}
+                    </div>
+                `;
+            })
+            .join('');
+
+        target.innerHTML = `
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header">📥 Offene Anfragen (${pending.length})</div>
+                <div class="card-body">${groupBlocks}</div>
+            </div>
+        `;
     }
 
     window.approveRequest = async (reqId) => {
