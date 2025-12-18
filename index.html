@@ -1182,46 +1182,36 @@
 
     async function loadData() {
         const dbRef = ref(db);
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap] = await Promise.all([
-            get(child(dbRef, 'people')),
-            get(child(dbRef, 'donations')),
-            get(child(dbRef, 'expenses')),
-            get(child(dbRef, 'settings')),
-            get(child(dbRef, 'system/inviteCode')),
-            get(child(dbRef, 'requests'))
-        ]);
 
-        people = safeList(pSnap.val());
-        donations = safeList(dSnap.val());
-        expenses = safeList(eSnap.val());
-        requests = safeList(rSnap.val());
-        if(sSnap.exists()) settings = sSnap.val();
-
-        // RBAC Filtering
+        // Non-admin: fetch only what is needed for their view (people + settings + their requests)
         if (currentUser && !currentUser.admin) {
-            // Filter people to show only the current user
-            // Match by UID OR Name (if UID not yet linked)
+            const [pSnap, sSnap, rSnap] = await Promise.all([
+                get(child(dbRef, 'people')),
+                get(child(dbRef, 'settings')),
+                get(child(dbRef, 'requests'))
+            ]);
+
+            people = safeList(pSnap.val());
+            requests = safeList(rSnap.val());
+            if (sSnap.exists()) settings = sSnap.val();
+
+            // Filter people to show only the current user (UID match or name fallback)
             const fullName = `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase();
             people = people.filter(p => p.uid === currentUser.uid || p.name.toLowerCase() === fullName);
-            
-            // Show User View, Hide Admin View
+
+            // UI toggles
             document.getElementById('admin-view').style.display = 'none';
             document.getElementById('user-view').style.display = 'block';
-            
-            // Hide Admin Tab Nav
             const adminNav = document.querySelector('.container > .tab-nav');
             if(adminNav) adminNav.style.display = 'none';
-
             document.getElementById('settings').style.display = 'none';
-            
-            // Hide FAB
             const fab = document.querySelector('.fab');
             if(fab) fab.style.display = 'none';
-            
-            // Populate User View
+
+            // Populate User View basic info
             document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
             document.getElementById('user-email-display').innerText = currentUser.email;
-            
+
             // Sync biometric toggle for user view
             const savedId = localStorage.getItem('juba-bio-id');
             if(savedId) {
@@ -1232,30 +1222,44 @@
             }
 
             // Initialize User Tabs Indicator
-            setTimeout(() => updateTabIndicator(), 50);
+            setTimeout(updateTabIndicator, 50);
 
         } else {
-            // Show Admin View, Hide User View
-            document.getElementById('admin-view').style.display = 'block';
-            document.getElementById('user-view').style.display = 'none';
-            
-            // Show Admin Tab Nav
-            const adminNav = document.querySelector('.container > .tab-nav');
-            if(adminNav) adminNav.style.display = 'flex';
-            
-            // Initialize Admin Tabs Indicator
-            setTimeout(() => updateTabIndicator(), 50);
-            document.getElementById('settings').style.display = '';
-            
-            const fab = document.querySelector('.fab');
-            if(fab) fab.style.display = 'flex';
+            // Admin: fetch full dataset
+            const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap] = await Promise.all([
+                get(child(dbRef, 'people')),
+                get(child(dbRef, 'donations')),
+                get(child(dbRef, 'expenses')),
+                get(child(dbRef, 'settings')),
+                get(child(dbRef, 'system/inviteCode')),
+                get(child(dbRef, 'requests'))
+            ]);
+
+            people = safeList(pSnap.val());
+            donations = safeList(dSnap.val());
+            expenses = safeList(eSnap.val());
+            requests = safeList(rSnap.val());
+            if (sSnap.exists()) settings = sSnap.val();
 
             // Show Invite Code
             const code = cSnap.exists() ? cSnap.val() : '123456';
             const codeInput = document.getElementById('admin-invite-code');
             if(codeInput) codeInput.value = code;
+
+            // UI toggles
+            document.getElementById('admin-view').style.display = 'block';
+            document.getElementById('user-view').style.display = 'none';
+            const adminNav = document.querySelector('.container > .tab-nav');
+            if(adminNav) adminNav.style.display = 'flex';
+            document.getElementById('settings').style.display = '';
+            const fab = document.querySelector('.fab');
+            if(fab) fab.style.display = 'flex';
+
+            // Initialize Admin Tabs Indicator
+            setTimeout(updateTabIndicator, 50);
         }
 
+        // Normalize people data
         people.forEach(person => {
             if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
             if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
@@ -2028,44 +2032,15 @@
 
             const userCredential = await createUserWithEmailAndPassword(auth, email, p1);
             const user = userCredential.user;
-            const fullName = `${first} ${last}`;
-
-            // Save User Profile
+            // Persist basic user profile
             await set(ref(db, 'users/' + user.uid), {
-                email: email,
                 firstName: first,
                 lastName: last,
-                role: 'user',
+                email,
                 admin: false
             });
 
-            // Link to Person in People List
-            const pSnap = await get(ref(db, 'people'));
-            let currentPeople = safeList(pSnap.val());
-            
-            let person = currentPeople.find(p => p.name.toLowerCase() === fullName.toLowerCase());
-            
-            if(person) {
-                person.uid = user.uid;
-                person.email = email;
-            } else {
-                person = {
-                    id: Date.now().toString(),
-                    name: fullName,
-                    status: 'vollverdiener',
-                    memberSince: new Date().toISOString().split('T')[0],
-                    originalMemberSince: new Date().toISOString().split('T')[0],
-                    totalPaid: 0,
-                    statusHistory: [],
-                    payments: [],
-                    uid: user.uid,
-                    email: email
-                };
-                currentPeople.push(person);
-            }
-            
-            await set(ref(db, 'people'), currentPeople);
-
+            errDiv.style.display = 'none';
         } catch (error) {
             console.error(error);
             errDiv.innerText = "Registrierung fehlgeschlagen: " + error.message;
