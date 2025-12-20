@@ -533,19 +533,6 @@
             <div class="card card-settings" id="card-security">
                 <div class="card-header">Sicherheit</div>
                 <div class="card-body">
-                    <div class="form-group">
-                        <label class="form-label">Biometrischer Login (Passkey)</label>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <label class="switch">
-                                <input type="checkbox" id="biometric-toggle" onchange="toggleBiometric()">
-                                <span class="slider"></span>
-                            </label>
-                            <span id="biometric-status" style="font-size:0.9rem; color:var(--text-secondary);">Deaktiviert</span>
-                        </div>
-                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
-                            Erfordert HTTPS. Speichert einen Passkey auf diesem Gerät (FaceID/Fingerprint).
-                        </div>
-                    </div>
                     <div class="form-group" style="margin-top:20px;">
                         <label class="form-label">Passwort ändern</label>
                         <input type="password" id="new-password" class="form-input" placeholder="Neues Passwort">
@@ -632,16 +619,6 @@
                         <div style="display:flex; gap:10px;">
                             <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
                             <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin-top:20px;">
-                        <label class="form-label">Biometrischer Login (Passkey)</label>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <label class="switch">
-                                <input type="checkbox" id="user-biometric-toggle" onchange="toggleBiometric()">
-                                <span class="slider"></span>
-                            </label>
-                            <span id="user-biometric-status" style="font-size:0.9rem; color:var(--text-secondary);">Deaktiviert</span>
                         </div>
                     </div>
                     <div class="form-group" style="margin-top:20px;">
@@ -866,30 +843,8 @@
         return Object.values(val);
     }
 
-    // --- WebAuthn / Biometric Utils ---
-    function _arrayBufferToBase64(buffer) {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return window.btoa(binary);
-    }
-
-    function _base64ToArrayBuffer(base64) {
-        const binary_string = window.atob(base64);
-        const len = binary_string.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binary_string.charCodeAt(i);
-        }
-        return bytes.buffer;
-    }
-
     document.addEventListener('DOMContentLoaded', async () => {
         initTheme();
-        initBiometric();
         checkAuth();
         
         const today = new Date().toISOString().split('T')[0];
@@ -1258,15 +1213,6 @@
             // Populate User View basic info
             document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
             document.getElementById('user-email-display').innerText = currentUser.email;
-
-            // Sync biometric toggle for user view
-            const savedId = localStorage.getItem('juba-bio-id');
-            if(savedId) {
-                const userBioToggle = document.getElementById('user-biometric-toggle');
-                if(userBioToggle) userBioToggle.checked = true;
-                const userBioStatus = document.getElementById('user-biometric-status');
-                if(userBioStatus) userBioStatus.innerText = 'Aktiv';
-            }
 
             // Initialize User Tabs Indicator
             setTimeout(updateTabIndicator, 50);
@@ -2231,98 +2177,6 @@
         const newCode = Math.floor(100000 + Math.random() * 900000);
         await set(ref(db, 'system/inviteCode'), newCode);
         document.getElementById('admin-invite-code').value = newCode;
-    };
-
-    // --- Biometric Implementation ---
-    function initBiometric() {
-        const savedId = localStorage.getItem('juba-bio-id');
-        if(savedId) {
-            document.getElementById('biometric-toggle').checked = true;
-            document.getElementById('biometric-status').innerText = "Aktiv";
-            document.getElementById('bio-login-btn').style.display = 'inline-block';
-        }
-    }
-
-    window.toggleBiometric = async () => {
-        const toggle = document.getElementById('biometric-toggle');
-        const on = toggle.checked;
-
-        if (on) {
-            if (!window.PublicKeyCredential) {
-                alert("Dein Browser unterstützt keine Passkeys/Biometrie.");
-                toggle.checked = false;
-                return;
-            }
-
-            try {
-                const challenge = new Uint8Array(32);
-                window.crypto.getRandomValues(challenge);
-
-                const publicKey = {
-                    challenge: challenge,
-                    rp: { name: "JuBa-Kasse", id: window.location.hostname },
-                    user: {
-                        id: Uint8Array.from("ADMIN", c => c.charCodeAt(0)),
-                        name: "admin@jubakasse.local",
-                        displayName: "Admin"
-                    },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                    authenticatorSelection: { userVerification: "required" },
-                    timeout: 60000
-                };
-
-                const credential = await navigator.credentials.create({ publicKey });
-                const credId = _arrayBufferToBase64(credential.rawId);
-                localStorage.setItem('juba-bio-id', credId);
-                
-                document.getElementById('biometric-status').innerText = "Aktiv";
-                document.getElementById('bio-login-btn').style.display = 'inline-block';
-                alert("Biometrie/Passkey erfolgreich eingerichtet!");
-
-            } catch (err) {
-                console.error(err);
-                alert("Fehler bei der Einrichtung. (HTTPS erforderlich?)");
-                toggle.checked = false;
-                document.getElementById('biometric-status').innerText = "Fehler";
-            }
-        } else {
-            localStorage.removeItem('juba-bio-id');
-            document.getElementById('biometric-status').innerText = "Deaktiviert";
-            document.getElementById('bio-login-btn').style.display = 'none';
-        }
-    };
-
-    window.attemptBiometricLogin = async () => {
-        const savedId = localStorage.getItem('juba-bio-id');
-        if (!savedId) {
-            alert("Keine Biometrie eingerichtet.");
-            return;
-        }
-
-        try {
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            const publicKey = {
-                challenge: challenge,
-                allowCredentials: [{
-                    id: _base64ToArrayBuffer(savedId),
-                    type: 'public-key'
-                }],
-                userVerification: "required",
-                timeout: 60000
-            };
-
-            await navigator.credentials.get({ publicKey });
-            
-            document.getElementById('login-modal').classList.remove('show');
-            isAuthenticated = true;
-            loadData();
-
-        } catch (err) {
-            console.error(err);
-            alert("Biometrischer Login fehlgeschlagen.");
-        }
     };
 
 </script>
