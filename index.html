@@ -563,6 +563,17 @@
             </div>
 
             <div class="card" style="margin-top: 20px;">
+                <div class="card-header">📊 Übersicht</div>
+                <div class="card-body" id="user-status-card">
+                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                        Lade Daten...
+                    </div>
+                </div>
+            </div>
+
+            <div id="user-payment-history" style="margin-top: 20px;"></div>
+
+            <div class="card" style="margin-top: 20px;">
                 <div class="card-header">⚡ Aktionen</div>
                 <div class="card-body">
                     <div class="action-buttons">
@@ -578,33 +589,6 @@
                 <div class="card-body" id="user-requests-list">
                     <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
                         Keine offenen Anfragen.
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" style="margin-top: 20px;">
-                <div class="card-header">📊 Mein Status</div>
-                <div class="card-body" id="user-status-card">
-                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                        Lade Daten...
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" style="margin-top: 20px;">
-                <div class="card-header">📋 Statushistorie</div>
-                <div class="card-body" id="user-status-history">
-                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                        Keine Historie vorhanden.
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" style="margin-top: 20px;">
-                <div class="card-header">💳 Zahlungshistorie</div>
-                <div class="card-body" id="user-payment-history">
-                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                        Keine Zahlungen vorhanden.
                     </div>
                 </div>
             </div>
@@ -789,7 +773,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, onValue, update } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -1187,19 +1171,86 @@
         try {
             // Non-admin: fetch only what is needed for their view (people + settings + their requests)
         if (currentUser && !currentUser.admin) {
-            const [pSnap, sSnap, rSnap] = await Promise.all([
-                get(child(dbRef, 'people')),
-                get(child(dbRef, 'settings')),
-                get(child(dbRef, 'requests'))
-            ]);
-
-            people = safeList(pSnap.val());
-            requests = safeList(rSnap.val());
+            // 1. Fetch Settings
+            const sSnap = await get(child(dbRef, 'settings'));
             if (sSnap.exists()) settings = sSnap.val();
 
-            // Filter people to show only the current user (UID match or name fallback)
-            const fullName = `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase();
-            people = people.filter(p => p.uid === currentUser.uid || p.name.toLowerCase() === fullName);
+            // 2. Fetch User's Person Entry (Securely with Fallback)
+            const peopleRef = child(dbRef, 'people');
+            let peopleList = [];
+
+            try {
+                // Try by UID first (Requires Index)
+                let q = query(peopleRef, orderByChild('uid'), equalTo(currentUser.uid));
+                let pSnap = await get(q);
+
+                if (pSnap.exists()) {
+                    peopleList = safeList(pSnap.val());
+                } else {
+                    // Fallback: Try by Name (Requires Index)
+                    const fullName = `${currentUser.firstName} ${currentUser.lastName}`;
+                    q = query(peopleRef, orderByChild('name'), equalTo(fullName));
+                    pSnap = await get(q);
+
+                    if (pSnap.exists()) {
+                        const val = pSnap.val();
+                        // Link the first match to this UID
+                        const key = Object.keys(val)[0];
+                        if (key) {
+                            await update(child(peopleRef, key), { uid: currentUser.uid });
+                            const p = val[key];
+                            p.uid = currentUser.uid;
+                            peopleList = [p];
+                        }
+                    }
+                }
+            } catch (queryErr) {
+                console.warn("Index missing, falling back to client-side filtering:", queryErr);
+                // Fallback: Fetch all and filter client-side (slower but works without index)
+                const pSnap = await get(peopleRef);
+                const allPeople = safeList(pSnap.val());
+                const fullName = `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase();
+                
+                // Find by UID or Name
+                peopleList = allPeople.filter(p => p.uid === currentUser.uid || p.name.toLowerCase() === fullName);
+                
+                // Auto-link if found by name but no UID
+                if (peopleList.length > 0) {
+                    const p = peopleList[0];
+                    if (!p.uid && p.name.toLowerCase() === fullName) {
+                        p.uid = currentUser.uid;
+                        // We need the key to update. Assuming 'id' is the key or we need to find it.
+                        // In this app structure, people is an array or object. 
+                        // If it's an object from Firebase, we need the key.
+                        // safeList loses keys if not careful, but here we just need to update the object in memory for now.
+                        // To persist the link, we would need to know the key.
+                        // Let's try to find the key from the snapshot if possible.
+                        if(pSnap.exists()) {
+                            const val = pSnap.val();
+                            const key = Object.keys(val).find(k => val[k].id === p.id);
+                            if(key) {
+                                update(child(peopleRef, key), { uid: currentUser.uid });
+                            }
+                        }
+                    }
+                }
+            }
+            people = peopleList;
+
+            // 3. Fetch User's Requests
+            const requestsRef = child(dbRef, 'requests');
+            let rSnap;
+            try {
+                const reqQuery = query(requestsRef, orderByChild('userId'), equalTo(currentUser.uid));
+                rSnap = await get(reqQuery);
+            } catch (reqErr) {
+                console.warn("Request index missing, fetching all requests:", reqErr);
+                rSnap = await get(requestsRef);
+            }
+            
+            const allRequests = safeList(rSnap.val());
+            // If we fell back to all requests, filter them now
+            requests = allRequests.filter(r => r.userId === currentUser.uid);
 
             // UI toggles
             document.getElementById('admin-view').style.display = 'none';
@@ -1456,43 +1507,41 @@
         }
 
         document.getElementById('user-status-card').innerHTML = `
-            <div style="display: grid; gap: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
-                    <span style="color: var(--text-secondary);">Mitgliedsstatus</span>
-                    <span style="font-weight: 600;">${statusLabels[p.status] || p.status}</span>
+            <div style="text-align: center; padding: 30px 20px; background: ${statusColor}15; border-radius: 20px; margin-bottom: 20px; border: 1px solid ${statusColor}40;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">${statusIcon}</div>
+                <h2 style="color: ${statusColor}; margin-bottom: 5px; font-weight: 800;">${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles OK')}</h2>
+                <div style="font-size: 1.1rem; font-weight: 600; opacity: 0.8;">Bezahlt bis: ${dateText}</div>
+                ${statusMeta.isOverdue ? `<div style="margin-top: 15px; font-weight: 700; font-size: 1.2rem; color: var(--danger);">Offen: ${overdueAmount.toFixed(2)} €</div>` : ''}
+                <div style="margin-top: 10px; font-size: 0.9rem; opacity: 0.7;">${statusMeta.text}</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" style="font-size: 1rem;">${statusLabels[p.status] || p.status}</div>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
-                    <span style="color: var(--text-secondary);">Monatlicher Beitrag</span>
-                    <span style="font-weight: 600;">${settings[p.status] || 0} €</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
-                    <span style="color: var(--text-secondary);">Bezahlt bis</span>
-                    <span style="font-weight: 600; color: ${statusColor};">${statusIcon} ${dateText}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
-                    <span style="color: var(--text-secondary);">Verbleibend</span>
-                    <span style="font-weight: 600; color: ${statusColor};">${statusMeta.text}</span>
-                </div>
-                ${statusMeta.isOverdue ? `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid var(--danger);">
-                    <span style="color: var(--danger); font-weight: 600;">Offener Betrag</span>
-                    <span style="font-weight: 700; color: var(--danger);">${overdueAmount.toFixed(2)} €</span>
-                </div>
-                ` : ''}
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-alt); border-radius: 12px;">
-                    <span style="color: var(--text-secondary);">Mitglied seit</span>
-                    <span style="font-weight: 600;">${new Date(p.originalMemberSince || p.memberSince).toLocaleDateString('de-DE')}</span>
+                <div class="stat-box">
+                    <div class="stat-label">Beitrag</div>
+                    <div class="stat-value">${settings[p.status] || 0} € / Monat</div>
                 </div>
             </div>
+
+            <details style="background: var(--surface-alt); border-radius: 12px; margin-bottom: 10px; overflow: hidden;">
+                <summary style="padding: 15px; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                    <span>📜 Status-Historie</span>
+                    <span style="opacity: 0.5;">▼</span>
+                </summary>
+                <div style="padding: 0 15px 15px 15px; border-top: 1px solid var(--border);">
+                    <div id="user-status-history">${generateStatusHistoryHTML(p)}</div>
+                </div>
+            </details>
         `;
 
-        // Status History
-        document.getElementById('user-status-history').innerHTML = generateStatusHistoryHTML(p);
-
-        // Payment History
+        // Payment History (Collapsible)
         const paymentsList = safeList(p.payments);
+        let paymentsHtml = '';
         if (paymentsList.length > 0) {
-            document.getElementById('user-payment-history').innerHTML = paymentsList.slice().reverse().map(pay => `
+            paymentsHtml = paymentsList.slice().reverse().map(pay => `
                 <div class="trans-item">
                     <div class="trans-left">
                         <span>${pay.description || 'Zahlung'}</span>
@@ -1502,12 +1551,24 @@
                 </div>
             `).join('');
         } else {
-            document.getElementById('user-payment-history').innerHTML = `
+            paymentsHtml = `
                 <div style="text-align:center; padding: 20px; color: var(--text-secondary); font-style: italic;">
                     Keine Zahlungen vorhanden.
                 </div>
             `;
         }
+
+        document.getElementById('user-payment-history').innerHTML = `
+            <details style="background: var(--surface-alt); border-radius: 12px; overflow: hidden;" open>
+                <summary style="padding: 15px; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                    <span>💰 Zahlungsverlauf</span>
+                    <span style="opacity: 0.5;">▼</span>
+                </summary>
+                <div style="padding: 0 15px 15px 15px; border-top: 1px solid var(--border);">
+                    ${paymentsHtml}
+                </div>
+            </details>
+        `;
 
         // User Requests List
         const myRequests = requests.filter(r => r.userId === currentUser.uid && r.status !== 'approved').sort((a,b) => b.timestamp - a.timestamp);
