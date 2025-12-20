@@ -562,33 +562,42 @@
                 <div class="hero-subtitle" id="user-email-display">—</div>
             </div>
 
-            <div class="card" style="margin-top: 20px;">
-                <div class="card-header">📊 Übersicht</div>
-                <div class="card-body" id="user-status-card">
-                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                        Lade Daten...
-                    </div>
+            <!-- Main Status Card -->
+            <div id="user-status-card">
+                <div style="text-align:center; padding: 40px 20px; color: var(--text-secondary);">
+                    <div class="spinner" style="margin: 0 auto 15px;"></div>
+                    <div>Lade Daten...</div>
                 </div>
             </div>
 
-            <div id="user-payment-history" style="margin-top: 20px;"></div>
-
-            <div class="card" style="margin-top: 20px;">
-                <div class="card-header">⚡ Aktionen</div>
-                <div class="card-body">
-                    <div class="action-buttons">
-                        <button class="btn btn-primary" onclick="openUserRequestModal('payment')">💰 Zahlung melden</button>
-                        <button class="btn btn-secondary" onclick="openUserRequestModal('status')">🔄 Status ändern</button>
-                        <button class="btn btn-secondary" onclick="openUserRequestModal('expense')">💸 Ausgabe melden</button>
-                    </div>
+            <!-- Quick Actions -->
+            <div style="margin-top: 25px;">
+                <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">⚡ Schnellaktionen</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                    <button class="btn btn-secondary" onclick="openUserRequestModal('payment')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
+                        <div style="font-size: 2rem;">💰</div>
+                        <div style="font-size: 0.85rem;">Zahlung</div>
+                    </button>
+                    <button class="btn btn-secondary" onclick="openUserRequestModal('status')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
+                        <div style="font-size: 2rem;">🔄</div>
+                        <div style="font-size: 0.85rem;">Status</div>
+                    </button>
+                    <button class="btn btn-secondary" onclick="openUserRequestModal('expense')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
+                        <div style="font-size: 2rem;">💸</div>
+                        <div style="font-size: 0.85rem;">Ausgabe</div>
+                    </button>
                 </div>
             </div>
 
-            <div class="card" style="margin-top: 20px;">
-                <div class="card-header">📨 Meine Anfragen</div>
-                <div class="card-body" id="user-requests-list">
-                    <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                        Keine offenen Anfragen.
+            <!-- Payment History -->
+            <div id="user-payment-history" style="margin-top: 25px;"></div>
+
+            <!-- Requests List -->
+            <div style="margin-top: 25px;">
+                <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">📨 Meine Anfragen</h3>
+                <div id="user-requests-list">
+                    <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
+                        Keine offenen Anfragen
                     </div>
                 </div>
             </div>
@@ -1488,7 +1497,8 @@
         const statusMeta = calculateTimeRemaining(p);
         const overdueAmount = calculateOverdueAmount(p);
         
-        let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {day:'numeric', month:'long', year:'numeric'}) : 'Nie';
+        // Format date to show only month and year
+        let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
         
         const statusLabels = {
             'vollverdiener': '💼 Vollverdiener',
@@ -1498,41 +1508,56 @@
         
         let statusColor = 'var(--success)';
         let statusIcon = '✅';
+        let statusBg = '#10b98120';
         if (statusMeta.isOverdue) {
             statusColor = 'var(--danger)';
             statusIcon = '⚠️';
+            statusBg = '#ef444420';
         } else if (statusMeta.isSoonDue) {
             statusColor = 'var(--warning)';
             statusIcon = '⏳';
+            statusBg = '#f59e0b20';
         }
 
         document.getElementById('user-status-card').innerHTML = `
-            <div style="text-align: center; padding: 30px 20px; background: ${statusColor}15; border-radius: 20px; margin-bottom: 20px; border: 1px solid ${statusColor}40;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">${statusIcon}</div>
-                <h2 style="color: ${statusColor}; margin-bottom: 5px; font-weight: 800;">${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles OK')}</h2>
-                <div style="font-size: 1.1rem; font-weight: 600; opacity: 0.8;">Bezahlt bis: ${dateText}</div>
-                ${statusMeta.isOverdue ? `<div style="margin-top: 15px; font-weight: 700; font-size: 1.2rem; color: var(--danger);">Offen: ${overdueAmount.toFixed(2)} €</div>` : ''}
-                <div style="margin-top: 10px; font-size: 0.9rem; opacity: 0.7;">${statusMeta.text}</div>
+            <!-- Status Hero Card -->
+            <div style="background: ${statusBg}; border-radius: 20px; padding: 35px 25px; text-align: center; margin-bottom: 25px; border: 2px solid ${statusColor}40;">
+                <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
+                <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
+                    ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
+                </h2>
+                <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
+                <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
+                ${statusMeta.isOverdue ? `
+                    <div style="margin-top: 20px; padding: 15px; background: var(--danger)15; border-radius: 12px; border: 1px solid var(--danger)40;">
+                        <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px;">Offener Betrag</div>
+                        <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger);">${overdueAmount.toFixed(2)} €</div>
+                    </div>
+                ` : ''}
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <div class="stat-label">Status</div>
-                    <div class="stat-value" style="font-size: 1rem;">${statusLabels[p.status] || p.status}</div>
+            <!-- Info Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                <div style="background: var(--surface); border-radius: 15px; padding: 20px; text-align: center;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 8px;">Status</div>
+                    <div style="font-size: 1.8rem; margin-bottom: 5px;">${statusLabels[p.status]?.split(' ')[0] || '💼'}</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text);">${statusLabels[p.status]?.split(' ').slice(1).join(' ') || p.status}</div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-label">Beitrag</div>
-                    <div class="stat-value">${settings[p.status] || 0} € / Monat</div>
+                <div style="background: var(--surface); border-radius: 15px; padding: 20px; text-align: center;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 8px;">Beitrag</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 5px;">${settings[p.status] || 0}€</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">pro Monat</div>
                 </div>
             </div>
 
-            <details style="background: var(--surface-alt); border-radius: 12px; margin-bottom: 10px; overflow: hidden;">
-                <summary style="padding: 15px; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
-                    <span>📜 Status-Historie</span>
-                    <span style="opacity: 0.5;">▼</span>
+            <!-- Status History (Collapsible) -->
+            <details style="background: var(--surface); border-radius: 15px; overflow: hidden;">
+                <summary style="padding: 18px 20px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
+                    <span>📜 Status-Verlauf</span>
+                    <span style="opacity: 0.4; font-size: 0.8rem;">▼</span>
                 </summary>
-                <div style="padding: 0 15px 15px 15px; border-top: 1px solid var(--border);">
-                    <div id="user-status-history">${generateStatusHistoryHTML(p)}</div>
+                <div style="padding: 0 20px 20px 20px; border-top: 1px solid var(--border);">
+                    ${generateStatusHistoryHTML(p)}
                 </div>
             </details>
         `;
@@ -1559,8 +1584,9 @@
         }
 
         document.getElementById('user-payment-history').innerHTML = `
-            <details style="background: var(--surface-alt); border-radius: 12px; overflow: hidden;" open>
-                <summary style="padding: 15px; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">💳 Zahlungsverlauf</h3>
+            <details style="background: var(--surface); border-radius: 15px; overflow: hidden;" open>
+                <summary style="padding: 18px 20px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
                     <span>💰 Zahlungsverlauf</span>
                     <span style="opacity: 0.5;">▼</span>
                 </summary>
@@ -1576,28 +1602,44 @@
         
         if(myRequests.length > 0) {
             reqList.innerHTML = myRequests.map(req => {
-                let statusBadge = '<span class="badge badge-warning">⏳ Warten</span>';
-                if(req.status === 'rejected') statusBadge = '<span class="badge badge-danger">❌ Abgelehnt</span>';
+                let statusBadge, statusBg, statusText;
+                if(req.status === 'rejected') {
+                    statusBadge = '❌';
+                    statusBg = '#ef444415';
+                    statusText = 'Abgelehnt';
+                } else {
+                    statusBadge = '⏳';
+                    statusBg = '#f59e0b15';
+                    statusText = 'In Prüfung';
+                }
                 
-                let typeLabel = req.type === 'payment' ? 'Zahlung' : (req.type === 'status' ? 'Status' : 'Ausgabe');
+                const typeIcons = { payment: '💰', status: '🔄', expense: '💸' };
+                const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe' };
+                
                 let details = '';
-                if(req.status === 'rejected') details = `<div style="color:var(--danger); font-size:0.8rem; margin-top:5px;">Grund: ${req.rejectionReason}</div>`;
+                if(req.status === 'rejected') {
+                    details = `<div style="color:var(--danger); font-size:0.85rem; margin-top:8px; padding:10px; background:var(--danger)10; border-radius:8px;">⚠️ ${req.rejectionReason || 'Keine Begründung'}</div>`;
+                }
 
                 return `
-                    <div class="trans-item">
-                        <div class="trans-left">
-                            <span style="font-weight:600;">${typeLabel}</span>
-                            <div class="trans-meta">${new Date(req.timestamp).toLocaleDateString('de-DE')}</div>
-                            ${details}
+                    <div style="background: var(--surface); border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                            <div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(req.timestamp).toLocaleDateString('de-DE', {day:'numeric', month:'short', year:'numeric'})}</div>
+                            </div>
+                            <div style="background: ${statusBg}; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
+                                ${statusBadge} ${statusText}
+                            </div>
                         </div>
-                        <div>${statusBadge}</div>
+                        ${details}
                     </div>
                 `;
             }).join('');
         } else {
             reqList.innerHTML = `
-                <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                    Keine offenen Anfragen.
+                <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
+                    Keine offenen Anfragen
                 </div>
             `;
         }
