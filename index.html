@@ -929,6 +929,16 @@
     // --- MATHEMATIK & LOGIK (VEREINFACHT & STABIL) ---
 
     /**
+     * Gibt den aktuell gültigen Status einer Person zurück (für heute).
+     * @param {Object} person - Die Person
+     * @returns {string} - Der aktuell gültige Status
+     */
+    function getCurrentStatus(person) {
+        const today = new Date();
+        return getStatusForMonth(person, today.getFullYear(), today.getMonth());
+    }
+
+    /**
      * Gibt den Status einer Person für einen bestimmten Monat zurück.
      * Berücksichtigt die komplette Statushistorie inkl. rückwirkender/zukünftiger Änderungen.
      * @param {Object} person - Die Person
@@ -1497,6 +1507,9 @@
         const statusMeta = calculateTimeRemaining(p);
         const overdueAmount = calculateOverdueAmount(p);
         
+        // Get current status (not future status)
+        const currentStatus = getCurrentStatus(p);
+        
         // Format date to show only month and year
         let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
         
@@ -1540,12 +1553,12 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
                 <div style="background: var(--surface); border-radius: 15px; padding: 20px; text-align: center;">
                     <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 8px;">Status</div>
-                    <div style="font-size: 1.8rem; margin-bottom: 5px;">${statusLabels[p.status]?.split(' ')[0] || '💼'}</div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text);">${statusLabels[p.status]?.split(' ').slice(1).join(' ') || p.status}</div>
+                    <div style="font-size: 1.8rem; margin-bottom: 5px;">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text);">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
                 </div>
                 <div style="background: var(--surface); border-radius: 15px; padding: 20px; text-align: center;">
                     <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 8px;">Beitrag</div>
-                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 5px;">${settings[p.status] || 0}€</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 5px;">${settings[currentStatus] || 0}€</div>
                     <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">pro Monat</div>
                 </div>
             </div>
@@ -1688,6 +1701,9 @@
         const statusMeta = calculateTimeRemaining(p);
         const overdueAmount = calculateOverdueAmount(p);
         
+        // Get current status (not future status)
+        const currentStatus = getCurrentStatus(p);
+        
         let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
         let pillClass = 'status-ok';
         let cardClass = 'success';
@@ -1710,7 +1726,7 @@
                                 ${p.name}
                                 <span class="chevron">›</span>
                             </div>
-                            <span class="person-status">${p.status}</span>
+                            <span class="person-status">${currentStatus}</span>
                         </div>
                         <div class="person-right">
                             <span class="payment-pill ${pillClass}">${dateText}</span>
