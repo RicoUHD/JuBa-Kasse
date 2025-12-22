@@ -783,7 +783,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo, runTransaction, remove } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -1479,80 +1479,92 @@
         const person = people.find(p => String(p.id) === String(personId));
         if (!person) { alert('Person nicht gefunden.'); return; }
 
-        person.uid = uid;
-        await savePeople();
-        alert('Zuordnung gespeichert.');
-        renderUnlinkedUsers();
-        renderPeople();
+        try {
+            await update(ref(db, 'people/' + personId), { uid });
+            person.uid = uid;
+            alert('Zuordnung gespeichert.');
+            renderUnlinkedUsers();
+            renderPeople();
+        } catch (err) {
+            console.error('Fehler beim Zuordnen:', err);
+            alert('Zuordnung fehlgeschlagen. Bitte erneut versuchen.');
+        }
     };
 
     window.approveRequest = async (reqId) => {
         const req = requests.find(r => r.id === reqId);
         if(!req) return;
 
-        if(req.type === 'payment') {
-            const person = people.find(p => p.id === req.personId);
-            if(person) {
-                const newPayment = {
+        try {
+            if(req.type === 'payment') {
+                await mutatePerson(req.personId, (person) => {
+                    const payments = safeList(person.payments);
+                    payments.push({
+                        id: Date.now().toString(),
+                        amount: parseFloat(req.data.amount),
+                        date: req.data.date,
+                        description: req.data.note || 'Zahlung (Genehmigt)'
+                    });
+                    const totalPaid = (person.totalPaid || 0) + parseFloat(req.data.amount);
+                    return { ...person, payments, totalPaid };
+                });
+            } else if(req.type === 'status') {
+                await mutatePerson(req.personId, (person) => {
+                    const changeDate = req.data.date;
+                    const newStatus = req.data.newStatus;
+                    const changeDateObj = new Date(changeDate);
+
+                    let currentStatusStartDate = person.originalMemberSince || person.memberSince;
+                    const sortedHistory = safeList(person.statusHistory).slice().sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+                    if (sortedHistory.length > 0 && sortedHistory[0].endDate) {
+                        currentStatusStartDate = sortedHistory[0].endDate;
+                    }
+
+                    const updatedHistory = safeList(person.statusHistory).filter(entry => new Date(entry.startDate) < changeDateObj);
+                    if (new Date(currentStatusStartDate) < changeDateObj) {
+                        updatedHistory.push({
+                            status: person.status,
+                            startDate: currentStatusStartDate,
+                            endDate: changeDate
+                        });
+                    }
+
+                    return { ...person, status: newStatus, statusHistory: updatedHistory };
+                });
+            } else if(req.type === 'expense') {
+                const newExpense = {
                     id: Date.now().toString(),
                     amount: parseFloat(req.data.amount),
-                    date: req.data.date,
-                    description: req.data.note || 'Zahlung (Genehmigt)'
+                    description: req.data.description + ` (Von: ${req.personName})`,
+                    date: req.data.date
                 };
-                if(!person.payments) person.payments = [];
-                person.payments.push(newPayment);
-                await savePeople();
+                const nextExpenses = [...expenses, newExpense];
+                await set(ref(db, 'expenses'), nextExpenses);
+                expenses = nextExpenses;
             }
-        } else if(req.type === 'status') {
-            const person = people.find(p => p.id === req.personId);
-            if(person) {
-                const changeDate = req.data.date;
-                const newStatus = req.data.newStatus;
-                const changeDateObj = new Date(changeDate);
-                
-                // Logic from saveStatusChange
-                let currentStatusStartDate = person.originalMemberSince || person.memberSince;
-                if (person.statusHistory && person.statusHistory.length > 0) {
-                    const sortedHistory = person.statusHistory.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
-                    currentStatusStartDate = sortedHistory[0].endDate; 
-                }
 
-                if (new Date(currentStatusStartDate) < changeDateObj) {
-                    const archiveEntry = {
-                        status: person.status,
-                        startDate: currentStatusStartDate,
-                        endDate: changeDate
-                    };
-                    if(!person.statusHistory) person.statusHistory = [];
-                    person.statusHistory.push(archiveEntry);
-                }
-                person.status = newStatus;
-                await savePeople();
-            }
-        } else if(req.type === 'expense') {
-            const newExpense = {
-                id: Date.now().toString(),
-                amount: parseFloat(req.data.amount),
-                description: req.data.description + ` (Von: ${req.personName})`,
-                date: req.data.date
-            };
-            expenses.push(newExpense);
-            await set(ref(db, 'expenses'), expenses);
+            await update(ref(db, 'requests/' + reqId), { status: 'approved' });
+            loadData();
+        } catch (err) {
+            console.error('Fehler beim Genehmigen der Anfrage:', err);
+            alert('Anfrage konnte nicht genehmigt werden. Bitte erneut versuchen.');
         }
-
-        await update(ref(db, 'requests/' + reqId), { status: 'approved' });
-        loadData();
     };
 
     window.rejectRequest = async (reqId) => {
         const reason = prompt("Grund für Ablehnung:");
         if(reason === null) return; // Cancelled
 
-        await update(ref(db, 'requests/' + reqId), { 
-            status: 'rejected',
-            rejectionReason: reason || 'Kein Grund angegeben'
-        });
-        loadData();
+        try {
+            await update(ref(db, 'requests/' + reqId), { 
+                status: 'rejected',
+                rejectionReason: reason || 'Kein Grund angegeben'
+            });
+            loadData();
+        } catch (err) {
+            console.error('Fehler beim Ablehnen der Anfrage:', err);
+            alert('Anfrage konnte nicht abgelehnt werden. Bitte erneut versuchen.');
+        }
     };
 
     function renderUserView() {
@@ -1934,11 +1946,18 @@
             memberSince: start,
             originalMemberSince: start,
             totalPaid: 0, 
-            statusHistory: [], // Starte leer, aktueller Status ist im Hauptobjekt
+            statusHistory: [],
             payments: []
         };
-        people.push(newP);
-        await savePeople(); renderAll(); closeModal('add-person-modal');
+
+        try {
+            await saveNewPerson(newP);
+            renderAll();
+            closeModal('add-person-modal');
+        } catch (err) {
+            console.error('Fehler beim Anlegen der Person:', err);
+            alert('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+        }
     };
 
     window.addPayment = async () => {
@@ -1947,35 +1966,70 @@
         const desc = document.getElementById('payment-desc').value;
         
         if(!currentPersonId || isNaN(amt)) return;
-        
-        const p = people.find(x => String(x.id) === String(currentPersonId));
-        
-        if(p) {
-            p.payments = safeList(p.payments);
-            p.payments.push({ amount: amt, date, description: desc, id: Date.now() });
-            p.totalPaid = (p.totalPaid || 0) + amt;
-            await savePeople(); renderAll(); closeModal('add-payment-modal');
+
+        try {
+            const updated = await mutatePerson(currentPersonId, (person) => {
+                const payments = safeList(person.payments);
+                payments.push({ amount: amt, date, description: desc, id: Date.now() });
+                const totalPaid = (person.totalPaid || 0) + amt;
+                return { ...person, payments, totalPaid };
+            });
+
+            if (!updated) {
+                alert('Person nicht gefunden.');
+                return;
+            }
+
+            renderAll();
+            closeModal('add-payment-modal');
+        } catch (err) {
+            console.error('Fehler beim Speichern der Zahlung:', err);
+            alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');
         }
     };
 
     window.addDonation = async () => {
         const amt = parseFloat(document.getElementById('donation-amount').value);
         if(isNaN(amt)) return;
-        donations.push({ amount: amt, name: document.getElementById('donation-name').value, date: document.getElementById('donation-date').value, id: Date.now() });
-        await set(ref(db, 'donations'), {...donations}); renderAll(); closeModal('add-donation-modal');
+        const newDonation = { amount: amt, name: document.getElementById('donation-name').value, date: document.getElementById('donation-date').value, id: Date.now() };
+        const nextDonations = [...donations, newDonation];
+        try {
+            await set(ref(db, 'donations'), { ...nextDonations });
+            donations = nextDonations;
+            renderAll();
+            closeModal('add-donation-modal');
+        } catch (err) {
+            console.error('Fehler beim Speichern der Spende:', err);
+            alert('Spende konnte nicht gespeichert werden. Bitte erneut versuchen.');
+        }
     };
 
     window.addExpense = async () => {
         const amt = parseFloat(document.getElementById('expense-amount').value);
         if(isNaN(amt)) return;
-        expenses.push({ amount: amt, issuer: document.getElementById('expense-issuer').value, description: document.getElementById('expense-desc').value, date: document.getElementById('expense-date').value, id: Date.now() });
-        await set(ref(db, 'expenses'), {...expenses}); renderAll(); closeModal('add-expense-modal');
+        const newExpense = { amount: amt, issuer: document.getElementById('expense-issuer').value, description: document.getElementById('expense-desc').value, date: document.getElementById('expense-date').value, id: Date.now() };
+        const nextExpenses = [...expenses, newExpense];
+        try {
+            await set(ref(db, 'expenses'), { ...nextExpenses });
+            expenses = nextExpenses;
+            renderAll();
+            closeModal('add-expense-modal');
+        } catch (err) {
+            console.error('Fehler beim Speichern der Ausgabe:', err);
+            alert('Ausgabe konnte nicht gespeichert werden. Bitte erneut versuchen.');
+        }
     };
 
     window.deletePerson = async (id) => {
         if(confirm("Wirklich löschen?")) {
-            people = people.filter(p => String(p.id) !== String(id));
-            await savePeople(); renderAll();
+            try {
+                await remove(ref(db, 'people/' + id));
+                people = people.filter(p => String(p.id) !== String(id));
+                renderAll();
+            } catch (err) {
+                console.error('Fehler beim Löschen der Person:', err);
+                alert('Löschen fehlgeschlagen. Bitte erneut versuchen.');
+            }
         }
     };
     
@@ -1995,83 +2049,62 @@
     window.saveStatusChange = async () => {
         if(!currentPersonId) return;
         
-        const p = people.find(x => String(x.id) === String(currentPersonId));
-        
-        if(p) {
-            const newStatus = document.getElementById('change-status-select').value;
-            const changeDate = document.getElementById('change-status-date').value;
-            
-            if (!changeDate) {
-                alert("Bitte ein Datum angeben.");
-                return;
-            }
-            
-            p.statusHistory = safeList(p.statusHistory);
-            
-            const changeDateObj = new Date(changeDate);
-            const memberSinceDate = new Date(p.originalMemberSince || p.memberSince);
-            
-            // Validierung: Änderung darf nicht vor Mitgliedschaft liegen
-            if (changeDateObj < memberSinceDate) {
-                alert("Das Änderungsdatum kann nicht vor dem Mitgliedschaftsbeginn liegen.");
-                return;
-            }
-            
-            // Alle bestehenden Einträge entfernen, die nach dem Änderungsdatum starten
-            p.statusHistory = p.statusHistory.filter(entry => {
-                const entryStart = new Date(entry.startDate);
-                return entryStart < changeDateObj;
-            });
-            
-            // Bestehende Einträge anpassen, die über das Änderungsdatum hinausgehen
-            p.statusHistory = p.statusHistory.map(entry => {
-                if (entry.endDate) {
-                    const entryEnd = new Date(entry.endDate);
-                    if (entryEnd > changeDateObj) {
-                        // Eintrag endet nach dem Änderungsdatum - kürzen
-                        return { ...entry, endDate: changeDate };
-                    }
+        const newStatus = document.getElementById('change-status-select').value;
+        const changeDate = document.getElementById('change-status-date').value;
+
+        if (!changeDate) {
+            alert("Bitte ein Datum angeben.");
+            return;
+        }
+
+        try {
+            const updated = await mutatePerson(currentPersonId, (person) => {
+                const changeDateObj = new Date(changeDate);
+                const memberSinceDate = new Date(person.originalMemberSince || person.memberSince);
+
+                if (changeDateObj < memberSinceDate) {
+                    throw new Error('Änderungsdatum liegt vor Mitgliedschaft.');
                 }
-                return entry;
-            });
-            
-            // Aktuellen Status ermitteln, der zum Änderungsdatum gültig war
-            let currentStatusAtChangeDate = p.status;
-            let currentStatusStartDate = p.originalMemberSince || p.memberSince;
-            
-            // Den zuletzt endenden Eintrag finden
-            if (p.statusHistory.length > 0) {
-                const sortedHistory = p.statusHistory.slice().sort(
-                    (a, b) => new Date(b.endDate || 0) - new Date(a.endDate || 0)
-                );
-                const lastEntry = sortedHistory[0];
-                if (lastEntry && lastEntry.endDate) {
-                    currentStatusStartDate = lastEntry.endDate;
+
+                let history = safeList(person.statusHistory)
+                    .filter(entry => new Date(entry.startDate) < changeDateObj)
+                    .map(entry => {
+                        if (entry.endDate) {
+                            const entryEnd = new Date(entry.endDate);
+                            if (entryEnd > changeDateObj) {
+                                return { ...entry, endDate: changeDate };
+                            }
+                        }
+                        return entry;
+                    });
+
+                let currentStatusStartDate = person.originalMemberSince || person.memberSince;
+                const sortedHistory = history.slice().sort((a, b) => new Date(b.endDate || 0) - new Date(a.endDate || 0));
+                if (sortedHistory.length > 0 && sortedHistory[0].endDate) {
+                    currentStatusStartDate = sortedHistory[0].endDate;
                 }
-            }
-            
-            // Neuen Archiv-Eintrag für den bisherigen Status erstellen
-            // (nur wenn der bisherige Status nicht gleich dem neuen ist und ein Zeitraum existiert)
-            if (new Date(currentStatusStartDate) < changeDateObj) {
-                const archiveEntry = {
-                    status: p.status,
-                    startDate: currentStatusStartDate,
-                    endDate: changeDate
-                };
-                p.statusHistory.push(archiveEntry);
-            }
-            
-            // Aktuellen Status auf den neuen setzen
-            p.status = newStatus;
-            
-            // Sicherstellen, dass originalMemberSince gesetzt ist
-            if (!p.originalMemberSince) {
-                p.originalMemberSince = p.memberSince;
+
+                if (new Date(currentStatusStartDate) < changeDateObj) {
+                    history.push({
+                        status: person.status,
+                        startDate: currentStatusStartDate,
+                        endDate: changeDate
+                    });
+                }
+
+                return { ...person, status: newStatus, statusHistory: history };
+            });
+
+            if (!updated) {
+                alert('Person nicht gefunden.');
+                return;
             }
 
-            await savePeople();
             renderAll();
             closeModal('change-status-modal');
+        } catch (err) {
+            console.error('Fehler bei der Statusänderung:', err);
+            alert('Statusänderung fehlgeschlagen: ' + err.message);
         }
     };
 
@@ -2080,8 +2113,14 @@
         settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value);
         settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value);
         settings.reportStartDate = document.getElementById('report-start-date').value || null;
-        await set(ref(db, 'settings'), settings);
-        renderAll(); alert("Gespeichert");
+        try {
+            await set(ref(db, 'settings'), settings);
+            renderAll();
+            alert("Gespeichert");
+        } catch (err) {
+            console.error('Fehler beim Speichern der Einstellungen:', err);
+            alert('Einstellungen konnten nicht gespeichert werden.');
+        }
     };
 
     window.changePassword = async (isUser = false) => {
@@ -2108,9 +2147,33 @@
         }
     };
 
-    async function savePeople() {
-        const obj = {}; people.forEach(p => obj[p.id] = p);
-        await set(ref(db, 'people'), obj);
+    function replacePersonInMemory(person) {
+        const idx = people.findIndex(p => String(p.id) === String(person.id));
+        if (idx >= 0) {
+            people[idx] = person;
+        } else {
+            people.push(person);
+        }
+    }
+
+    async function mutatePerson(personId, mutator) {
+        const personRef = ref(db, 'people/' + personId);
+        const result = await runTransaction(personRef, (current) => {
+            if (!current) return current;
+            const draft = { ...current };
+            draft.payments = safeList(draft.payments);
+            draft.statusHistory = safeList(draft.statusHistory);
+            return mutator(draft);
+        });
+        const updated = result.snapshot.val();
+        if (updated) replacePersonInMemory(updated);
+        return updated;
+    }
+
+    async function saveNewPerson(person) {
+        if (!person || !person.id) throw new Error('Person ohne ID kann nicht gespeichert werden');
+        await set(ref(db, 'people/' + person.id), person);
+        replacePersonInMemory(person);
     }
 
     function initTheme() {
@@ -2369,16 +2432,26 @@
             timestamp: Date.now()
         };
 
-        await set(ref(db, 'requests/' + newReq.id), newReq);
-        closeModal('user-request-modal');
-        alert("Anfrage gesendet! Ein Administrator wird sie prüfen.");
-        loadData(); // Reload to show in list
+        try {
+            await set(ref(db, 'requests/' + newReq.id), newReq);
+            closeModal('user-request-modal');
+            alert("Anfrage gesendet! Ein Administrator wird sie prüfen.");
+            loadData();
+        } catch (err) {
+            console.error('Fehler beim Senden der Anfrage:', err);
+            alert('Anfrage konnte nicht gesendet werden. Bitte erneut versuchen.');
+        }
     };
 
     window.generateNewCode = async () => {
         const newCode = Math.floor(100000 + Math.random() * 900000);
-        await set(ref(db, 'system/inviteCode'), newCode);
-        document.getElementById('admin-invite-code').value = newCode;
+        try {
+            await set(ref(db, 'system/inviteCode'), newCode);
+            document.getElementById('admin-invite-code').value = newCode;
+        } catch (err) {
+            console.error('Fehler beim Generieren des Codes:', err);
+            alert('Neuer Code konnte nicht gespeichert werden.');
+        }
     };
 
 </script>
