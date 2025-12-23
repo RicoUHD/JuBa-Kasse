@@ -164,7 +164,7 @@ function getCurrentStatus(person) {
  * @param {number} month - Der Monat (0-11)
  * @returns {string|null} - Der Status oder null wenn vor Mitgliedschaft
  */
-function getStatusForMonth(person, year, month) {
+function getStatusForMonth(person, year, month, sortedHistory = null) {
     const targetDate = new Date(year, month, 15); // Mitte des Monats als Referenz
     const memberSince = new Date(person.originalMemberSince || person.memberSince);
 
@@ -174,7 +174,8 @@ function getStatusForMonth(person, year, month) {
     }
 
     // Statushistorie verarbeiten (sortiert nach Startdatum)
-    const history = safeList(person.statusHistory).slice().sort(
+    // Optimization: Use pre-sorted history if available to avoid repeated sorting in loops
+    const history = sortedHistory || safeList(person.statusHistory).slice().sort(
         (a, b) => new Date(a.startDate) - new Date(b.startDate)
     );
 
@@ -209,8 +210,13 @@ function calculateTotalCostUntil(person, untilDate) {
     let year = memberSince.getFullYear();
     let month = memberSince.getMonth();
 
+    // Optimization: Pre-sort history once to avoid sorting in every iteration of the loop
+    const sortedHistory = safeList(person.statusHistory).slice().sort(
+        (a, b) => new Date(a.startDate) - new Date(b.startDate)
+    );
+
     while (new Date(year, month, 1) <= untilDate) {
-        const status = getStatusForMonth(person, year, month);
+        const status = getStatusForMonth(person, year, month, sortedHistory);
         if (status && settings[status]) {
             totalCost += settings[status];
         }
@@ -249,12 +255,16 @@ function calculatePaidUntil(person) {
     let year = memberSince.getFullYear();
     let month = memberSince.getMonth();
 
+    const sortedHistory = safeList(person.statusHistory).slice().sort(
+        (a, b) => new Date(a.startDate) - new Date(b.startDate)
+    );
+
     // Maximal 120 Monate (10 Jahre) in die Zukunft prüfen
     const maxIterations = 120;
     let iterations = 0;
 
     while (remainingCredit > 0 && iterations < maxIterations) {
-        const status = getStatusForMonth(person, year, month);
+        const status = getStatusForMonth(person, year, month, sortedHistory);
         const monthlyRate = status ? (settings[status] || 0) : 0;
 
         if (monthlyRate > 0) {
