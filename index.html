@@ -220,16 +220,16 @@
 
 </div>
 
-<button class="fab" onclick="toggleFab()">+</button>
+<button class="fab" onclick="toggleFab()" aria-label="Aktionsmenü öffnen">+</button>
 <div class="fab-menu" id="fabMenu">
     <div class="fab-item" onclick="openModal('add-person-modal'); toggleFab()">👤 Person</div>
     <div class="fab-item" onclick="openModal('add-donation-modal'); toggleFab()">💝 Spende</div>
     <div class="fab-item" onclick="openModal('add-expense-modal'); toggleFab()">💸 Ausgabe</div>
 </div>
 
-<div id="add-person-modal" class="modal">
+<div id="add-person-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-person">
     <div class="modal-content">
-        <div class="modal-header">Person hinzufügen <span onclick="closeModal('add-person-modal')" style="cursor:pointer">&times;</span></div>
+        <div class="modal-header"><span id="title-add-person">Person hinzufügen</span> <button class="close-btn" onclick="closeModal('add-person-modal')" aria-label="Schließen">&times;</button></div>
         <div class="form-group">
             <label class="form-label">Name</label>
             <input type="text" id="new-person-name" class="form-input">
@@ -253,9 +253,9 @@
     </div>
 </div>
 
-<div id="change-status-modal" class="modal">
+<div id="change-status-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-change-status">
     <div class="modal-content">
-        <div class="modal-header">Status Ändern <span onclick="closeModal('change-status-modal')" style="cursor:pointer">&times;</span></div>
+        <div class="modal-header"><span id="title-change-status">Status Ändern</span> <button class="close-btn" onclick="closeModal('change-status-modal')" aria-label="Schließen">&times;</button></div>
         <div class="form-group">
             <label class="form-label">Neuer Status</label>
             <select id="change-status-select" class="form-select">
@@ -276,9 +276,9 @@
     </div>
 </div>
 
-<div id="add-payment-modal" class="modal">
+<div id="add-payment-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-payment">
     <div class="modal-content">
-        <div class="modal-header">Zahlung buchen <span onclick="closeModal('add-payment-modal')" style="cursor:pointer">&times;</span></div>
+        <div class="modal-header"><span id="title-add-payment">Zahlung buchen</span> <button class="close-btn" onclick="closeModal('add-payment-modal')" aria-label="Schließen">&times;</button></div>
         <div class="form-group">
             <label class="form-label">Betrag (€)</label>
             <input type="number" id="payment-amount" class="form-input" step="0.01">
@@ -295,25 +295,25 @@
     </div>
 </div>
 
-<div id="add-donation-modal" class="modal"><div class="modal-content"><div class="modal-header">Spende <span onclick="closeModal('add-donation-modal')" style="cursor:pointer">&times;</span></div><input id="donation-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px"><input id="donation-name" class="form-input" placeholder="Spender Name" style="margin-bottom:10px"><input type="date" id="donation-date" class="form-input" style="margin-bottom:10px"><button class="btn btn-primary" onclick="addDonation()">Speichern</button></div></div>
-<div id="add-expense-modal" class="modal"><div class="modal-content"><div class="modal-header">Ausgabe <span onclick="closeModal('add-expense-modal')" style="cursor:pointer">&times;</span></div><input id="expense-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px"><input id="expense-issuer" class="form-input" placeholder="Wer?" style="margin-bottom:10px"><input id="expense-desc" class="form-input" placeholder="Wofür?" style="margin-bottom:10px"><input type="date" id="expense-date" class="form-input" style="margin-bottom:10px"><button class="btn btn-primary" onclick="addExpense()">Speichern</button></div></div>
+<div id="add-donation-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-donation"><div class="modal-content"><div class="modal-header"><span id="title-add-donation">Spende</span> <button class="close-btn" onclick="closeModal('add-donation-modal')" aria-label="Schließen">&times;</button></div><input id="donation-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px"><input id="donation-name" class="form-input" placeholder="Spender Name" style="margin-bottom:10px"><input type="date" id="donation-date" class="form-input" style="margin-bottom:10px"><button class="btn btn-primary" onclick="addDonation()">Speichern</button></div></div>
+<div id="add-expense-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-expense"><div class="modal-content"><div class="modal-header"><span id="title-add-expense">Ausgabe</span> <button class="close-btn" onclick="closeModal('add-expense-modal')" aria-label="Schließen">&times;</button></div><input id="expense-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px"><input id="expense-issuer" class="form-input" placeholder="Wer?" style="margin-bottom:10px"><input id="expense-desc" class="form-input" placeholder="Wofür?" style="margin-bottom:10px"><input type="date" id="expense-date" class="form-input" style="margin-bottom:10px"><button class="btn btn-primary" onclick="addExpense()">Speichern</button></div></div>
 
-<div id="transaction-modal" class="modal">
+<div id="transaction-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-transaction">
     <div class="modal-content">
-        <div class="modal-header">Verlauf <span onclick="closeModal('transaction-modal')" style="cursor:pointer">&times;</span></div>
+        <div class="modal-header"><span id="title-transaction">Verlauf</span> <button class="close-btn" onclick="closeModal('transaction-modal')" aria-label="Schließen">&times;</button></div>
         <div id="full-transaction-list"></div>
     </div>
 </div>
 
-<div id="user-request-modal" class="modal">
+<div id="user-request-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="req-modal-title">
     <div class="modal-content">
-        <div class="modal-header"><span id="req-modal-title">Anfrage</span> <span onclick="closeModal('user-request-modal')" style="cursor:pointer">&times;</span></div>
+        <div class="modal-header"><span id="req-modal-title">Anfrage</span> <button class="close-btn" onclick="closeModal('user-request-modal')" aria-label="Schließen">&times;</button></div>
         <div id="req-form-content"></div>
         <button class="btn btn-primary" onclick="submitUserRequest()" style="margin-top:15px; width:100%">Absenden</button>
     </div>
 </div>
 
-<div id="login-modal" class="modal show" style="z-index:2000;">
+<div id="login-modal" class="modal show" style="z-index:2000;" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <div class="modal-content" style="max-width: 400px;">
         <div style="text-align: center; margin-bottom: 20px;">
             <h2 id="auth-title" style="margin-bottom: 15px;">Anmelden</h2>
