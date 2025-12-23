@@ -406,3 +406,22 @@ input:checked + .slider:before { transform: translateX(22px); }
     .tab-content { display: block !important; animation: none; }
     #settings { grid-column: 1; grid-row: 3; }
 }
+
+/* --- Accessibility Improvements --- */
+.close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0 4px;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.close-btn:hover, .close-btn:focus {
+    color: var(--danger);
+    outline: none;
+}
