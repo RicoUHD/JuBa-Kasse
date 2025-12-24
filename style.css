@@ -43,7 +43,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-tap-highlight-color: transparent; }
-body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 100px; transition: background-color 0.3s ease; }
+body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 140px; transition: background-color 0.3s ease; }
 
 .container { max-width: 800px; margin: 0 auto; padding: 20px; }
 
@@ -61,15 +61,19 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .hero-card {
     background: var(--gradient-primary);
     color: white;
-    padding: 30px 24px;
-    border-radius: 28px;
+    padding: 35px 24px;
+    border-radius: 32px;
     text-align: center;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 20px 25px -5px rgba(6, 182, 212, 0.25), 0 10px 10px -5px rgba(6, 182, 212, 0.1);
     position: relative;
     overflow: hidden;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
+    will-change: transform;
+}
+.hero-card:hover {
+    box-shadow: 0 25px 30px -5px rgba(6, 182, 212, 0.35);
 }
 .hero-card:active { transform: scale(0.98); }
 .hero-card::before { content: ''; position: absolute; top: -50px; left: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; }
@@ -88,27 +92,49 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     background: var(--surface); padding: 16px; border-radius: 20px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
     box-shadow: var(--shadow); border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
-.stat-label { font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+.stat-box:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+.stat-label { font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
 .stat-value { font-size: 1.1rem; font-weight: 700; }
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }
 
 /* --- Tabs --- */
 .tab-nav {
-    display: flex; justify-content: center; margin-bottom: 25px;
+    position: fixed;
+    bottom: 30px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    z-index: 1000;
+    pointer-events: none;
+    padding: 0 20px;
 }
 .tab-nav-container {
-    background: var(--surface-alt);
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: 99px;
-    padding: 5px;
+    padding: 6px;
     display: flex;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     position: relative;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
+[data-theme="dark"] .tab-nav-container {
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+}
+
 .tab-btn {
-    padding: 10px 28px;
+    padding: 12px 28px;
     background: none;
     border: none;
     cursor: pointer;
@@ -117,7 +143,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     color: var(--text-secondary);
     transition: color 0.3s ease;
     border-radius: 99px;
-    min-width: 110px;
+    min-width: 100px;
     position: relative;
     z-index: 2;
 }
@@ -125,12 +151,13 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 
 .tab-indicator {
     position: absolute;
-    top: 5px; bottom: 5px;
+    top: 6px; bottom: 6px;
     background: var(--gradient-primary);
     border-radius: 99px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
     z-index: 1;
+    will-change: transform, width;
 }
 
 .tab-content { display: none; animation: fadeIn 0.3s ease; }
@@ -313,7 +340,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 
 /* FAB */
 .fab {
-    position: fixed; bottom: 30px; right: 30px;
+    position: fixed; bottom: 110px; right: 30px;
     width: 60px; height: 60px; border-radius: 50%;
     background: var(--gradient-primary); color: white;
     font-size: 28px; display: flex; align-items: center; justify-content: center;
@@ -323,7 +350,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .fab:active { transform: scale(0.9); }
 .fab.active { transform: rotate(45deg); }
 .fab-menu {
-    position: fixed; bottom: 100px; right: 30px;
+    position: fixed; bottom: 180px; right: 30px;
     display: flex; flex-direction: column; gap: 12px;
     z-index: 99; opacity: 0; pointer-events: none; transform: translateY(20px);
     transition: 0.3s;
