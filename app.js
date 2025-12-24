@@ -165,31 +165,46 @@ function getCurrentStatus(person) {
  * @returns {string|null} - Der Status oder null wenn vor Mitgliedschaft
  */
 function getStatusForMonth(person, year, month, sortedHistory = null) {
-    const targetDate = new Date(year, month, 15); // Mitte des Monats als Referenz
-    const memberSince = new Date(person.originalMemberSince || person.memberSince);
+    // ⚡ Bolt: Fast integer comparison using pre-calculated values
+    const currentTotal = year * 12 + month;
 
-    // Vor Mitgliedschaft? Kein Status
-    if (targetDate < new Date(memberSince.getFullYear(), memberSince.getMonth(), 1)) {
+    // Check if before membership
+    const memberSince = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
+    const memberStartTotal = memberSince.getFullYear() * 12 + memberSince.getMonth();
+
+    if (currentTotal < memberStartTotal) {
         return null;
     }
 
-    // Statushistorie verarbeiten (sortiert nach Startdatum)
-    // Optimization: Use pre-sorted history if available to avoid repeated sorting in loops
-    const history = sortedHistory || safeList(person.statusHistory).slice().sort(
-        (a, b) => new Date(a.startDate) - new Date(b.startDate)
-    );
+    // Use passed sortedHistory or person.statusHistory (which is now pre-sorted in loadData)
+    const history = sortedHistory || person.statusHistory;
 
-    // Alle Statusperioden durchgehen
-    for (const entry of history) {
-        const start = new Date(entry.startDate);
-        const end = entry.endDate ? new Date(entry.endDate) : null;
+    // Fast path: loop through pre-processed history
+    if (history && history.length > 0 && history[0].startTotal !== undefined) {
+        for (const entry of history) {
+            if (currentTotal >= entry.startTotal && (!entry.endTotal || currentTotal < entry.endTotal)) {
+                return entry.status;
+            }
+        }
+    } else {
+        // Fallback for safety (e.g. if data not normalized)
+        const targetDate = new Date(year, month, 15);
+        const startOfMemberMonth = new Date(memberSince.getFullYear(), memberSince.getMonth(), 1);
 
-        // Ist das Zieldatum in diesem Zeitraum?
-        const startMonth = new Date(start.getFullYear(), start.getMonth(), 1);
-        const endMonth = end ? new Date(end.getFullYear(), end.getMonth() + 1, 0) : null;
+        if (targetDate < startOfMemberMonth) return null;
 
-        if (targetDate >= startMonth && (!endMonth || targetDate < new Date(end.getFullYear(), end.getMonth(), 1))) {
-            return entry.status;
+        const fallbackHistory = safeList(person.statusHistory).slice().sort(
+            (a, b) => new Date(a.startDate) - new Date(b.startDate)
+        );
+
+        for (const entry of fallbackHistory) {
+            const start = new Date(entry.startDate);
+            const end = entry.endDate ? new Date(entry.endDate) : null;
+            const startMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+
+            if (targetDate >= startMonth && (!end || targetDate < new Date(end.getFullYear(), end.getMonth(), 1))) {
+                return entry.status;
+            }
         }
     }
 
@@ -204,16 +219,14 @@ function getStatusForMonth(person, year, month, sortedHistory = null) {
  * @returns {number} - Gesamtkosten in Euro
  */
 function calculateTotalCostUntil(person, untilDate) {
-    const memberSince = new Date(person.originalMemberSince || person.memberSince);
+    const memberSince = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
     let totalCost = 0;
 
     let year = memberSince.getFullYear();
     let month = memberSince.getMonth();
 
-    // Optimization: Pre-sort history once to avoid sorting in every iteration of the loop
-    const sortedHistory = safeList(person.statusHistory).slice().sort(
-        (a, b) => new Date(a.startDate) - new Date(b.startDate)
-    );
+    // History is already sorted in loadData
+    const sortedHistory = person.statusHistory;
 
     while (new Date(year, month, 1) <= untilDate) {
         const status = getStatusForMonth(person, year, month, sortedHistory);
@@ -244,20 +257,19 @@ function calculatePaidUntil(person) {
 
     // Fall 1: Keine Zahlungen
     if (totalPaid === 0) {
-        const start = new Date(person.originalMemberSince || person.memberSince);
+        const start = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
         // Letzter Tag des Vormonats
         return new Date(start.getFullYear(), start.getMonth(), 0);
     }
 
-    const memberSince = new Date(person.originalMemberSince || person.memberSince);
+    const memberSince = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
     let remainingCredit = totalPaid;
 
     let year = memberSince.getFullYear();
     let month = memberSince.getMonth();
 
-    const sortedHistory = safeList(person.statusHistory).slice().sort(
-        (a, b) => new Date(a.startDate) - new Date(b.startDate)
-    );
+    // History is already sorted in loadData
+    const sortedHistory = person.statusHistory;
 
     // Maximal 120 Monate (10 Jahre) in die Zukunft prüfen
     const maxIterations = 120;
@@ -559,7 +571,24 @@ async function loadData() {
         if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
         if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
         person.payments = safeList(person.payments);
-        person.statusHistory = safeList(person.statusHistory);
+
+        // ⚡ Bolt: Pre-process history for faster lookup (avoid Date creation in loops)
+        person.statusHistory = safeList(person.statusHistory).sort(
+            (a, b) => new Date(a.startDate) - new Date(b.startDate)
+        );
+        person.statusHistory.forEach(entry => {
+            const s = new Date(entry.startDate);
+            entry.startTotal = s.getFullYear() * 12 + s.getMonth();
+            if (entry.endDate) {
+                const e = new Date(entry.endDate);
+                entry.endTotal = e.getFullYear() * 12 + e.getMonth();
+            } else {
+                entry.endTotal = null;
+            }
+        });
+
+        // Cache memberSince date object
+        person.memberSinceObj = new Date(person.originalMemberSince || person.memberSince);
     });
 
     renderAll();
