@@ -75,7 +75,7 @@ function updateTabIndicator() {
 
         if (activeBtn && indicator) {
             indicator.style.width = activeBtn.offsetWidth + 'px';
-            indicator.style.transform = `translateX(${activeBtn.offsetLeft - 5}px)`;
+            indicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
         }
     }
 }
@@ -106,7 +106,7 @@ window.switchTab = function(tabName, btn) {
         const indicator = container.querySelector('.tab-indicator');
         if (indicator) {
             indicator.style.width = btn.offsetWidth + 'px';
-            indicator.style.transform = `translateX(${btn.offsetLeft - 5}px)`;
+            indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
         }
     }
 };
