@@ -99,8 +99,12 @@ window.switchTab = function(tabName, btn) {
     // Update buttons in the same tab nav container
     const container = btn.closest('.tab-nav-container');
     if (container) {
-        container.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        container.querySelectorAll('.tab-btn').forEach(el => {
+            el.classList.remove('active');
+            el.setAttribute('aria-selected', 'false');
+        });
         btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
 
         // Update indicator in this container
         const indicator = container.querySelector('.tab-indicator');
