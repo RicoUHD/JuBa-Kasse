@@ -295,8 +295,32 @@
     </div>
 </div>
 
-<div id="add-donation-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-donation"><div class="modal-content"><div class="modal-header"><span id="title-add-donation">Spende</span> <button class="close-btn" onclick="closeModal('add-donation-modal')" aria-label="Schließen">&times;</button></div><input id="donation-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px"><input id="donation-name" class="form-input" placeholder="Spender Name" style="margin-bottom:10px"><input type="date" id="donation-date" class="form-input" style="margin-bottom:10px"><button class="btn btn-primary" onclick="addDonation()">Speichern</button></div></div>
-<div id="add-expense-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-expense"><div class="modal-content"><div class="modal-header"><span id="title-add-expense">Ausgabe</span> <button class="close-btn" onclick="closeModal('add-expense-modal')" aria-label="Schließen">&times;</button></div><input id="expense-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px"><input id="expense-issuer" class="form-input" placeholder="Wer?" style="margin-bottom:10px"><input id="expense-desc" class="form-input" placeholder="Wofür?" style="margin-bottom:10px"><input type="date" id="expense-date" class="form-input" style="margin-bottom:10px"><button class="btn btn-primary" onclick="addExpense()">Speichern</button></div></div>
+<div id="add-donation-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-donation">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-add-donation">Spende</span> <button class="close-btn" onclick="closeModal('add-donation-modal')" aria-label="Schließen">&times;</button></div>
+        <label for="donation-amount" class="sr-only">Betrag</label>
+        <input id="donation-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px">
+        <label for="donation-name" class="sr-only">Spender Name</label>
+        <input id="donation-name" class="form-input" placeholder="Spender Name" style="margin-bottom:10px">
+        <label for="donation-date" class="sr-only">Datum</label>
+        <input type="date" id="donation-date" class="form-input" style="margin-bottom:10px">
+        <button class="btn btn-primary" onclick="addDonation()">Speichern</button>
+    </div>
+</div>
+<div id="add-expense-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-expense">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-add-expense">Ausgabe</span> <button class="close-btn" onclick="closeModal('add-expense-modal')" aria-label="Schließen">&times;</button></div>
+        <label for="expense-amount" class="sr-only">Betrag</label>
+        <input id="expense-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px">
+        <label for="expense-issuer" class="sr-only">Wer?</label>
+        <input id="expense-issuer" class="form-input" placeholder="Wer?" style="margin-bottom:10px">
+        <label for="expense-desc" class="sr-only">Wofür?</label>
+        <input id="expense-desc" class="form-input" placeholder="Wofür?" style="margin-bottom:10px">
+        <label for="expense-date" class="sr-only">Datum</label>
+        <input type="date" id="expense-date" class="form-input" style="margin-bottom:10px">
+        <button class="btn btn-primary" onclick="addExpense()">Speichern</button>
+    </div>
+</div>
 
 <div id="transaction-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-transaction">
     <div class="modal-content">
@@ -325,7 +349,9 @@
 
         <!-- Login Form -->
         <div id="login-form">
+            <label for="login-email" class="sr-only">E-Mail</label>
             <input type="email" id="login-email" class="form-input" placeholder="E-Mail" style="margin-bottom:10px;">
+            <label for="login-password" class="sr-only">Passwort</label>
             <input type="password" id="login-password" class="form-input" placeholder="Passwort" style="margin-bottom:15px;">
             <button class="btn btn-primary" onclick="attemptLogin()" style="width:100%">Anmelden</button>
         </div>
@@ -335,13 +361,19 @@
             <div style="background: var(--surface-alt); padding: 10px; border-radius: 10px; margin-bottom: 15px; font-size: 0.9rem;">
                 <p>Bitte geben Sie den aktuellen 6-stelligen Registrierungscode ein.</p>
             </div>
+            <label for="reg-code" class="sr-only">Registrierungscode</label>
             <input type="text" id="reg-code" class="form-input" placeholder="6-stelliger Code" style="margin-bottom:10px;" maxlength="6">
+            <label for="reg-email" class="sr-only">E-Mail</label>
             <input type="email" id="reg-email" class="form-input" placeholder="E-Mail" style="margin-bottom:10px;">
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <label for="reg-firstname" class="sr-only">Vorname</label>
                 <input type="text" id="reg-firstname" class="form-input" placeholder="Vorname">
+                <label for="reg-lastname" class="sr-only">Nachname</label>
                 <input type="text" id="reg-lastname" class="form-input" placeholder="Nachname">
             </div>
+            <label for="reg-pass1" class="sr-only">Passwort (min 6 Zeichen)</label>
             <input type="password" id="reg-pass1" class="form-input" placeholder="Passwort (min 6)" style="margin-bottom:10px;">
+            <label for="reg-pass2" class="sr-only">Passwort wiederholen</label>
             <input type="password" id="reg-pass2" class="form-input" placeholder="Passwort wiederholen" style="margin-bottom:15px;">
             <button class="btn btn-primary" onclick="attemptRegister()" style="width:100%">Registrieren</button>
         </div>
