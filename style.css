@@ -436,3 +436,15 @@ input:checked + .slider:before { transform: translateX(22px); }
   white-space: nowrap;
   border-width: 0;
 }
+
+/* --- Validation Feedback --- */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+.input-error {
+    border-color: var(--danger) !important;
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+    background-color: rgba(239, 68, 68, 0.05) !important;
+}
