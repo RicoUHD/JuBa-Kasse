@@ -54,6 +54,21 @@ function safeList(val) {
     return Object.values(val);
 }
 
+function validateRequired(ids) {
+    let isValid = true;
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || !el.value.trim()) {
+            isValid = false;
+            if(el) {
+                el.classList.add('input-error');
+                el.addEventListener('input', () => el.classList.remove('input-error'), {once: true});
+            }
+        }
+    });
+    return isValid;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     initTheme();
     checkAuth();
@@ -1091,7 +1106,7 @@ function generatePersonHTML(p) {
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
-                        <button class="btn btn-danger" onclick="deletePerson('${p.id}')">🗑️</button>
+                        <button class="btn btn-danger" onclick="deletePerson('${p.id}')" aria-label="Person löschen">🗑️</button>
                     </div>
 
                     <div class="history-header">📋 Statushistorie</div>
@@ -1192,11 +1207,11 @@ window.showTransactionModal = function() {
 };
 
 window.addPerson = async () => {
+    if (!validateRequired(['new-person-name', 'new-person-start'])) return;
+
     const name = document.getElementById('new-person-name').value;
     const status = document.getElementById('new-person-status').value;
     const start = document.getElementById('new-person-start').value;
-
-    if(!name || !start) return;
 
     const newP = {
         id: Date.now().toString(),
@@ -1220,6 +1235,8 @@ window.addPerson = async () => {
 };
 
 window.addPayment = async () => {
+    if (!validateRequired(['payment-amount', 'payment-date'])) return;
+
     const amt = parseFloat(document.getElementById('payment-amount').value);
     const date = document.getElementById('payment-date').value;
     const desc = document.getElementById('payment-desc').value;
@@ -1248,6 +1265,8 @@ window.addPayment = async () => {
 };
 
 window.addDonation = async () => {
+    if (!validateRequired(['donation-amount', 'donation-date', 'donation-name'])) return;
+
     const amt = parseFloat(document.getElementById('donation-amount').value);
     if(isNaN(amt)) return;
     const newDonation = { amount: amt, name: document.getElementById('donation-name').value, date: document.getElementById('donation-date').value, id: Date.now() };
@@ -1264,6 +1283,8 @@ window.addDonation = async () => {
 };
 
 window.addExpense = async () => {
+    if (!validateRequired(['expense-amount', 'expense-date', 'expense-issuer', 'expense-desc'])) return;
+
     const amt = parseFloat(document.getElementById('expense-amount').value);
     if(isNaN(amt)) return;
     const newExpense = { amount: amt, issuer: document.getElementById('expense-issuer').value, description: document.getElementById('expense-desc').value, date: document.getElementById('expense-date').value, id: Date.now() };
