@@ -134,8 +134,13 @@ window.switchTab = function(tabName, btn) {
 setTimeout(updateTabIndicator, 200);
 
 window.toggleFab = function() {
-    document.getElementById('fabMenu').classList.toggle('show');
-    document.querySelector('.fab').classList.toggle('active');
+    const menu = document.getElementById('fabMenu');
+    const fab = document.querySelector('.fab');
+    menu.classList.toggle('show');
+    fab.classList.toggle('active');
+
+    const isExpanded = menu.classList.contains('show');
+    fab.setAttribute('aria-expanded', isExpanded);
 };
 
 window.openModal = (id) => { document.getElementById(id).classList.add('show'); };
