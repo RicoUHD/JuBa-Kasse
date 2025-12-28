@@ -220,11 +220,11 @@
 
 </div>
 
-<button class="fab" onclick="toggleFab()" aria-label="Aktionsmenü öffnen">+</button>
+<button class="fab" onclick="toggleFab()" aria-label="Aktionsmenü öffnen" aria-expanded="false" aria-haspopup="true" aria-controls="fabMenu">+</button>
 <div class="fab-menu" id="fabMenu">
-    <div class="fab-item" onclick="openModal('add-person-modal'); toggleFab()">👤 Person</div>
-    <div class="fab-item" onclick="openModal('add-donation-modal'); toggleFab()">💝 Spende</div>
-    <div class="fab-item" onclick="openModal('add-expense-modal'); toggleFab()">💸 Ausgabe</div>
+    <button type="button" class="fab-item" onclick="openModal('add-person-modal'); toggleFab()">👤 Person</button>
+    <button type="button" class="fab-item" onclick="openModal('add-donation-modal'); toggleFab()">💝 Spende</button>
+    <button type="button" class="fab-item" onclick="openModal('add-expense-modal'); toggleFab()">💸 Ausgabe</button>
 </div>
 
 <div id="add-person-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-person">
