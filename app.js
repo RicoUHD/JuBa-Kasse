@@ -45,7 +45,24 @@ window.showRegister = () => {
     document.getElementById('btn-show-login').classList.add('btn-secondary');
     document.getElementById('btn-show-login').classList.remove('btn-primary');
     document.getElementById('auth-error').style.display = 'none';
+    setButtonLoading('btn-login', false, null); // Reset login button state
 };
+
+// Helper: Changes button state to loading/disabled
+function setButtonLoading(btnId, isLoading, loadingText = "Laden...") {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (isLoading) {
+        btn.dataset.originalText = btn.innerText;
+        btn.innerText = loadingText;
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+    } else {
+        if(btn.dataset.originalText) btn.innerText = btn.dataset.originalText;
+        btn.disabled = false;
+        btn.style.opacity = '';
+    }
+}
 
 // Helper: Firebase can return lists as objects {0:.., 1:..}, this fixes that.
 function safeList(val) {
@@ -1214,6 +1231,7 @@ window.showTransactionModal = function() {
 window.addPerson = async () => {
     if (!validateRequired(['new-person-name', 'new-person-start'])) return;
 
+    setButtonLoading('btn-add-person', true, "Speichert...");
     const name = document.getElementById('new-person-name').value;
     const status = document.getElementById('new-person-status').value;
     const start = document.getElementById('new-person-start').value;
@@ -1233,9 +1251,12 @@ window.addPerson = async () => {
         await saveNewPerson(newP);
         renderAll();
         closeModal('add-person-modal');
+        document.getElementById('new-person-name').value = ''; // Clear input on success
     } catch (err) {
         console.error('Fehler beim Anlegen der Person:', err);
         alert('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+    } finally {
+        setButtonLoading('btn-add-person', false);
     }
 };
 
@@ -1535,26 +1556,25 @@ window.attemptLogin = async () => {
     const email = document.getElementById('login-email').value;
     const pass = document.getElementById('login-password').value;
     const errDiv = document.getElementById('auth-error');
-    const btn = document.querySelector('#login-form button');
+
+    setButtonLoading('btn-login', true, "Anmelden...");
 
     if(!email || !pass) {
         errDiv.innerText = "Bitte E-Mail und Passwort eingeben.";
         errDiv.style.display = 'block';
+        setButtonLoading('btn-login', false);
         return;
     }
 
-    const originalText = btn.innerText;
-    btn.innerText = "Anmelden...";
-    btn.disabled = true;
-
     try {
         await signInWithEmailAndPassword(auth, email, pass);
+        // Reset button state on success so it's ready for next login after logout
+        setButtonLoading('btn-login', false);
     } catch (error) {
         console.error(error);
         errDiv.innerText = "Login fehlgeschlagen: " + error.message;
         errDiv.style.display = 'block';
-        btn.innerText = originalText;
-        btn.disabled = false;
+        setButtonLoading('btn-login', false);
     }
 };
 
