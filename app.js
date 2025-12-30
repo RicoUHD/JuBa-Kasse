@@ -1263,11 +1263,16 @@ window.addPerson = async () => {
 window.addPayment = async () => {
     if (!validateRequired(['payment-amount', 'payment-date'])) return;
 
+    setButtonLoading('btn-add-payment', true, "Buche...");
+
     const amt = parseFloat(document.getElementById('payment-amount').value);
     const date = document.getElementById('payment-date').value;
     const desc = document.getElementById('payment-desc').value;
 
-    if(!currentPersonId || isNaN(amt)) return;
+    if(!currentPersonId || isNaN(amt)) {
+        setButtonLoading('btn-add-payment', false);
+        return;
+    }
 
     try {
         const updated = await mutatePerson(currentPersonId, (person) => {
@@ -1287,14 +1292,21 @@ window.addPayment = async () => {
     } catch (err) {
         console.error('Fehler beim Speichern der Zahlung:', err);
         alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    } finally {
+        setButtonLoading('btn-add-payment', false);
     }
 };
 
 window.addDonation = async () => {
     if (!validateRequired(['donation-amount', 'donation-date', 'donation-name'])) return;
 
+    setButtonLoading('btn-add-donation', true, "Speichert...");
+
     const amt = parseFloat(document.getElementById('donation-amount').value);
-    if(isNaN(amt)) return;
+    if(isNaN(amt)) {
+        setButtonLoading('btn-add-donation', false);
+        return;
+    }
     const newDonation = { amount: amt, name: document.getElementById('donation-name').value, date: document.getElementById('donation-date').value, id: Date.now() };
     const nextDonations = [...donations, newDonation];
     try {
@@ -1305,14 +1317,21 @@ window.addDonation = async () => {
     } catch (err) {
         console.error('Fehler beim Speichern der Spende:', err);
         alert('Spende konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    } finally {
+        setButtonLoading('btn-add-donation', false);
     }
 };
 
 window.addExpense = async () => {
     if (!validateRequired(['expense-amount', 'expense-date', 'expense-issuer', 'expense-desc'])) return;
 
+    setButtonLoading('btn-add-expense', true, "Speichert...");
+
     const amt = parseFloat(document.getElementById('expense-amount').value);
-    if(isNaN(amt)) return;
+    if(isNaN(amt)) {
+        setButtonLoading('btn-add-expense', false);
+        return;
+    }
     const newExpense = { amount: amt, issuer: document.getElementById('expense-issuer').value, description: document.getElementById('expense-desc').value, date: document.getElementById('expense-date').value, id: Date.now() };
     const nextExpenses = [...expenses, newExpense];
     try {
@@ -1323,6 +1342,8 @@ window.addExpense = async () => {
     } catch (err) {
         console.error('Fehler beim Speichern der Ausgabe:', err);
         alert('Ausgabe konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    } finally {
+        setButtonLoading('btn-add-expense', false);
     }
 };
 
@@ -1737,6 +1758,8 @@ window.submitUserRequest = async () => {
         timestamp: Date.now()
     };
 
+    setButtonLoading('btn-submit-request', true, "Sende...");
+
     try {
         await set(ref(db, 'requests/' + newReq.id), newReq);
         closeModal('user-request-modal');
@@ -1745,6 +1768,8 @@ window.submitUserRequest = async () => {
     } catch (err) {
         console.error('Fehler beim Senden der Anfrage:', err);
         alert('Anfrage konnte nicht gesendet werden. Bitte erneut versuchen.');
+    } finally {
+        setButtonLoading('btn-submit-request', false);
     }
 };
 
