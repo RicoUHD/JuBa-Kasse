@@ -291,7 +291,7 @@
             <label class="form-label">Notiz</label>
             <input type="text" id="payment-desc" class="form-input" placeholder="z.B. Beitrag Mai">
         </div>
-        <button class="btn btn-primary" onclick="addPayment()">Buchen</button>
+        <button id="btn-add-payment" class="btn btn-primary" onclick="addPayment()">Buchen</button>
     </div>
 </div>
 
@@ -304,7 +304,7 @@
         <input id="donation-name" class="form-input" placeholder="Spender Name" style="margin-bottom:10px">
         <label for="donation-date" class="sr-only">Datum</label>
         <input type="date" id="donation-date" class="form-input" style="margin-bottom:10px">
-        <button class="btn btn-primary" onclick="addDonation()">Speichern</button>
+        <button id="btn-add-donation" class="btn btn-primary" onclick="addDonation()">Speichern</button>
     </div>
 </div>
 <div id="add-expense-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-expense">
@@ -318,7 +318,7 @@
         <input id="expense-desc" class="form-input" placeholder="Wofür?" style="margin-bottom:10px">
         <label for="expense-date" class="sr-only">Datum</label>
         <input type="date" id="expense-date" class="form-input" style="margin-bottom:10px">
-        <button class="btn btn-primary" onclick="addExpense()">Speichern</button>
+        <button id="btn-add-expense" class="btn btn-primary" onclick="addExpense()">Speichern</button>
     </div>
 </div>
 
@@ -333,7 +333,7 @@
     <div class="modal-content">
         <div class="modal-header"><span id="req-modal-title">Anfrage</span> <button class="close-btn" onclick="closeModal('user-request-modal')" aria-label="Schließen">&times;</button></div>
         <div id="req-form-content"></div>
-        <button class="btn btn-primary" onclick="submitUserRequest()" style="margin-top:15px; width:100%">Absenden</button>
+        <button id="btn-submit-request" class="btn btn-primary" onclick="submitUserRequest()" style="margin-top:15px; width:100%">Absenden</button>
     </div>
 </div>
 
