@@ -32,7 +32,7 @@
     <!-- ADMIN VIEW -->
     <div id="admin-view">
         <div id="overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
-            <div class="hero-card" onclick="showTransactionModal()">
+            <div class="hero-card" role="button" tabindex="0" aria-label="Transaktionsverlauf anzeigen" onclick="showTransactionModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); showTransactionModal();}">
                 <span class="hero-label">Aktueller Kassenstand</span>
                 <div class="hero-amount" id="heroAmount">0,00 €</div>
                 <div class="hero-subtitle">Tippen für Details</div>
