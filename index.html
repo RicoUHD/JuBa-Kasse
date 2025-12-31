@@ -21,16 +21,16 @@
         <h1>JuBa-Kasse</h1>
     </div>
 
-    <div class="tab-nav">
-        <div class="tab-nav-container" role="tablist">
-            <div class="tab-indicator" id="tabIndicator"></div>
-            <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="overview" onclick="switchTab('overview', this)">Übersicht</button>
-            <button class="tab-btn" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="settings" onclick="switchTab('settings', this)">Einstellung</button>
-        </div>
-    </div>
-
     <!-- ADMIN VIEW -->
     <div id="admin-view">
+        <div class="tab-nav">
+            <div class="tab-nav-container" role="tablist">
+                <div class="tab-indicator" id="tabIndicator"></div>
+                <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="overview" onclick="switchTab('overview', this)">Übersicht</button>
+                <button class="tab-btn" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="settings" onclick="switchTab('settings', this)">Einstellung</button>
+            </div>
+        </div>
+
         <div id="overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
             <div class="hero-card" role="button" tabindex="0" aria-label="Transaktionsverlauf anzeigen" onclick="showTransactionModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); showTransactionModal();}">
                 <span class="hero-label">Aktueller Kassenstand</span>
@@ -143,53 +143,65 @@
             <div class="tab-nav-container" role="tablist">
                 <div class="tab-indicator" id="userTabIndicator"></div>
                 <button class="tab-btn active" id="tab-btn-user-overview" role="tab" aria-selected="true" aria-controls="user-overview" onclick="switchTab('user-overview', this)">Übersicht</button>
-                <button class="tab-btn" id="tab-btn-user-settings" role="tab" aria-selected="false" aria-controls="user-settings" onclick="switchTab('user-settings', this)">Einstellungen</button>
+                <button class="tab-btn" id="tab-btn-user-settings" role="tab" aria-selected="false" aria-controls="user-settings" onclick="switchTab('user-settings', this)">Profil</button>
             </div>
         </div>
 
         <div id="user-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-user-overview">
-            <div class="hero-card" style="cursor:default;">
-                <span class="hero-label">Willkommen</span>
-                <div class="hero-amount" id="user-name-display">—</div>
-                <div class="hero-subtitle" id="user-email-display">—</div>
+
+            <div class="hero-card" style="text-align: left; display: flex; align-items: center; justify-content: space-between; padding: 24px;">
+                <div>
+                    <span class="hero-label" style="margin-bottom: 8px;">Willkommen zurück</span>
+                    <div class="hero-amount" id="user-name-display" style="font-size: 1.75rem;">—</div>
+                    <div class="hero-subtitle" id="user-email-display" style="font-size: 0.9rem;">—</div>
+                </div>
+                <!-- Optional User Avatar or Icon could go here -->
             </div>
 
-            <!-- Main Status Card -->
-            <div id="user-status-card">
-                <div style="text-align:center; padding: 40px 20px; color: var(--text-secondary);">
-                    <div class="spinner" style="margin: 0 auto 15px;"></div>
-                    <div>Lade Daten...</div>
+            <!-- Quick Actions Grid -->
+            <div class="quick-actions-grid">
+                <div class="action-card" onclick="openUserRequestModal('payment')">
+                    <div class="action-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    </div>
+                    <div class="action-label">Zahlung</div>
+                </div>
+                <div class="action-card" onclick="openUserRequestModal('status')">
+                    <div class="action-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    </div>
+                    <div class="action-label">Status</div>
+                </div>
+                <div class="action-card" onclick="openUserRequestModal('expense')">
+                    <div class="action-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    </div>
+                    <div class="action-label">Ausgabe</div>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div style="margin-top: 25px;">
-                <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">⚡ Schnellaktionen</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-                    <button class="btn btn-secondary" onclick="openUserRequestModal('payment')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
-                        <div style="font-size: 2rem;">💰</div>
-                        <div style="font-size: 0.85rem;">Zahlung</div>
-                    </button>
-                    <button class="btn btn-secondary" onclick="openUserRequestModal('status')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
-                        <div style="font-size: 2rem;">🔄</div>
-                        <div style="font-size: 0.85rem;">Status</div>
-                    </button>
-                    <button class="btn btn-secondary" onclick="openUserRequestModal('expense')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
-                        <div style="font-size: 2rem;">💸</div>
-                        <div style="font-size: 0.85rem;">Ausgabe</div>
-                    </button>
+            <div class="dashboard-grid">
+                <!-- Main Status Card -->
+                <div id="user-status-card">
+                    <!-- Dynamic Content -->
                 </div>
-            </div>
 
-            <!-- Payment History -->
-            <div id="user-payment-history" style="margin-top: 25px;"></div>
+                <!-- Right Column for Desktop / Below for Mobile -->
+                <div>
+                    <!-- Payment History -->
+                    <div class="card">
+                        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Zahlungsverlauf</span>
+                        </div>
+                        <div class="card-body" id="user-payment-history" style="padding-top: 0;">
+                            <!-- Timeline -->
+                        </div>
+                    </div>
 
-            <!-- Requests List -->
-            <div style="margin-top: 25px;">
-                <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">📨 Meine Anfragen</h3>
-                <div id="user-requests-list">
-                    <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
-                        Keine offenen Anfragen
+                    <!-- Requests List -->
+                    <div id="user-requests-container">
+                        <div class="list-section-title">Meine Anfragen</div>
+                        <div id="user-requests-list"></div>
                     </div>
                 </div>
             </div>
@@ -197,24 +209,24 @@
 
         <div id="user-settings" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-settings">
             <div class="card">
-                <div class="card-header">⚙️ Einstellungen</div>
+                <div class="card-header">Einstellungen</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label class="form-label">Farbschema</label>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
-                            <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
+                        <label class="form-label">Erscheinungsbild</label>
+                        <div style="display:flex; gap:12px;">
+                            <button class="btn btn-secondary" onclick="setTheme('light')" style="width: auto; flex:1;">☀️ Hell</button>
+                            <button class="btn btn-secondary" onclick="setTheme('dark')" style="width: auto; flex:1;">🌙 Dunkel</button>
                         </div>
                     </div>
-                    <div class="form-group" style="margin-top:20px;">
-                        <label class="form-label">Passwort ändern</label>
-                        <input type="password" id="user-new-password" class="form-input" placeholder="Neues Passwort">
+                    <div class="form-group" style="margin-top:24px;">
+                        <label class="form-label">Sicherheit</label>
+                        <input type="password" id="user-new-password" class="form-input" placeholder="Neues Passwort eingeben">
+                        <button class="btn btn-secondary" onclick="changePassword(true)" style="margin-top: 12px;">Passwort aktualisieren</button>
                     </div>
-                    <button class="btn btn-secondary" onclick="changePassword(true)">Passwort ändern</button>
                 </div>
             </div>
 
-            <button class="btn btn-danger" onclick="logout()" style="width:100%; margin-top: 20px;">🚪 Abmelden</button>
+            <button class="btn btn-danger" onclick="logout()" style="margin-top: 12px;">Abmelden</button>
         </div>
     </div>
 
