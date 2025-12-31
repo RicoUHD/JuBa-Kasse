@@ -1,3 +1,3 @@
-## 2025-10-27 - [Hidden Interactive Elements]
-**Learning:** Elements with `opacity: 0` and `pointer-events: none` are still reachable via keyboard navigation (Tab), which is confusing for users as they are navigating "invisible" elements.
-**Action:** Always use `visibility: hidden` (or `display: none`) in combination with opacity transitions to ensure hidden elements are removed from the accessibility tree and tab order.
+## 2024-05-23 - Interactive Div Accessibility
+**Learning:** `div` elements used as buttons (e.g., card toggles) are inaccessible to keyboard users and screen readers if they lack `role="button"`, `tabindex="0"`, and keyboard event handlers.
+**Action:** When creating clickable cards or list items, always use `<button>` or add proper ARIA attributes and keydown handlers (Enter/Space) to the `div`.

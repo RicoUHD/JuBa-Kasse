@@ -176,10 +176,12 @@ window.toggleDetails = function(id) {
     });
     document.querySelectorAll('.person-item').forEach(el => {
         el.classList.remove('active');
+        el.setAttribute('aria-expanded', 'false');
     });
 
     if (!isOpen) {
         header.classList.add('active');
+        header.setAttribute('aria-expanded', 'true');
         drawer.classList.add('active');
         drawer.style.maxHeight = drawer.scrollHeight + "px";
     }
@@ -1090,7 +1092,7 @@ function generatePersonHTML(p) {
 
     return `
         <div class="person-wrapper">
-            <div id="person-item-${p.id}" class="person-item" onclick="toggleDetails('${p.id}')">
+            <div id="person-item-${p.id}" class="person-item" role="button" tabindex="0" aria-expanded="false" onclick="toggleDetails('${p.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); toggleDetails('${p.id}');}">
                 <div class="person-pill">
                     <div class="person-left">
                         <div class="person-name">
