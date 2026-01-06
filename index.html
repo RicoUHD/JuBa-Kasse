@@ -24,8 +24,14 @@
     <div class="tab-nav">
         <div class="tab-nav-container" role="tablist">
             <div class="tab-indicator" id="tabIndicator"></div>
-            <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="overview" onclick="switchTab('overview', this)">Übersicht</button>
-            <button class="tab-btn" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="settings" onclick="switchTab('settings', this)">Einstellung</button>
+            <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="overview" onclick="switchTab('overview', this)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Übersicht</span>
+            </button>
+            <button class="tab-btn" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="settings" onclick="switchTab('settings', this)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span>Einstellung</span>
+            </button>
         </div>
     </div>
 
@@ -80,15 +86,15 @@
                 <div class="card-body">
                     <div class="form-group">
                         <label class="form-label">Vollverdiener (€)</label>
-                        <input type="number" id="rate-vollverdiener" class="form-input" value="50">
+                        <input type="text" inputmode="decimal" id="rate-vollverdiener" class="form-input" value="50">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Geringverdiener (€)</label>
-                        <input type="number" id="rate-geringverdiener" class="form-input" value="25">
+                        <input type="text" inputmode="decimal" id="rate-geringverdiener" class="form-input" value="25">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Keinverdiener (€)</label>
-                        <input type="number" id="rate-keinverdiener" class="form-input" value="10">
+                        <input type="text" inputmode="decimal" id="rate-keinverdiener" class="form-input" value="10">
                     </div>
                 </div>
             </div>
@@ -142,8 +148,14 @@
         <div class="tab-nav">
             <div class="tab-nav-container" role="tablist">
                 <div class="tab-indicator" id="userTabIndicator"></div>
-                <button class="tab-btn active" id="tab-btn-user-overview" role="tab" aria-selected="true" aria-controls="user-overview" onclick="switchTab('user-overview', this)">Übersicht</button>
-                <button class="tab-btn" id="tab-btn-user-settings" role="tab" aria-selected="false" aria-controls="user-settings" onclick="switchTab('user-settings', this)">Einstellungen</button>
+                <button class="tab-btn active" id="tab-btn-user-overview" role="tab" aria-selected="true" aria-controls="user-overview" onclick="switchTab('user-overview', this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <span>Übersicht</span>
+                </button>
+                <button class="tab-btn" id="tab-btn-user-settings" role="tab" aria-selected="false" aria-controls="user-settings" onclick="switchTab('user-settings', this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <span>Einstellung</span>
+                </button>
             </div>
         </div>
 
@@ -281,7 +293,7 @@
         <div class="modal-header"><span id="title-add-payment">Zahlung buchen</span> <button class="close-btn" onclick="closeModal('add-payment-modal')" aria-label="Schließen">&times;</button></div>
         <div class="form-group">
             <label class="form-label">Betrag (€)</label>
-            <input type="number" id="payment-amount" class="form-input" step="0.01">
+            <input type="text" inputmode="decimal" id="payment-amount" class="form-input">
         </div>
         <div class="form-group">
             <label class="form-label">Datum</label>
@@ -299,7 +311,7 @@
     <div class="modal-content">
         <div class="modal-header"><span id="title-add-donation">Spende</span> <button class="close-btn" onclick="closeModal('add-donation-modal')" aria-label="Schließen">&times;</button></div>
         <label for="donation-amount" class="sr-only">Betrag</label>
-        <input id="donation-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px">
+        <input id="donation-amount" class="form-input" type="text" inputmode="decimal" placeholder="Betrag" style="margin-bottom:10px">
         <label for="donation-name" class="sr-only">Spender Name</label>
         <input id="donation-name" class="form-input" placeholder="Spender Name" style="margin-bottom:10px">
         <label for="donation-date" class="sr-only">Datum</label>
@@ -311,7 +323,7 @@
     <div class="modal-content">
         <div class="modal-header"><span id="title-add-expense">Ausgabe</span> <button class="close-btn" onclick="closeModal('add-expense-modal')" aria-label="Schließen">&times;</button></div>
         <label for="expense-amount" class="sr-only">Betrag</label>
-        <input id="expense-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px">
+        <input id="expense-amount" class="form-input" type="text" inputmode="decimal" placeholder="Betrag" style="margin-bottom:10px">
         <label for="expense-issuer" class="sr-only">Wer?</label>
         <input id="expense-issuer" class="form-input" placeholder="Wer?" style="margin-bottom:10px">
         <label for="expense-desc" class="sr-only">Wofür?</label>

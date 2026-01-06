@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
 import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo, runTransaction, remove } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
+import { parseAmount, parseAmountStrict } from "./utils.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD5z2-ND8Ukx46wDhYJlUQhiUqHITrLxy0",
@@ -682,14 +683,14 @@ function renderAdminRequests() {
 
         if (req.type === 'payment') {
             typeLabel = '💰 Zahlung';
-            details = `${parseFloat(req.data.amount).toFixed(2)} € am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            details = `${parseAmount(req.data.amount).toFixed(2)} € am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
             if (req.data.note) details += `<br><small>"${req.data.note}"</small>`;
         } else if (req.type === 'status') {
             typeLabel = '🔄 Statusänderung';
             details = `Neu: <strong>${req.data.newStatus}</strong> ab ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
         } else if (req.type === 'expense') {
             typeLabel = '💸 Ausgabe';
-            details = `${parseFloat(req.data.amount).toFixed(2)} € für "${req.data.description}" am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            details = `${parseAmount(req.data.amount).toFixed(2)} € für "${req.data.description}" am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
         }
 
         return `
@@ -797,13 +798,14 @@ window.approveRequest = async (reqId) => {
         if(req.type === 'payment') {
             await mutatePerson(req.personId, (person) => {
                 const payments = safeList(person.payments);
+                const amt = parseAmount(req.data.amount);
                 payments.push({
                     id: Date.now().toString(),
-                    amount: parseFloat(req.data.amount),
+                    amount: amt,
                     date: req.data.date,
                     description: req.data.note || 'Zahlung (Genehmigt)'
                 });
-                const totalPaid = (person.totalPaid || 0) + parseFloat(req.data.amount);
+                const totalPaid = (person.totalPaid || 0) + amt;
                 return { ...person, payments, totalPaid };
             });
         } else if(req.type === 'status') {
@@ -832,7 +834,7 @@ window.approveRequest = async (reqId) => {
         } else if(req.type === 'expense') {
             const newExpense = {
                 id: Date.now().toString(),
-                amount: parseFloat(req.data.amount),
+                amount: parseAmount(req.data.amount),
                 description: req.data.description + ` (Von: ${req.personName})`,
                 date: req.data.date
             };
@@ -958,7 +960,7 @@ function renderUserView() {
                     <span>${pay.description || 'Zahlung'}</span>
                     <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
                 </div>
-                <div class="trans-amount text-success">+${parseFloat(pay.amount).toFixed(2)}€</div>
+                <div class="trans-amount text-success">+${parseAmount(pay.amount).toFixed(2)}€</div>
             </div>
         `).join('');
     } else {
@@ -1143,7 +1145,7 @@ function generatePersonHTML(p) {
                                 <span>${pay.description || 'Zahlung'}</span>
                                 <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
                             </div>
-                            <div class="trans-amount text-success">+${parseFloat(pay.amount).toFixed(2)}€</div>
+                            <div class="trans-amount text-success">+${parseAmount(pay.amount).toFixed(2)}€</div>
                         </div>
                     `).join('') : '<div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">Keine Zahlungen vorhanden.</div>'}
                 </div>
@@ -1160,18 +1162,18 @@ function renderStats() {
 
     people.forEach(p => {
         safeList(p.payments).forEach(pay => {
-            const amount = parseFloat(pay.amount);
+            const amount = parseAmount(pay.amount);
             totalInc += amount;
             if(!startDate || new Date(pay.date) >= startDate) periodInc += amount;
         });
     });
     donations.forEach(d => {
-        const amount = parseFloat(d.amount);
+        const amount = parseAmount(d.amount);
         totalInc += amount;
         if(!startDate || new Date(d.date) >= startDate) periodInc += amount;
     });
     expenses.forEach(e => {
-        const amount = parseFloat(e.amount);
+        const amount = parseAmount(e.amount);
         totalExp += amount;
         if(!startDate || new Date(e.date) >= startDate) periodExp += amount;
     });
@@ -1222,7 +1224,7 @@ window.showTransactionModal = function() {
                         <span style="font-weight:600;">${icon} ${t.who}</span>
                         <div class="trans-meta">${t.description || '-'} • ${t.date ? new Date(t.date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
                     </div>
-                    <div class="trans-amount ${color}">${sign}${parseFloat(t.amount).toFixed(2)}€</div>
+                    <div class="trans-amount ${color}">${sign}${parseAmount(t.amount).toFixed(2)}€</div>
                 </div>
             `;
         }).join('');
@@ -1267,7 +1269,7 @@ window.addPayment = async () => {
 
     setButtonLoading('btn-add-payment', true, "Buche...");
 
-    const amt = parseFloat(document.getElementById('payment-amount').value);
+    const amt = parseAmountStrict(document.getElementById('payment-amount').value);
     const date = document.getElementById('payment-date').value;
     const desc = document.getElementById('payment-desc').value;
 
@@ -1304,7 +1306,7 @@ window.addDonation = async () => {
 
     setButtonLoading('btn-add-donation', true, "Speichert...");
 
-    const amt = parseFloat(document.getElementById('donation-amount').value);
+    const amt = parseAmountStrict(document.getElementById('donation-amount').value);
     if(isNaN(amt)) {
         setButtonLoading('btn-add-donation', false);
         return;
@@ -1329,7 +1331,7 @@ window.addExpense = async () => {
 
     setButtonLoading('btn-add-expense', true, "Speichert...");
 
-    const amt = parseFloat(document.getElementById('expense-amount').value);
+    const amt = parseAmountStrict(document.getElementById('expense-amount').value);
     if(isNaN(amt)) {
         setButtonLoading('btn-add-expense', false);
         return;
@@ -1438,9 +1440,9 @@ window.saveStatusChange = async () => {
 };
 
 window.saveSettings = async () => {
-    settings.vollverdiener = parseFloat(document.getElementById('rate-vollverdiener').value);
-    settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value);
-    settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value);
+    settings.vollverdiener = parseAmount(document.getElementById('rate-vollverdiener').value);
+    settings.geringverdiener = parseAmount(document.getElementById('rate-geringverdiener').value);
+    settings.keinverdiener = parseAmount(document.getElementById('rate-keinverdiener').value);
     settings.reportStartDate = document.getElementById('report-start-date').value || null;
     try {
         await set(ref(db, 'settings'), settings);
@@ -1670,7 +1672,7 @@ window.openUserRequestModal = (type) => {
         container.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Betrag (€)</label>
-                <input type="number" id="req-amount" class="form-input" step="0.01">
+                <input type="text" inputmode="decimal" id="req-amount" class="form-input">
             </div>
             <div class="form-group">
                 <label class="form-label">Datum</label>
@@ -1702,7 +1704,7 @@ window.openUserRequestModal = (type) => {
         container.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Betrag (€)</label>
-                <input type="number" id="req-amount" class="form-input" step="0.01">
+                <input type="text" inputmode="decimal" id="req-amount" class="form-input">
             </div>
             <div class="form-group">
                 <label class="form-label">Beschreibung</label>
