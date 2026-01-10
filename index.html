@@ -80,15 +80,15 @@
                 <div class="card-body">
                     <div class="form-group">
                         <label class="form-label">Vollverdiener (€)</label>
-                        <input type="number" id="rate-vollverdiener" class="form-input" value="50">
+                <input type="text" inputmode="decimal" id="rate-vollverdiener" class="form-input" value="50">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Geringverdiener (€)</label>
-                        <input type="number" id="rate-geringverdiener" class="form-input" value="25">
+                <input type="text" inputmode="decimal" id="rate-geringverdiener" class="form-input" value="25">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Keinverdiener (€)</label>
-                        <input type="number" id="rate-keinverdiener" class="form-input" value="10">
+                <input type="text" inputmode="decimal" id="rate-keinverdiener" class="form-input" value="10">
                     </div>
                 </div>
             </div>
@@ -281,7 +281,7 @@
         <div class="modal-header"><span id="title-add-payment">Zahlung buchen</span> <button class="close-btn" onclick="closeModal('add-payment-modal')" aria-label="Schließen">&times;</button></div>
         <div class="form-group">
             <label class="form-label">Betrag (€)</label>
-            <input type="number" id="payment-amount" class="form-input" step="0.01">
+            <input type="text" inputmode="decimal" id="payment-amount" class="form-input">
         </div>
         <div class="form-group">
             <label class="form-label">Datum</label>
@@ -299,7 +299,7 @@
     <div class="modal-content">
         <div class="modal-header"><span id="title-add-donation">Spende</span> <button class="close-btn" onclick="closeModal('add-donation-modal')" aria-label="Schließen">&times;</button></div>
         <label for="donation-amount" class="sr-only">Betrag</label>
-        <input id="donation-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px">
+        <input id="donation-amount" class="form-input" type="text" inputmode="decimal" placeholder="Betrag" style="margin-bottom:10px">
         <label for="donation-name" class="sr-only">Spender Name</label>
         <input id="donation-name" class="form-input" placeholder="Spender Name" style="margin-bottom:10px">
         <label for="donation-date" class="sr-only">Datum</label>
@@ -311,7 +311,7 @@
     <div class="modal-content">
         <div class="modal-header"><span id="title-add-expense">Ausgabe</span> <button class="close-btn" onclick="closeModal('add-expense-modal')" aria-label="Schließen">&times;</button></div>
         <label for="expense-amount" class="sr-only">Betrag</label>
-        <input id="expense-amount" class="form-input" type="number" placeholder="Betrag" style="margin-bottom:10px">
+        <input id="expense-amount" class="form-input" type="text" inputmode="decimal" placeholder="Betrag" style="margin-bottom:10px">
         <label for="expense-issuer" class="sr-only">Wer?</label>
         <input id="expense-issuer" class="form-input" placeholder="Wer?" style="margin-bottom:10px">
         <label for="expense-desc" class="sr-only">Wofür?</label>
