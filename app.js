@@ -939,6 +939,10 @@ window.switchUserTab = (tab) => {
     renderUserView(); // Re-render content
 }
 
+window.toggleTimelineItem = function(el) {
+    el.classList.toggle('expanded');
+};
+
 function renderUserOverview(container, p) {
     if (!currentUser) {
         console.warn("renderUserOverview: currentUser is null");
@@ -1041,8 +1045,9 @@ function renderUserOverview(container, p) {
     // Add current open status
     const currentStart = history.length > 0 ? history[0].endDate : (p.originalMemberSince || p.memberSince);
 
-    const renderTimelineItem = (title, date, isActive) => `
-        <div class="timeline-item ${isActive ? 'active' : ''}">
+    // Helper to render timeline items with accordion capability
+    const renderTimelineItem = (title, date, isActive, detailsHtml = '') => `
+        <div class="timeline-item ${isActive ? 'active' : ''}" onclick="toggleTimelineItem(this)">
             <div class="timeline-dot"></div>
             <div class="timeline-content">
                 <div class="timeline-main">
@@ -1050,16 +1055,42 @@ function renderUserOverview(container, p) {
                     <div class="timeline-date">${date}</div>
                 </div>
                 <div class="timeline-arrow">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
+            </div>
+            <div class="timeline-details">
+                ${detailsHtml || '<div class="timeline-detail-row" style="justify-content:center; color:#94a3b8; font-style:italic;">Keine weiteren Details verfügbar</div>'}
             </div>
         </div>
     `;
 
-    timelineHtml += renderTimelineItem(currentStatus.toUpperCase(), `Seit ${new Date(currentStart).toLocaleDateString('de-DE')}`, true);
+    // Generate detail content for Current Status
+    const currentDetails = `
+        <div class="timeline-detail-row">
+            <span>Beitrag</span>
+            <span style="font-weight:600">${formatCurrency(rate)} €</span>
+        </div>
+        <div class="timeline-detail-row">
+            <span>Status</span>
+            <span style="font-weight:600">Aktiv</span>
+        </div>
+    `;
+
+    timelineHtml += renderTimelineItem(currentStatus.toUpperCase(), `Seit ${new Date(currentStart).toLocaleDateString('de-DE')}`, true, currentDetails);
 
     history.forEach(h => {
-        timelineHtml += renderTimelineItem(h.status.toUpperCase(), `${new Date(h.startDate).toLocaleDateString('de-DE')} - ${h.endDate ? new Date(h.endDate).toLocaleDateString('de-DE') : '...'}`, false);
+        const hRate = settings[h.status] || 0;
+        const hDetails = `
+            <div class="timeline-detail-row">
+                <span>Beitrag</span>
+                <span style="font-weight:600">${formatCurrency(hRate)} €</span>
+            </div>
+             <div class="timeline-detail-row">
+                <span>Ende</span>
+                <span style="font-weight:600">${h.endDate ? new Date(h.endDate).toLocaleDateString('de-DE') : '-'}</span>
+            </div>
+        `;
+        timelineHtml += renderTimelineItem(h.status.toUpperCase(), `${new Date(h.startDate).toLocaleDateString('de-DE')} - ${h.endDate ? new Date(h.endDate).toLocaleDateString('de-DE') : '...'}`, false, hDetails);
     });
 
     timelineHtml += `</div>`;
