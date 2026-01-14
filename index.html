@@ -164,19 +164,19 @@
 
             <!-- Quick Actions -->
             <div style="margin-top: 25px;">
-                <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">⚡ Schnellaktionen</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-                    <button class="btn btn-secondary" onclick="openUserRequestModal('payment')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
-                        <div style="font-size: 2rem;">💰</div>
-                        <div style="font-size: 0.85rem;">Zahlung</div>
+                <h3 class="list-section-title">⚡ Schnellaktionen</h3>
+                <div class="user-quick-actions-grid">
+                    <button class="btn btn-secondary user-action-btn" onclick="openUserRequestModal('payment')">
+                        <div class="user-action-icon">💰</div>
+                        <div class="user-action-label">Zahlung</div>
                     </button>
-                    <button class="btn btn-secondary" onclick="openUserRequestModal('status')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
-                        <div style="font-size: 2rem;">🔄</div>
-                        <div style="font-size: 0.85rem;">Status</div>
+                    <button class="btn btn-secondary user-action-btn" onclick="openUserRequestModal('status')">
+                        <div class="user-action-icon">🔄</div>
+                        <div class="user-action-label">Status</div>
                     </button>
-                    <button class="btn btn-secondary" onclick="openUserRequestModal('expense')" style="display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 8px;">
-                        <div style="font-size: 2rem;">💸</div>
-                        <div style="font-size: 0.85rem;">Ausgabe</div>
+                    <button class="btn btn-secondary user-action-btn" onclick="openUserRequestModal('expense')">
+                        <div class="user-action-icon">💸</div>
+                        <div class="user-action-label">Ausgabe</div>
                     </button>
                 </div>
             </div>
@@ -186,7 +186,7 @@
 
             <!-- Requests List -->
             <div style="margin-top: 25px;">
-                <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">📨 Meine Anfragen</h3>
+                <h3 class="list-section-title">📨 Meine Anfragen</h3>
                 <div id="user-requests-list">
                     <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
                         Keine offenen Anfragen
