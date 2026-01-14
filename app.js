@@ -1086,12 +1086,15 @@ function generatePersonHTML(p) {
     let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
     let pillClass = 'status-ok';
     let cardClass = 'success';
+    let timeIcon = '✅';
 
     if(statusMeta.isOverdue) {
         pillClass = 'status-err';
         cardClass = 'danger';
+        timeIcon = '⚠️';
     } else if(statusMeta.isSoonDue) {
         pillClass = 'status-warn';
+        timeIcon = '⏳';
     }
 
     const paymentsList = safeList(p.payments);
@@ -1108,8 +1111,8 @@ function generatePersonHTML(p) {
                         <span class="person-status">${currentStatus}</span>
                     </div>
                     <div class="person-right">
-                        <span class="payment-pill ${pillClass}">${dateText}</span>
-                        <span class="time-remaining">${statusMeta.text}</span>
+                        <span class="payment-pill ${pillClass}">🗓️ ${dateText}</span>
+                        <span class="time-remaining">${timeIcon} ${statusMeta.text}</span>
                     </div>
                 </div>
             </div>
