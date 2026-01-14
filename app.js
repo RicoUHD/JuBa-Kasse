@@ -570,8 +570,8 @@ async function loadData() {
         if(fab) fab.style.display = 'none';
 
         // Populate User View basic info
-        document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
-        document.getElementById('user-email-display').innerText = currentUser.email;
+        // document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
+        // document.getElementById('user-email-display').innerText = currentUser.email;
 
         // Initialize User Tabs Indicator
         setTimeout(updateTabIndicator, 50);
@@ -871,171 +871,284 @@ window.rejectRequest = async (reqId) => {
     }
 };
 
+let currentUserTab = 'overview';
+
 function renderUserView() {
+    const container = document.getElementById('user-content-area');
+    const navContainer = document.getElementById('user-bottom-nav');
+
     if (people.length === 0) {
-        document.getElementById('user-status-card').innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.
+        container.innerHTML = `
+            <div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+                Kein Profil gefunden. Bitte Admin kontaktieren.
             </div>
         `;
+        // Ensure nav is rendered even if no profile, but might be empty
+        renderUserBottomNav(navContainer);
         return;
     }
 
-    const p = people[0]; // User has only one person (themselves)
-    const paidUntil = calculatePaidUntil(p);
-    const statusMeta = calculateTimeRemaining(p);
-    const overdueAmount = calculateOverdueAmount(p);
+    const p = people[0];
 
-    // Get current status (not future status)
-    const currentStatus = getCurrentStatus(p);
+    // Render Bottom Nav
+    renderUserBottomNav(navContainer);
 
-    // Format date to show only month and year
-    let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
+    // Render Content based on tab
+    if (currentUserTab === 'overview') {
+        renderUserOverview(container, p);
+    } else if (currentUserTab === 'membership') {
+        // Reuse generatePersonHTML logic but wrap nicely
+        container.innerHTML = `<div style="padding:20px 0;">${generatePersonHTML(p)}</div>`;
+        // Auto-expand details
+        setTimeout(() => {
+            const el = document.getElementById(`person-item-${p.id}`);
+            if(el) toggleDetails(p.id);
+        }, 100);
+    } else if (currentUserTab === 'history') {
+         renderUserHistoryTab(container, p);
+    } else if (currentUserTab === 'settings') {
+        renderUserSettingsTab(container);
+    }
+}
 
-    const statusLabels = {
-        'vollverdiener': '💼 Vollverdiener',
-        'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
+function renderUserBottomNav(container) {
+    const icons = {
+        home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>',
+        user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
+        clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+        settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>'
     };
 
-    let statusClass = 'user-status-ok';
-    let statusColor = 'var(--success)';
-    let statusIcon = '✅';
+    const tabs = [
+        { id: 'overview', icon: icons.home, label: 'Übersicht' },
+        { id: 'membership', icon: icons.user, label: 'Mitgliedschaft' },
+        { id: 'history', icon: icons.clock, label: 'Verlauf' },
+        { id: 'settings', icon: icons.settings, label: 'Einstellung' }
+    ];
 
-    if (statusMeta.isOverdue) {
-        statusClass = 'user-status-overdue';
-        statusColor = 'var(--danger)';
-        statusIcon = '⚠️';
-    } else if (statusMeta.isSoonDue) {
-        statusClass = 'user-status-soon';
-        statusColor = 'var(--warning)';
-        statusIcon = '⏳';
+    container.innerHTML = tabs.map(t => `
+        <button class="nav-item ${currentUserTab === t.id ? 'active' : ''}" onclick="switchUserTab('${t.id}')">
+            ${t.icon}
+            <span class="nav-label">${t.label}</span>
+        </button>
+    `).join('');
+}
+
+window.switchUserTab = (tab) => {
+    currentUserTab = tab;
+    renderUserView(); // Re-render content
+}
+
+function renderUserOverview(container, p) {
+    if (!currentUser) {
+        console.warn("renderUserOverview: currentUser is null");
+        return;
     }
 
-    document.getElementById('user-status-card').innerHTML = `
-        <!-- Status Hero Card -->
-        <div class="user-hero-status ${statusClass}">
-            <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
-            <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
-                ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
-            </h2>
-            <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
-            <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
-            ${statusMeta.isOverdue ? `
-                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                    <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; color: var(--danger);">Offener Betrag</div>
-                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger);">${formatCurrency(overdueAmount)} €</div>
-                </div>
-            ` : ''}
-        </div>
+    const paidUntil = calculatePaidUntil(p);
+    const statusMeta = calculateTimeRemaining(p);
+    const currentStatus = getCurrentStatus(p);
+    let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
 
-        <!-- Info Grid -->
-        <div class="user-info-grid">
-            <div class="user-info-box">
-                <div class="user-info-label">Status</div>
-                <div class="user-info-value">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
-                <div class="user-info-sub" style="color:var(--text);">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
+    // Welcome Card
+    const firstName = currentUser.firstName || 'Mitglied';
+    const lastName = currentUser.lastName || '';
+    const welcomeHtml = `
+        <div class="welcome-card">
+            <div class="welcome-text">
+                <div class="welcome-label">WILLKOMMEN</div>
+                <div class="welcome-name">${firstName} ${lastName}</div>
+                <div class="welcome-email">${currentUser.email}</div>
             </div>
-            <div class="user-info-box">
-                <div class="user-info-label">Beitrag</div>
-                <div class="user-info-value">${formatCurrency(settings[currentStatus] || 0)}€</div>
-                <div class="user-info-sub">pro Monat</div>
+            <div class="profile-pic">
+                 ${firstName.charAt(0)}${lastName.charAt(0)}
             </div>
         </div>
-
-        <!-- Status History (Collapsible) -->
-        <details class="user-details-box">
-            <summary class="user-details-summary">
-                <span>📜 Status-Verlauf</span>
-                <span style="opacity: 0.4; font-size: 0.8rem;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${generateStatusHistoryHTML(p)}
-            </div>
-        </details>
     `;
 
-    // Payment History (Collapsible)
-    const paymentsList = safeList(p.payments);
-    let paymentsHtml = '';
-    if (paymentsList.length > 0) {
-        paymentsHtml = paymentsList.slice().reverse().map(pay => `
-            <div class="trans-item">
-                <div class="trans-left">
-                    <span>${pay.description || 'Zahlung'}</span>
-                    <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
-                </div>
-                <div class="trans-amount text-success">+${formatCurrency(pay.amount)}€</div>
-            </div>
-        `).join('');
+    // Status Card Logic
+    // Progress logic: Max 12 months buffer
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const paidMonth = paidUntil ? new Date(paidUntil.getFullYear(), paidUntil.getMonth(), 1) : new Date(0);
+    const monthsDiff = (paidMonth.getFullYear() - currentMonth.getFullYear()) * 12 + (paidMonth.getMonth() - currentMonth.getMonth());
+
+    // Clamp to 0-12 for ring
+    let progress = 0;
+    let ringColor = '#34C759'; // Green
+
+    if (monthsDiff < 0) {
+        progress = 100; // Full ring
+        ringColor = '#FF3B30'; // Red
     } else {
-        paymentsHtml = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary); font-style: italic;">
-                Keine Zahlungen vorhanden.
-            </div>
-        `;
+        progress = Math.min(Math.max(monthsDiff, 0) * (100/12), 100);
+        if (monthsDiff <= 1) ringColor = '#FF9500'; // Orange
     }
 
-    document.getElementById('user-payment-history').innerHTML = `
-        <h3 class="list-section-title">💳 Zahlungsverlauf</h3>
-        <details class="user-details-box" open>
-            <summary class="user-details-summary">
-                <span>💰 Zahlungsverlauf</span>
-                <span style="opacity: 0.5;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${paymentsHtml}
+    const radius = 26;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (progress / 100) * circumference;
+
+    const hourglassIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`; // Clock icon as hourglass placeholder
+
+    const statusHtml = `
+        <div class="status-card">
+            <div class="status-left">
+                <div class="status-icon-box">
+                    ${hourglassIcon}
+                </div>
+                <div class="status-info">
+                    <h2>${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles aktuell')}</h2>
+                    <p>Bezahlt bis ${dateText}</p>
+                    <div class="sub-text">${statusMeta.text}</div>
+                </div>
             </div>
-        </details>
+            <div class="progress-ring-container">
+                <svg width="60" height="60">
+                    <circle stroke="#f1f5f9" stroke-width="6" fill="transparent" r="${radius}" cx="30" cy="30" />
+                    <circle class="progress-ring-circle" stroke="${ringColor}" stroke-width="6" stroke-linecap="round" fill="transparent" r="${radius}" cx="30" cy="30"
+                        style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset}" />
+                </svg>
+            </div>
+        </div>
     `;
 
-    // User Requests List
-    const myRequests = requests.filter(r => r.userId === currentUser.uid && r.status !== 'approved').sort((a,b) => b.timestamp - a.timestamp);
-    const reqList = document.getElementById('user-requests-list');
+    // Info Grid
+    const rate = settings[currentStatus] || 0;
+    const gridHtml = `
+        <div class="info-grid">
+            <div class="info-tile">
+                <div class="tile-header">
+                    <span>Status</span>
+                    <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="tile-value" style="text-transform:capitalize;">${currentStatus}</div>
+            </div>
+            <div class="info-tile">
+                <div class="tile-header">
+                    <span>Beitrag</span>
+                    <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h12v4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v-8z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="tile-value">${formatCurrency(rate)}€<br><span style="font-size:0.8rem; font-weight:500; color:#86868b">pro Monat</span></div>
+            </div>
+        </div>
+    `;
 
-    if(myRequests.length > 0) {
-        reqList.innerHTML = myRequests.map(req => {
-            let statusBadge, statusBg, statusText;
-            if(req.status === 'rejected') {
-                statusBadge = '❌';
-                statusBg = '#ef444415';
-                statusText = 'Abgelehnt';
-            } else {
-                statusBadge = '⏳';
-                statusBg = '#f59e0b15';
-                statusText = 'In Prüfung';
-            }
+    // Timeline
+    let timelineHtml = `<div class="timeline-section-title">Status-Verlauf</div><div class="timeline">`;
+    const history = safeList(p.statusHistory).slice().sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
 
-            const typeIcons = { payment: '💰', status: '🔄', expense: '💸' };
-            const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe' };
+    // Add current open status
+    const currentStart = history.length > 0 ? history[0].endDate : (p.originalMemberSince || p.memberSince);
 
-            let details = '';
-            if(req.status === 'rejected') {
-                details = `<div style="color:var(--danger); font-size:0.85rem; margin-top:8px; padding:10px; background:var(--danger)10; border-radius:8px;">⚠️ ${req.rejectionReason || 'Keine Begründung'}</div>`;
-            }
+    const renderTimelineItem = (title, date, isActive) => `
+        <div class="timeline-item ${isActive ? 'active' : ''}">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+                <div class="timeline-main">
+                    <div class="timeline-title">${title}</div>
+                    <div class="timeline-date">${date}</div>
+                </div>
+                <div class="timeline-arrow">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+            </div>
+        </div>
+    `;
 
-            return `
-                <div class="user-request-item">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                        <div>
-                            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(req.timestamp).toLocaleDateString('de-DE', {day:'numeric', month:'short', year:'numeric'})}</div>
-                        </div>
-                        <div style="background: ${statusBg}; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
-                            ${statusBadge} ${statusText}
+    timelineHtml += renderTimelineItem(currentStatus.toUpperCase(), `Seit ${new Date(currentStart).toLocaleDateString('de-DE')}`, true);
+
+    history.forEach(h => {
+        timelineHtml += renderTimelineItem(h.status.toUpperCase(), `${new Date(h.startDate).toLocaleDateString('de-DE')} - ${h.endDate ? new Date(h.endDate).toLocaleDateString('de-DE') : '...'}`, false);
+    });
+
+    timelineHtml += `</div>`;
+
+    container.innerHTML = welcomeHtml + statusHtml + gridHtml + timelineHtml + `<div style="height: 100px;"></div>`;
+}
+
+function renderUserHistoryTab(container, p) {
+    const payments = safeList(p.payments).reverse();
+    const html = `
+        <div style="padding: 20px;">
+            <h2 style="margin-bottom: 20px; font-weight:800; font-size:1.5rem;">Verlauf</h2>
+            <div class="timeline">
+                ${payments.map(pay => `
+                    <div class="timeline-item">
+                        <div class="timeline-dot" style="background:#34C759"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-main">
+                                <div class="timeline-title">${pay.description || 'Zahlung'}</div>
+                                <div class="timeline-date">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
+                            </div>
+                            <div style="font-weight:700; color:#34C759">+${formatCurrency(pay.amount)}€</div>
                         </div>
                     </div>
-                    ${details}
+                `).join('')}
+                ${payments.length === 0 ? '<div style="color:#86868b">Keine Zahlungen.</div>' : ''}
+            </div>
+
+            <h3 style="margin-top: 30px; margin-bottom: 15px; font-weight:700;">Anfragen</h3>
+             <div class="user-quick-actions-grid">
+                <button class="btn btn-secondary user-action-btn" onclick="openUserRequestModal('payment')">
+                    <div class="user-action-icon">💰</div>
+                    <div class="user-action-label">Zahlung</div>
+                </button>
+                <button class="btn btn-secondary user-action-btn" onclick="openUserRequestModal('status')">
+                    <div class="user-action-icon">🔄</div>
+                    <div class="user-action-label">Status</div>
+                </button>
+            </div>
+            <div id="user-requests-list" style="margin-top:20px;"></div>
+            <div style="height: 100px;"></div>
+        </div>
+    `;
+    container.innerHTML = html;
+
+    const myRequests = requests.filter(r => r.userId === currentUser.uid && r.status !== 'approved').sort((a,b) => b.timestamp - a.timestamp);
+    const reqList = document.getElementById('user-requests-list');
+    if(myRequests.length > 0 && reqList) {
+        reqList.innerHTML = myRequests.map(req => {
+            let statusBadge = '⏳', statusBg = '#f59e0b15', statusText = 'In Prüfung';
+            if(req.status === 'rejected') { statusBadge = '❌'; statusBg='#ef444415'; statusText = 'Abgelehnt'; }
+
+            return `
+                <div class="user-request-item" style="background:var(--surface); border:1px solid var(--border); padding:10px; border-radius:12px; margin-bottom:10px;">
+                    <div style="display: flex; justify-content: space-between; align-items:center;">
+                        <span style="font-weight:700;">${req.type}</span>
+                        <span style="background:${statusBg}; padding:4px 8px; border-radius:12px; font-size:0.8rem;">${statusBadge} ${statusText}</span>
+                    </div>
+                    <div style="font-size:0.8rem; color: #666; margin-top:4px;">${new Date(req.timestamp).toLocaleDateString('de-DE')}</div>
                 </div>
             `;
         }).join('');
-    } else {
-        reqList.innerHTML = `
-            <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
-                Keine offenen Anfragen
-            </div>
-        `;
     }
+}
+
+function renderUserSettingsTab(container) {
+    container.innerHTML = `
+        <div style="padding: 20px;">
+            <h2 style="margin-bottom: 20px; font-weight:800; font-size:1.5rem;">Einstellungen</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Farbschema</label>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
+                            <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:20px;">
+                        <label class="form-label">Passwort ändern</label>
+                        <input type="password" id="user-new-password" class="form-input" placeholder="Neues Passwort">
+                    </div>
+                    <button class="btn btn-secondary" onclick="changePassword(true)">Passwort ändern</button>
+                </div>
+            </div>
+            <button class="btn btn-danger" onclick="logout()" style="width:100%; margin-top: 20px;">🚪 Abmelden</button>
+            <div style="height: 100px;"></div>
+        </div>
+    `;
 }
 
 function renderPeople() {
