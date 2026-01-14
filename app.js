@@ -898,22 +898,23 @@ function renderUserView() {
         'keinverdiener': '🎓 Keinverdiener'
     };
 
+    let statusClass = 'user-status-ok';
     let statusColor = 'var(--success)';
     let statusIcon = '✅';
-    let statusBg = '#10b98120';
+
     if (statusMeta.isOverdue) {
+        statusClass = 'user-status-overdue';
         statusColor = 'var(--danger)';
         statusIcon = '⚠️';
-        statusBg = '#ef444420';
     } else if (statusMeta.isSoonDue) {
+        statusClass = 'user-status-soon';
         statusColor = 'var(--warning)';
         statusIcon = '⏳';
-        statusBg = '#f59e0b20';
     }
 
     document.getElementById('user-status-card').innerHTML = `
         <!-- Status Hero Card -->
-        <div style="background: ${statusBg}; border-radius: 20px; padding: 35px 25px; text-align: center; margin-bottom: 25px; border: 2px solid ${statusColor}40;">
+        <div class="user-hero-status ${statusClass}">
             <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
             <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
                 ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
@@ -921,34 +922,34 @@ function renderUserView() {
             <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
             <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
             ${statusMeta.isOverdue ? `
-                <div style="margin-top: 20px; padding: 15px; background: var(--danger)15; border-radius: 12px; border: 1px solid var(--danger)40;">
-                    <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px;">Offener Betrag</div>
+                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                    <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; color: var(--danger);">Offener Betrag</div>
                     <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger);">${formatCurrency(overdueAmount)} €</div>
                 </div>
             ` : ''}
         </div>
 
         <!-- Info Grid -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
-            <div style="background: var(--surface); border-radius: 15px; padding: 20px; text-align: center;">
-                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 8px;">Status</div>
-                <div style="font-size: 1.8rem; margin-bottom: 5px;">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
-                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text);">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
+        <div class="user-info-grid">
+            <div class="user-info-box">
+                <div class="user-info-label">Status</div>
+                <div class="user-info-value">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
+                <div class="user-info-sub" style="color:var(--text);">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
             </div>
-            <div style="background: var(--surface); border-radius: 15px; padding: 20px; text-align: center;">
-                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 8px;">Beitrag</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 5px;">${formatCurrency(settings[currentStatus] || 0)}€</div>
-                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">pro Monat</div>
+            <div class="user-info-box">
+                <div class="user-info-label">Beitrag</div>
+                <div class="user-info-value">${formatCurrency(settings[currentStatus] || 0)}€</div>
+                <div class="user-info-sub">pro Monat</div>
             </div>
         </div>
 
         <!-- Status History (Collapsible) -->
-        <details style="background: var(--surface); border-radius: 15px; overflow: hidden;">
-            <summary style="padding: 18px 20px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
+        <details class="user-details-box">
+            <summary class="user-details-summary">
                 <span>📜 Status-Verlauf</span>
                 <span style="opacity: 0.4; font-size: 0.8rem;">▼</span>
             </summary>
-            <div style="padding: 0 20px 20px 20px; border-top: 1px solid var(--border);">
+            <div class="user-details-content">
                 ${generateStatusHistoryHTML(p)}
             </div>
         </details>
@@ -976,13 +977,13 @@ function renderUserView() {
     }
 
     document.getElementById('user-payment-history').innerHTML = `
-        <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">💳 Zahlungsverlauf</h3>
-        <details style="background: var(--surface); border-radius: 15px; overflow: hidden;" open>
-            <summary style="padding: 18px 20px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
+        <h3 class="list-section-title">💳 Zahlungsverlauf</h3>
+        <details class="user-details-box" open>
+            <summary class="user-details-summary">
                 <span>💰 Zahlungsverlauf</span>
                 <span style="opacity: 0.5;">▼</span>
             </summary>
-            <div style="padding: 0 15px 15px 15px; border-top: 1px solid var(--border);">
+            <div class="user-details-content">
                 ${paymentsHtml}
             </div>
         </details>
@@ -1014,7 +1015,7 @@ function renderUserView() {
             }
 
             return `
-                <div style="background: var(--surface); border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+                <div class="user-request-item">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                         <div>
                             <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
