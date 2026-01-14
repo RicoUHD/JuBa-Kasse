@@ -429,10 +429,10 @@ input:checked + .slider:before { transform: translateX(22px); }
     display: flex;
     align-items: center;
     justify-content: center;
-}
-.close-btn:hover, .close-btn:focus {
+    .close-btn:hover, .close-btn:focus {
     color: var(--danger);
     outline: none;
+}
 }
 .sr-only {
   position: absolute;
@@ -567,4 +567,262 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-bottom: 12px;
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
+}
+
+/* --- Bottom Navigation --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--surface);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.nav-item {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.nav-item.active {
+    color: var(--text); /* Black/Primary as per design */
+}
+
+.nav-icon {
+    width: 24px;
+    height: 24px;
+}
+
+/* --- New Design Elements --- */
+
+/* Welcome Card */
+.welcome-card {
+    /* Mesh gradient approximate */
+    background: linear-gradient(120deg, #f0f4ff 0%, #e0e7ff 50%, #f0f9ff 100%);
+    /* Actually the image has a more complex blur gradient, let's try to mimic roughly */
+    background: radial-gradient(circle at top right, #eef2ff, #e0f2fe), radial-gradient(circle at bottom left, #fdf4ff, #ffffff);
+    padding: 25px;
+    border-radius: 24px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .welcome-card {
+    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+
+.welcome-text-small {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.welcome-name {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 5px;
+    line-height: 1.2;
+}
+
+.welcome-email {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.user-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Status Card (New) */
+.status-card-new {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid var(--border);
+}
+
+.status-icon-box {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Hourglass icon styling */
+}
+
+.status-content {
+    flex: 1;
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+.status-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.status-subtitle {
+    font-size: 0.9rem;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.status-sub-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* Progress Ring */
+.progress-ring-circle {
+    transition: stroke-dashoffset 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+/* Info Grid Cards */
+.info-card-new {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 120px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.3;
+}
+
+.info-icon-corner {
+    align-self: flex-end;
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+/* Timeline */
+.timeline-section-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+    padding-left: 5px;
+}
+
+.timeline-container {
+    position: relative;
+    padding-left: 10px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 25px;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border);
+    z-index: 2;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 17px;
+    bottom: -30px;
+    width: 2px;
+    background: var(--border);
+    z-index: 1;
+}
+
+.timeline-item.active::before {
+    background: var(--primary); /* Blue dot */
+    box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
+}
+
+.timeline-item.active:not(:last-child)::after {
+    background: var(--border); /* Line stays gray usually, or colored if active path */
+}
+
+.timeline-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.timeline-date {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.timeline-chevron {
+    position: absolute;
+    right: 0;
+    top: 0;
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+/* Header Override */
+.user-header-override h1 {
+    font-size: 1.8rem;
+    margin-left: 10px;
 }

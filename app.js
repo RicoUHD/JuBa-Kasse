@@ -134,17 +134,17 @@ window.switchTab = function(tabName, btn) {
         targetContent.classList.add('active');
     }
 
-    // Update buttons in the same tab nav container
-    const container = btn.closest('.tab-nav-container');
+    // Update buttons in the same tab nav container OR bottom nav
+    const container = btn.closest('.tab-nav-container') || btn.closest('.bottom-nav');
     if (container) {
-        container.querySelectorAll('.tab-btn').forEach(el => {
+        container.querySelectorAll('.tab-btn, .nav-item').forEach(el => {
             el.classList.remove('active');
             el.setAttribute('aria-selected', 'false');
         });
         btn.classList.add('active');
         btn.setAttribute('aria-selected', 'true');
 
-        // Update indicator in this container
+        // Update indicator in this container (only for top tabs)
         const indicator = container.querySelector('.tab-indicator');
         if (indicator) {
             indicator.style.width = btn.offsetWidth + 'px';
@@ -568,6 +568,8 @@ async function loadData() {
         document.getElementById('settings').style.display = 'none';
         const fab = document.querySelector('.fab');
         if(fab) fab.style.display = 'none';
+        const globalHeader = document.querySelector('.container > .header');
+        if(globalHeader) globalHeader.style.display = 'none';
 
         // Populate User View basic info
         document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
@@ -610,6 +612,8 @@ async function loadData() {
         document.getElementById('settings').style.display = '';
         const fab = document.querySelector('.fab');
         if(fab) fab.style.display = 'flex';
+        const globalHeader = document.querySelector('.container > .header');
+        if(globalHeader) globalHeader.style.display = 'flex';
 
         // Initialize Admin Tabs Indicator
         setTimeout(updateTabIndicator, 50);
@@ -873,7 +877,7 @@ window.rejectRequest = async (reqId) => {
 
 function renderUserView() {
     if (people.length === 0) {
-        document.getElementById('user-status-card').innerHTML = `
+        document.getElementById('welcome-card-container').innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
                 Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.
             </div>
@@ -885,156 +889,203 @@ function renderUserView() {
     const paidUntil = calculatePaidUntil(p);
     const statusMeta = calculateTimeRemaining(p);
     const overdueAmount = calculateOverdueAmount(p);
-
-    // Get current status (not future status)
     const currentStatus = getCurrentStatus(p);
 
-    // Format date to show only month and year
     let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
 
-    const statusLabels = {
-        'vollverdiener': '💼 Vollverdiener',
-        'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
-    };
+    // --- Welcome Card ---
+    // Use initials if no avatar image available
+    const initials = (currentUser.firstName[0] || '') + (currentUser.lastName[0] || '');
 
-    let statusClass = 'user-status-ok';
-    let statusColor = 'var(--success)';
-    let statusIcon = '✅';
+    document.getElementById('welcome-card-container').innerHTML = `
+        <div class="welcome-card">
+            <div>
+                <div class="welcome-text-small">WILLKOMMEN</div>
+                <div class="welcome-name">${currentUser.firstName} ${currentUser.lastName}</div>
+                <div class="welcome-email">${currentUser.email}</div>
+            </div>
+            <div class="user-avatar">${initials}</div>
+        </div>
+    `;
+
+    // --- Status Card ---
+    let statusTitle = "Alles in Ordnung";
+    let statusSubtitle = "Bezahlt bis " + dateText;
+    let statusSubSubtitle = statusMeta.text;
+    let circleColor = "var(--success)";
+    let percent = 100;
 
     if (statusMeta.isOverdue) {
-        statusClass = 'user-status-overdue';
-        statusColor = 'var(--danger)';
-        statusIcon = '⚠️';
+        statusTitle = "Überfällig";
+        statusSubtitle = "Zahlung erforderlich";
+        circleColor = "var(--danger)";
+        percent = 100; // Full circle for alarm
     } else if (statusMeta.isSoonDue) {
-        statusClass = 'user-status-soon';
-        statusColor = 'var(--warning)';
-        statusIcon = '⏳';
+        statusTitle = "Bald fällig";
+        circleColor = "#3b82f6"; // Blueish as in design
+        percent = 75;
     }
 
-    document.getElementById('user-status-card').innerHTML = `
-        <!-- Status Hero Card -->
-        <div class="user-hero-status ${statusClass}">
-            <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
-            <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
-                ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
-            </h2>
-            <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
-            <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
-            ${statusMeta.isOverdue ? `
-                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                    <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; color: var(--danger);">Offener Betrag</div>
-                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger);">${formatCurrency(overdueAmount)} €</div>
-                </div>
-            ` : ''}
-        </div>
+    // Circumference of radius 18 is ~113
+    const radius = 18;
+    const circumference = 2 * Math.PI * radius;
+    const dashOffset = circumference - (percent / 100) * circumference;
 
-        <!-- Info Grid -->
-        <div class="user-info-grid">
-            <div class="user-info-box">
-                <div class="user-info-label">Status</div>
-                <div class="user-info-value">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
-                <div class="user-info-sub" style="color:var(--text);">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
+    document.getElementById('status-card-container').innerHTML = `
+        <div class="status-card-new">
+            <div class="status-icon-box">
+               <!-- Hourglass Icon -->
+               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 22h14"></path>
+                    <path d="M5 2h14"></path>
+                    <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"></path>
+                    <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path>
+                </svg>
             </div>
-            <div class="user-info-box">
-                <div class="user-info-label">Beitrag</div>
-                <div class="user-info-value">${formatCurrency(settings[currentStatus] || 0)}€</div>
-                <div class="user-info-sub">pro Monat</div>
+            <div class="status-content">
+                <div class="status-title">${statusTitle}</div>
+                <div class="status-subtitle">${statusSubtitle}</div>
+                <div class="status-sub-subtitle">${statusSubSubtitle}</div>
+            </div>
+            <div style="position: relative; width: 44px; height: 44px;">
+                <svg width="44" height="44" viewBox="0 0 44 44">
+                    <circle cx="22" cy="22" r="${radius}" fill="none" stroke="var(--border)" stroke-width="4"></circle>
+                    <circle cx="22" cy="22" r="${radius}" fill="none" stroke="${circleColor}" stroke-width="4"
+                            stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}" stroke-linecap="round"
+                            class="progress-ring-circle"></circle>
+                </svg>
             </div>
         </div>
-
-        <!-- Status History (Collapsible) -->
-        <details class="user-details-box">
-            <summary class="user-details-summary">
-                <span>📜 Status-Verlauf</span>
-                <span style="opacity: 0.4; font-size: 0.8rem;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${generateStatusHistoryHTML(p)}
-            </div>
-        </details>
     `;
 
-    // Payment History (Collapsible)
-    const paymentsList = safeList(p.payments);
-    let paymentsHtml = '';
-    if (paymentsList.length > 0) {
-        paymentsHtml = paymentsList.slice().reverse().map(pay => `
-            <div class="trans-item">
-                <div class="trans-left">
-                    <span>${pay.description || 'Zahlung'}</span>
-                    <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
-                </div>
-                <div class="trans-amount text-success">+${formatCurrency(pay.amount)}€</div>
+    // --- Info Grid ---
+    const statusLabels = {
+        'vollverdiener': 'Vollverdiener',
+        'geringverdiener': 'Geringverdiener',
+        'keinverdiener': 'Keinverdiener'
+    };
+    const currentRate = formatCurrency(settings[currentStatus] || 0);
+    const statusLabel = statusLabels[currentStatus] || currentStatus;
+
+    document.getElementById('info-grid-container').innerHTML = `
+        <div class="info-card-new">
+            <div>
+                <div class="info-label">Status</div>
+                <div class="info-value">${statusLabel}</div>
             </div>
-        `).join('');
-    } else {
-        paymentsHtml = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary); font-style: italic;">
-                Keine Zahlungen vorhanden.
+            <div class="info-icon-corner">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+            </div>
+        </div>
+        <div class="info-card-new">
+            <div>
+                <div class="info-label">Beitrag</div>
+                <div class="info-value">${currentRate}€ pro Monat</div>
+            </div>
+            <div class="info-icon-corner">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+            </div>
+        </div>
+    `;
+
+    // --- Status History ---
+    // Reusing logic from generateStatusHistoryHTML but adapting to new design
+    const history = safeList(p.statusHistory).slice().sort(
+        (a, b) => new Date(b.startDate) - new Date(a.startDate)
+    );
+
+    let historyHtml = `
+        <h3 class="timeline-section-title">Status-Verlauf</h3>
+        <div class="timeline-container">
+    `;
+
+    // Current Status Item
+    const currentStatusStart = history.length > 0
+        ? history[0].endDate
+        : (p.originalMemberSince || p.memberSince);
+
+    const startStr = new Date(currentStatusStart).toLocaleDateString('de-DE', {month:'long', year:'numeric'});
+
+    historyHtml += `
+        <div class="timeline-item active">
+            <div class="timeline-title">${statusLabel}</div>
+            <div class="timeline-date">${startStr}</div>
+            <div class="timeline-chevron">›</div>
+        </div>
+    `;
+
+    // Past Items
+    history.forEach(entry => {
+        const start = new Date(entry.startDate).toLocaleDateString('de-DE', {month:'long', year:'numeric'});
+        const label = statusLabels[entry.status] || entry.status;
+
+        historyHtml += `
+            <div class="timeline-item">
+                <div class="timeline-title">${label}</div>
+                <div class="timeline-date">${start}</div>
+                <div class="timeline-chevron">›</div>
             </div>
         `;
-    }
+    });
 
-    document.getElementById('user-payment-history').innerHTML = `
-        <h3 class="list-section-title">💳 Zahlungsverlauf</h3>
-        <details class="user-details-box" open>
-            <summary class="user-details-summary">
-                <span>💰 Zahlungsverlauf</span>
-                <span style="opacity: 0.5;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${paymentsHtml}
-            </div>
-        </details>
-    `;
+    historyHtml += `</div>`;
+    document.getElementById('status-history-container').innerHTML = historyHtml;
 
-    // User Requests List
+    // --- Requests List (Restored) ---
     const myRequests = requests.filter(r => r.userId === currentUser.uid && r.status !== 'approved').sort((a,b) => b.timestamp - a.timestamp);
-    const reqList = document.getElementById('user-requests-list');
+    const reqList = document.getElementById('user-requests-list-new');
 
-    if(myRequests.length > 0) {
-        reqList.innerHTML = myRequests.map(req => {
-            let statusBadge, statusBg, statusText;
-            if(req.status === 'rejected') {
-                statusBadge = '❌';
-                statusBg = '#ef444415';
-                statusText = 'Abgelehnt';
-            } else {
-                statusBadge = '⏳';
-                statusBg = '#f59e0b15';
-                statusText = 'In Prüfung';
-            }
+    if(reqList) {
+        if(myRequests.length > 0) {
+            reqList.innerHTML = myRequests.map(req => {
+                let statusBadge, statusBg, statusText;
+                if(req.status === 'rejected') {
+                    statusBadge = '❌';
+                    statusBg = '#ef444415';
+                    statusText = 'Abgelehnt';
+                } else {
+                    statusBadge = '⏳';
+                    statusBg = '#f59e0b15';
+                    statusText = 'In Prüfung';
+                }
 
-            const typeIcons = { payment: '💰', status: '🔄', expense: '💸' };
-            const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe' };
+                const typeIcons = { payment: '💰', status: '🔄', expense: '💸' };
+                const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe' };
 
-            let details = '';
-            if(req.status === 'rejected') {
-                details = `<div style="color:var(--danger); font-size:0.85rem; margin-top:8px; padding:10px; background:var(--danger)10; border-radius:8px;">⚠️ ${req.rejectionReason || 'Keine Begründung'}</div>`;
-            }
+                let details = '';
+                if(req.status === 'rejected') {
+                    details = `<div style="color:var(--danger); font-size:0.85rem; margin-top:8px; padding:10px; background:var(--danger)10; border-radius:8px;">⚠️ ${req.rejectionReason || 'Keine Begründung'}</div>`;
+                }
 
-            return `
-                <div class="user-request-item">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                        <div>
-                            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(req.timestamp).toLocaleDateString('de-DE', {day:'numeric', month:'short', year:'numeric'})}</div>
+                return `
+                    <div class="user-request-item">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                            <div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(req.timestamp).toLocaleDateString('de-DE', {day:'numeric', month:'short', year:'numeric'})}</div>
+                            </div>
+                            <div style="background: ${statusBg}; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
+                                ${statusBadge} ${statusText}
+                            </div>
                         </div>
-                        <div style="background: ${statusBg}; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
-                            ${statusBadge} ${statusText}
-                        </div>
+                        ${details}
                     </div>
-                    ${details}
+                `;
+            }).join('');
+        } else {
+            reqList.innerHTML = `
+                <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
+                    Keine offenen Anfragen
                 </div>
             `;
-        }).join('');
-    } else {
-        reqList.innerHTML = `
-            <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
-                Keine offenen Anfragen
-            </div>
-        `;
+        }
     }
 }
 
@@ -1791,4 +1842,48 @@ window.generateNewCode = async () => {
         console.error('Fehler beim Generieren des Codes:', err);
         alert('Neuer Code konnte nicht gespeichert werden.');
     }
+};
+
+// DEBUG
+window.debugRender = function() {
+    currentUser = { firstName: 'Enrico', lastName: 'Lehn', email: 'enrico.lehn@gmail.com', uid: 'mock-uid', admin: false };
+    settings = { vollverdiener: 50, geringverdiener: 10, keinverdiener: 10 };
+
+    // Create person
+    people = [{
+        id: '1',
+        name: 'Enrico Lehn',
+        uid: 'mock-uid',
+        status: 'geringverdiener',
+        memberSince: '2024-01-01',
+        originalMemberSince: '2024-01-01',
+        statusHistory: [],
+        payments: [],
+        totalPaid: 0
+    }];
+
+    // To expire "This Month" (diff=0), we need paidUntil = End of Current Month.
+    // calculatePaidUntil logic subtracts rate from totalPaid month by month.
+    // memberSince Jan 2024.
+    // Assume today is e.g. Feb 2025.
+    // Months passed: 13 months.
+    // 13 * 10 = 130.
+    // If totalPaid = 130, paid until Feb 2025.
+    // calculateTimeRemaining: PaidMonth (Feb 2025) - CurrentMonth (Feb 2025) = 0.
+    // -> "läuft diesen Monat ab", isSoonDue=true.
+
+    // We need to calculate how many months from 2024-01-01 to NOW.
+    const start = new Date('2024-01-01');
+    const now = new Date();
+    const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1;
+    // +1 because if we are in Feb, we need to pay for Feb to be valid until end of Feb.
+
+    people[0].totalPaid = months * 10;
+
+    document.getElementById('login-modal').classList.remove('show');
+    document.getElementById('user-view').style.display = 'block';
+    const loader = document.getElementById('loading-overlay');
+    if(loader) loader.style.display = 'none';
+
+    renderUserView();
 };

@@ -138,33 +138,41 @@
     </div>
 
     <!-- USER VIEW (Non-Admin) -->
-    <div id="user-view" style="display:none;">
-        <div class="tab-nav">
-            <div class="tab-nav-container" role="tablist">
-                <div class="tab-indicator" id="userTabIndicator"></div>
-                <button class="tab-btn active" id="tab-btn-user-overview" role="tab" aria-selected="true" aria-controls="user-overview" onclick="switchTab('user-overview', this)">Übersicht</button>
-                <button class="tab-btn" id="tab-btn-user-settings" role="tab" aria-selected="false" aria-controls="user-settings" onclick="switchTab('user-settings', this)">Einstellungen</button>
-            </div>
+    <div id="user-view" style="display:none; padding-bottom: 80px;">
+        <!-- Header for User View -->
+        <div class="header user-header-override" style="justify-content: flex-start; padding-left: 10px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            <h1 style="color: var(--text); background: none; -webkit-text-fill-color: initial;">JuBa-Kasse</h1>
         </div>
 
-        <div id="user-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-user-overview">
-            <div class="hero-card" style="cursor:default;">
-                <span class="hero-label">Willkommen</span>
-                <div class="hero-amount" id="user-name-display">—</div>
-                <div class="hero-subtitle" id="user-email-display">—</div>
-            </div>
+        <div id="user-overview" class="tab-content active" role="tabpanel">
+            <!-- Welcome Card -->
+            <div id="welcome-card-container"></div>
 
-            <!-- Main Status Card -->
-            <div id="user-status-card">
-                <div style="text-align:center; padding: 40px 20px; color: var(--text-secondary);">
-                    <div class="spinner" style="margin: 0 auto 15px;"></div>
-                    <div>Lade Daten...</div>
-                </div>
-            </div>
+            <!-- Status Card -->
+            <div id="status-card-container"></div>
 
-            <!-- Quick Actions -->
-            <div style="margin-top: 25px;">
-                <h3 class="list-section-title">⚡ Schnellaktionen</h3>
+            <!-- Info Grid -->
+            <div id="info-grid-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;"></div>
+
+            <!-- Status History -->
+            <div id="status-history-container"></div>
+
+            <!-- Hidden Legacy Containers (to prevent JS errors if referenced) -->
+            <div id="user-name-display" style="display:none"></div>
+            <div id="user-email-display" style="display:none"></div>
+            <div id="user-status-card" style="display:none"></div>
+            <div id="user-payment-history" style="display:none"></div>
+            <div id="user-requests-list" style="display:none"></div>
+        </div>
+
+        <div id="user-membership" class="tab-content" role="tabpanel">
+             <div style="padding: 20px;">
+                <h3 class="list-section-title">⚡ Aktionen</h3>
                 <div class="user-quick-actions-grid">
                     <button class="btn btn-secondary user-action-btn" onclick="openUserRequestModal('payment')">
                         <div class="user-action-icon">💰</div>
@@ -179,23 +187,23 @@
                         <div class="user-action-label">Ausgabe</div>
                     </button>
                 </div>
-            </div>
 
-            <!-- Payment History -->
-            <div id="user-payment-history" style="margin-top: 25px;"></div>
-
-            <!-- Requests List -->
-            <div style="margin-top: 25px;">
-                <h3 class="list-section-title">📨 Meine Anfragen</h3>
-                <div id="user-requests-list">
+                <h3 class="list-section-title" style="margin-top: 25px;">📨 Meine Anfragen</h3>
+                <div id="user-requests-list-new">
                     <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
                         Keine offenen Anfragen
                     </div>
                 </div>
-            </div>
+             </div>
         </div>
 
-        <div id="user-settings" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-settings">
+        <div id="user-history" class="tab-content" role="tabpanel">
+             <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                Verlauf (Platzhalter)
+             </div>
+        </div>
+
+        <div id="user-settings" class="tab-content" role="tabpanel">
             <div class="card">
                 <div class="card-header">⚙️ Einstellungen</div>
                 <div class="card-body">
@@ -215,6 +223,25 @@
             </div>
 
             <button class="btn btn-danger" onclick="logout()" style="width:100%; margin-top: 20px;">🚪 Abmelden</button>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="switchTab('user-overview', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <span class="nav-label">Übersicht</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('user-membership', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span class="nav-label">Mitgliedschaft</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('user-history', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span class="nav-label">Verlauf</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('user-settings', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span class="nav-label">Einstellungen</span>
+            </button>
         </div>
     </div>
 
