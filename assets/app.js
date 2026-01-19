@@ -25,6 +25,27 @@ let isAuthenticated = false;
 let currentUser = null;
 let users = [];
 
+window.showToast = (msg, type = 'info') => {
+    const container = document.getElementById('toast-container');
+    if(!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    // Simple icon mapping
+    let icon = 'ℹ️';
+    if(type === 'success') icon = '✅';
+    if(type === 'error') icon = '⚠️';
+
+    toast.innerHTML = `<span style="font-size:1.2rem">${icon}</span> <span>${msg}</span>`;
+
+    container.appendChild(toast);
+
+    // Auto remove
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        toast.addEventListener('animationend', () => toast.remove());
+    }, 4000);
+};
+
 window.showLogin = () => {
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('register-form').style.display = 'none';
@@ -643,7 +664,7 @@ async function loadData() {
     renderAll();
     } catch (err) {
         console.error("Ladefehler:", err);
-        alert("Fehler beim Laden der Daten. Bitte Seite neu laden.");
+        showToast("Fehler beim Laden der Daten. Bitte Seite neu laden.", 'error');
     } finally {
         // Ladebildschirm ausblenden
         if(loader) loader.style.display = 'none';
@@ -778,20 +799,20 @@ window.assignUserToPerson = async (uid) => {
     const select = document.getElementById(`link-select-${uid}`);
     if (!select) return;
     const personId = select.value;
-    if (!personId) { alert('Bitte eine Person auswählen.'); return; }
+    if (!personId) { showToast('Bitte eine Person auswählen.', 'error'); return; }
 
     const person = people.find(p => String(p.id) === String(personId));
-    if (!person) { alert('Person nicht gefunden.'); return; }
+    if (!person) { showToast('Person nicht gefunden.', 'error'); return; }
 
     try {
         await update(ref(db, 'people/' + personId), { uid });
         person.uid = uid;
-        alert('Zuordnung gespeichert.');
+        showToast('Zuordnung gespeichert.', 'success');
         renderUnlinkedUsers();
         renderPeople();
     } catch (err) {
         console.error('Fehler beim Zuordnen:', err);
-        alert('Zuordnung fehlgeschlagen. Bitte erneut versuchen.');
+        showToast('Zuordnung fehlgeschlagen. Bitte erneut versuchen.', 'error');
     }
 };
 
@@ -848,10 +869,11 @@ window.approveRequest = async (reqId) => {
         }
 
         await update(ref(db, 'requests/' + reqId), { status: 'approved' });
+        showToast('Anfrage genehmigt.', 'success');
         loadData();
     } catch (err) {
         console.error('Fehler beim Genehmigen der Anfrage:', err);
-        alert('Anfrage konnte nicht genehmigt werden. Bitte erneut versuchen.');
+        showToast('Anfrage konnte nicht genehmigt werden.', 'error');
     }
 };
 
@@ -864,10 +886,11 @@ window.rejectRequest = async (reqId) => {
             status: 'rejected',
             rejectionReason: reason || 'Kein Grund angegeben'
         });
+        showToast('Anfrage abgelehnt.', 'success');
         loadData();
     } catch (err) {
         console.error('Fehler beim Ablehnen der Anfrage:', err);
-        alert('Anfrage konnte nicht abgelehnt werden. Bitte erneut versuchen.');
+        showToast('Anfrage konnte nicht abgelehnt werden.', 'error');
     }
 };
 
@@ -912,19 +935,48 @@ function renderUserView() {
         statusIcon = '⏳';
     }
 
+    // Progress Bar Calculation
+    const today = new Date();
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    let monthsAhead = 0;
+
+    if (paidUntil) {
+        const paidUntilMonth = new Date(paidUntil.getFullYear(), paidUntil.getMonth(), 1);
+        monthsAhead = (paidUntilMonth.getFullYear() - currentMonthStart.getFullYear()) * 12 + (paidUntilMonth.getMonth() - currentMonthStart.getMonth());
+    }
+
+    // We cap it for visual (e.g. max 12 months ahead)
+    // If overdue, progress is 0. If current, small progress.
+    let progressPercent = 0;
+    if (monthsAhead >= 0) {
+        // Base progress for being up to date
+        progressPercent = 5;
+        // Add more for buffer, cap at 100% (approx 12 months)
+        progressPercent += Math.min(monthsAhead * 8, 95);
+    }
+
     document.getElementById('user-status-card').innerHTML = `
         <!-- Status Hero Card -->
         <div class="user-hero-status ${statusClass}">
-            <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
-            <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
-                ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
-            </h2>
-            <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
-            <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <div class="avatar avatar-lg" style="margin-bottom: 10px; font-size: 2rem; width: 80px; height: 80px; box-shadow: 0 8px 20px rgba(0,0,0,0.1);">${getInitials(p.name)}</div>
+
+                <h2 style="color: ${statusColor}; font-size: 1.6rem; font-weight: 800; margin: 0;">
+                    ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
+                </h2>
+                <div style="font-size: 1.1rem; font-weight: 600; color: var(--text); opacity: 0.9;">Bezahlt bis <strong>${dateText}</strong></div>
+
+                <div class="status-progress-bar-container" style="width: 100%; max-width: 280px; height: 8px; background: rgba(0,0,0,0.08); border-radius: 99px; margin-top: 10px; overflow: hidden;">
+                    <div class="status-progress-bar" style="width: ${progressPercent}%; height: 100%; background: ${statusColor}; border-radius: 99px; transition: width 1s ease;"></div>
+                </div>
+
+                <div style="font-size: 0.9rem; opacity: 0.7; color: var(--text); margin-top: 5px;">${statusMeta.text}</div>
+            </div>
+
             ${statusMeta.isOverdue ? `
-                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                    <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; color: var(--danger);">Offener Betrag</div>
-                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger);">${formatCurrency(overdueAmount)} €</div>
+                <div style="margin-top: 25px; padding: 20px; background: rgba(239, 68, 68, 0.08); border-radius: 16px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                    <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--danger); text-transform: uppercase;">Offener Betrag</div>
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--danger); line-height: 1;">${formatCurrency(overdueAmount)} €</div>
                 </div>
             ` : ''}
         </div>
@@ -1076,6 +1128,11 @@ function renderPeople() {
     list.innerHTML = html;
 }
 
+function getInitials(name) {
+    if(!name) return '??';
+    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+}
+
 function generatePersonHTML(p) {
     const paidUntil = calculatePaidUntil(p);
     const statusMeta = calculateTimeRemaining(p);
@@ -1101,12 +1158,14 @@ function generatePersonHTML(p) {
         <div class="person-wrapper">
             <div id="person-item-${p.id}" class="person-item" role="button" tabindex="0" aria-expanded="false" onclick="toggleDetails('${p.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); toggleDetails('${p.id}');}">
                 <div class="person-pill">
-                    <div class="person-left">
-                        <div class="person-name">
-                            ${p.name}
-                            <span class="chevron">›</span>
+                    <div class="person-left" style="flex-direction: row; align-items: center; gap: 12px;">
+                        <div class="avatar">${getInitials(p.name)}</div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div class="person-name">
+                                ${p.name}
+                            </div>
+                            <span class="person-status">${currentStatus}</span>
                         </div>
-                        <span class="person-status">${currentStatus}</span>
                     </div>
                     <div class="person-right">
                         <span class="payment-pill ${pillClass}">${dateText}</span>
@@ -1261,9 +1320,10 @@ window.addPerson = async () => {
         renderAll();
         closeModal('add-person-modal');
         document.getElementById('new-person-name').value = ''; // Clear input on success
+        showToast('Person hinzugefügt.', 'success');
     } catch (err) {
         console.error('Fehler beim Anlegen der Person:', err);
-        alert('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+        showToast('Speichern fehlgeschlagen. Bitte erneut versuchen.', 'error');
     } finally {
         setButtonLoading('btn-add-person', false);
     }
@@ -1292,15 +1352,16 @@ window.addPayment = async () => {
         });
 
         if (!updated) {
-            alert('Person nicht gefunden.');
+            showToast('Person nicht gefunden.', 'error');
             return;
         }
 
         renderAll();
         closeModal('add-payment-modal');
+        showToast('Zahlung gespeichert.', 'success');
     } catch (err) {
         console.error('Fehler beim Speichern der Zahlung:', err);
-        alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');
+        showToast('Zahlung konnte nicht gespeichert werden.', 'error');
     } finally {
         setButtonLoading('btn-add-payment', false);
     }
@@ -1323,9 +1384,10 @@ window.addDonation = async () => {
         donations = nextDonations;
         renderAll();
         closeModal('add-donation-modal');
+        showToast('Spende gespeichert.', 'success');
     } catch (err) {
         console.error('Fehler beim Speichern der Spende:', err);
-        alert('Spende konnte nicht gespeichert werden. Bitte erneut versuchen.');
+        showToast('Spende konnte nicht gespeichert werden.', 'error');
     } finally {
         setButtonLoading('btn-add-donation', false);
     }
@@ -1348,9 +1410,10 @@ window.addExpense = async () => {
         expenses = nextExpenses;
         renderAll();
         closeModal('add-expense-modal');
+        showToast('Ausgabe gespeichert.', 'success');
     } catch (err) {
         console.error('Fehler beim Speichern der Ausgabe:', err);
-        alert('Ausgabe konnte nicht gespeichert werden. Bitte erneut versuchen.');
+        showToast('Ausgabe konnte nicht gespeichert werden.', 'error');
     } finally {
         setButtonLoading('btn-add-expense', false);
     }
@@ -1362,9 +1425,10 @@ window.deletePerson = async (id) => {
             await remove(ref(db, 'people/' + id));
             people = people.filter(p => String(p.id) !== String(id));
             renderAll();
+            showToast('Person gelöscht.', 'success');
         } catch (err) {
             console.error('Fehler beim Löschen der Person:', err);
-            alert('Löschen fehlgeschlagen. Bitte erneut versuchen.');
+            showToast('Löschen fehlgeschlagen. Bitte erneut versuchen.', 'error');
         }
     }
 };
@@ -1389,7 +1453,7 @@ window.saveStatusChange = async () => {
     const changeDate = document.getElementById('change-status-date').value;
 
     if (!changeDate) {
-        alert("Bitte ein Datum angeben.");
+        showToast("Bitte ein Datum angeben.", 'error');
         return;
     }
 
@@ -1432,15 +1496,16 @@ window.saveStatusChange = async () => {
         });
 
         if (!updated) {
-            alert('Person nicht gefunden.');
+            showToast('Person nicht gefunden.', 'error');
             return;
         }
 
         renderAll();
         closeModal('change-status-modal');
+        showToast('Status geändert.', 'success');
     } catch (err) {
         console.error('Fehler bei der Statusänderung:', err);
-        alert('Statusänderung fehlgeschlagen: ' + err.message);
+        showToast('Statusänderung fehlgeschlagen: ' + err.message, 'error');
     }
 };
 
@@ -1452,10 +1517,10 @@ window.saveSettings = async () => {
     try {
         await set(ref(db, 'settings'), settings);
         renderAll();
-        alert("Gespeichert");
+        showToast("Einstellungen gespeichert", 'success');
     } catch (err) {
         console.error('Fehler beim Speichern der Einstellungen:', err);
-        alert('Einstellungen konnten nicht gespeichert werden.');
+        showToast('Einstellungen konnten nicht gespeichert werden.', 'error');
     }
 };
 
@@ -1464,7 +1529,7 @@ window.changePassword = async (isUser = false) => {
     const pw = document.getElementById(inputId).value;
 
     if(!pw || pw.length < 6) {
-        alert("Passwort muss mindestens 6 Zeichen lang sein.");
+        showToast("Passwort muss mindestens 6 Zeichen lang sein.", 'error');
         return;
     }
 
@@ -1472,14 +1537,14 @@ window.changePassword = async (isUser = false) => {
         const user = auth.currentUser;
         if(user) {
             await updatePassword(user, pw);
-            alert("Passwort erfolgreich geändert.");
+            showToast("Passwort erfolgreich geändert.", 'success');
             document.getElementById(inputId).value = '';
         } else {
-            alert("Kein Benutzer angemeldet.");
+            showToast("Kein Benutzer angemeldet.", 'error');
         }
     } catch (error) {
         console.error(error);
-        alert("Fehler beim Ändern des Passworts: " + error.message);
+        showToast("Fehler beim Ändern des Passworts: " + error.message, 'error');
     }
 };
 
@@ -1730,7 +1795,7 @@ window.submitUserRequest = async () => {
 
     // Find person ID linked to current user
     const person = people.find(p => p.uid === currentUser.uid);
-    if(!person) { alert("Kein Personenprofil gefunden."); return; }
+    if(!person) { showToast("Kein Personenprofil gefunden.", 'error'); return; }
 
     const reqData = {};
     const date = document.getElementById('req-date').value;
@@ -1738,19 +1803,19 @@ window.submitUserRequest = async () => {
     if(currentRequestType === 'payment') {
         const amount = document.getElementById('req-amount').value.replace(',', '.');
         const note = document.getElementById('req-note').value;
-        if(!amount || !date) { alert("Bitte alle Felder ausfüllen"); return; }
+        if(!amount || !date) { showToast("Bitte alle Felder ausfüllen", 'error'); return; }
         reqData.amount = amount;
         reqData.date = date;
         reqData.note = note;
     } else if(currentRequestType === 'status') {
         const status = document.getElementById('req-status').value;
-        if(!status || !date) { alert("Bitte alle Felder ausfüllen"); return; }
+        if(!status || !date) { showToast("Bitte alle Felder ausfüllen", 'error'); return; }
         reqData.newStatus = status;
         reqData.date = date;
     } else if(currentRequestType === 'expense') {
         const amount = document.getElementById('req-amount').value.replace(',', '.');
         const desc = document.getElementById('req-desc').value;
-        if(!amount || !desc || !date) { alert("Bitte alle Felder ausfüllen"); return; }
+        if(!amount || !desc || !date) { showToast("Bitte alle Felder ausfüllen", 'error'); return; }
         reqData.amount = amount;
         reqData.description = desc;
         reqData.date = date;
@@ -1772,11 +1837,11 @@ window.submitUserRequest = async () => {
     try {
         await set(ref(db, 'requests/' + newReq.id), newReq);
         closeModal('user-request-modal');
-        alert("Anfrage gesendet! Ein Administrator wird sie prüfen.");
+        showToast("Anfrage gesendet! Ein Administrator wird sie prüfen.", 'success');
         loadData();
     } catch (err) {
         console.error('Fehler beim Senden der Anfrage:', err);
-        alert('Anfrage konnte nicht gesendet werden. Bitte erneut versuchen.');
+        showToast('Anfrage konnte nicht gesendet werden. Bitte erneut versuchen.', 'error');
     } finally {
         setButtonLoading('btn-submit-request', false);
     }
@@ -1787,8 +1852,9 @@ window.generateNewCode = async () => {
     try {
         await set(ref(db, 'system/inviteCode'), newCode);
         document.getElementById('admin-invite-code').value = newCode;
+        showToast("Neuer Code generiert", 'success');
     } catch (err) {
         console.error('Fehler beim Generieren des Codes:', err);
-        alert('Neuer Code konnte nicht gespeichert werden.');
+        showToast('Neuer Code konnte nicht gespeichert werden.', 'error');
     }
 };

@@ -15,6 +15,8 @@
     <div id="loading-message" style="font-weight:600; color:var(--text)">Lade Daten...</div>
 </div>
 
+<div id="toast-container"></div>
+
 <div class="container">
     <div class="header">
         <img src="https://www.ev-bg.de/wp-content/uploads/2021/03/Logo_blau_Serifen.svg" alt="EV-BG Logo" style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(2352%) hue-rotate(188deg) brightness(96%) contrast(101%);">
@@ -40,12 +42,18 @@
 
             <div class="stats-grid">
                 <div class="stat-box">
-                    <div class="stat-label">Einnahmen</div>
-                    <div class="stat-value text-success" id="totalIncome">0,00 €</div>
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">💰</div>
+                    <div>
+                        <div class="stat-label">Einnahmen</div>
+                        <div class="stat-value text-success" id="totalIncome">0,00 €</div>
+                    </div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Ausgaben</div>
-                    <div class="stat-value text-danger" id="totalExpenses">0,00 €</div>
+                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">💸</div>
+                    <div>
+                        <div class="stat-label">Ausgaben</div>
+                        <div class="stat-value text-danger" id="totalExpenses">0,00 €</div>
+                    </div>
                 </div>
             </div>
 
