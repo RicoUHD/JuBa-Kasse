@@ -1,9 +1,9 @@
-const CACHE_NAME = 'juba-kasse-v1.7';
+const CACHE_NAME = 'juba-kasse-v1.8';
 const URLS_TO_CACHE = [
     './',
     './index.html',
-    './style.css',
-    './app.js',
+    './assets/style.css',
+    './assets/app.js',
     './manifest.json',
     './icon-512.png',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js',
