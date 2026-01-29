@@ -278,11 +278,26 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 /* --- Bottom Navigation --- */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; width: 100%;
-    background: var(--surface); border-top: 1px solid var(--border);
+    /* Shared Layout */
     display: flex; justify-content: space-around; align-items: center;
-    padding: 10px 0 15px; /* Extra padding for safe area */
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
     z-index: 1000;
+
+    /* Slimmer defaults */
+    height: 60px;
+    padding: 0;
+
+    /* Default Appearance (User Nav) */
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+}
+
+/* Admin Nav Specifics (Cutout) */
+#admin-bottom-nav {
+    background: radial-gradient(circle at 50% -20px, transparent 35px, var(--surface) 35.5px);
+    border-top: none;
+    box-shadow: none;
+    filter: drop-shadow(0 -5px 10px rgba(0,0,0,0.05));
 }
 
 .nav-item {
@@ -297,11 +312,13 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 
 .nav-center {
     position: relative; width: 60px; height: 60px;
-    margin-top: -30px; /* Float above */
+    margin-top: -50px;
     display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
 }
 
 .nav-fab {
+    pointer-events: auto;
     width: 56px; height: 56px; border-radius: 50%;
     background: var(--gradient-primary); border: none;
     display: flex; align-items: center; justify-content: center;
