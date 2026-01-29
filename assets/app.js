@@ -103,26 +103,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-function updateTabIndicator() {
-    // Find the visible tab container
-    const visibleContainer = Array.from(document.querySelectorAll('.tab-nav-container')).find(el => el.offsetParent !== null);
-
-    if (visibleContainer) {
-        const activeBtn = visibleContainer.querySelector('.tab-btn.active');
-        const indicator = visibleContainer.querySelector('.tab-indicator');
-
-        if (activeBtn && indicator) {
-            indicator.style.width = activeBtn.offsetWidth + 'px';
-            indicator.style.transform = `translateX(${activeBtn.offsetLeft - 5}px)`;
-        }
-    }
-}
-
-window.addEventListener('resize', updateTabIndicator);
-
 window.switchTab = function(tabName, btn) {
-    const isUserTabs = !!btn.closest('#user-view');
-    const scope = isUserTabs ? document.getElementById('user-view') : document.getElementById('admin-view');
+    const isUserNav = !!btn.closest('#user-bottom-nav');
+    const scope = isUserNav ? document.getElementById('user-view') : document.getElementById('admin-view');
     if (!scope) return;
 
     // Hide only the tab contents inside the current scope (admin vs user)
@@ -134,31 +117,23 @@ window.switchTab = function(tabName, btn) {
         targetContent.classList.add('active');
     }
 
-    // Update buttons in the same tab nav container
-    const container = btn.closest('.tab-nav-container');
+    // Update buttons in the same nav container
+    const container = btn.closest('.bottom-nav');
     if (container) {
-        container.querySelectorAll('.tab-btn').forEach(el => {
+        container.querySelectorAll('.nav-item').forEach(el => {
             el.classList.remove('active');
             el.setAttribute('aria-selected', 'false');
         });
         btn.classList.add('active');
         btn.setAttribute('aria-selected', 'true');
-
-        // Update indicator in this container
-        const indicator = container.querySelector('.tab-indicator');
-        if (indicator) {
-            indicator.style.width = btn.offsetWidth + 'px';
-            indicator.style.transform = `translateX(${btn.offsetLeft - 5}px)`;
-        }
     }
 };
 
-// Initial indicator sync (avoid switching tabs globally)
-setTimeout(updateTabIndicator, 200);
-
 window.toggleFab = function() {
     const menu = document.getElementById('fabMenu');
-    const fab = document.querySelector('.fab');
+    const fab = document.querySelector('.nav-fab');
+    if (!fab) return;
+
     menu.classList.toggle('show');
     fab.classList.toggle('active');
 
@@ -563,18 +538,17 @@ async function loadData() {
         // UI toggles
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('user-view').style.display = 'block';
-        const adminNav = document.querySelector('.container > .tab-nav');
-        if(adminNav) adminNav.style.display = 'none';
+
+        const adminBottomNav = document.getElementById('admin-bottom-nav');
+        if(adminBottomNav) adminBottomNav.style.display = 'none';
+        const userBottomNav = document.getElementById('user-bottom-nav');
+        if(userBottomNav) userBottomNav.style.display = 'flex';
+
         document.getElementById('settings').style.display = 'none';
-        const fab = document.querySelector('.fab');
-        if(fab) fab.style.display = 'none';
 
         // Populate User View basic info
         document.getElementById('user-name-display').innerText = `${currentUser.firstName} ${currentUser.lastName}`;
         document.getElementById('user-email-display').innerText = currentUser.email;
-
-        // Initialize User Tabs Indicator
-        setTimeout(updateTabIndicator, 50);
 
     } else {
         // Admin: fetch full dataset
@@ -605,14 +579,13 @@ async function loadData() {
         // UI toggles
         document.getElementById('admin-view').style.display = 'block';
         document.getElementById('user-view').style.display = 'none';
-        const adminNav = document.querySelector('.container > .tab-nav');
-        if(adminNav) adminNav.style.display = 'flex';
-        document.getElementById('settings').style.display = '';
-        const fab = document.querySelector('.fab');
-        if(fab) fab.style.display = 'flex';
 
-        // Initialize Admin Tabs Indicator
-        setTimeout(updateTabIndicator, 50);
+        const adminBottomNav = document.getElementById('admin-bottom-nav');
+        if(adminBottomNav) adminBottomNav.style.display = 'flex';
+        const userBottomNav = document.getElementById('user-bottom-nav');
+        if(userBottomNav) userBottomNav.style.display = 'none';
+
+        document.getElementById('settings').style.display = '';
     }
 
     // Normalize people data
