@@ -278,11 +278,22 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 /* --- Bottom Navigation --- */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; width: 100%;
-    background: var(--surface); border-top: 1px solid var(--border);
+    background: transparent;
+    border: none;
     display: flex; justify-content: space-around; align-items: center;
     padding: 10px 0 15px; /* Extra padding for safe area */
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
     z-index: 1000;
+}
+
+.bottom-nav::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--surface);
+    z-index: -1;
+    -webkit-mask: radial-gradient(circle at 50% 0, transparent 40px, black 40.5px);
+    mask: radial-gradient(circle at 50% 0, transparent 40px, black 40.5px);
+    filter: drop-shadow(0 -1px 0 var(--border)) drop-shadow(0 -4px 20px rgba(0,0,0,0.05));
 }
 
 .nav-item {
