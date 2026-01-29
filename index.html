@@ -21,14 +21,6 @@
         <h1>JuBa-Kasse</h1>
     </div>
 
-    <div class="tab-nav">
-        <div class="tab-nav-container" role="tablist">
-            <div class="tab-indicator" id="tabIndicator"></div>
-            <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="overview" onclick="switchTab('overview', this)">Übersicht</button>
-            <button class="tab-btn" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="settings" onclick="switchTab('settings', this)">Einstellung</button>
-        </div>
-    </div>
-
     <!-- ADMIN VIEW -->
     <div id="admin-view">
         <div id="overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
@@ -139,13 +131,6 @@
 
     <!-- USER VIEW (Non-Admin) -->
     <div id="user-view" style="display:none;">
-        <div class="tab-nav">
-            <div class="tab-nav-container" role="tablist">
-                <div class="tab-indicator" id="userTabIndicator"></div>
-                <button class="tab-btn active" id="tab-btn-user-overview" role="tab" aria-selected="true" aria-controls="user-overview" onclick="switchTab('user-overview', this)">Übersicht</button>
-                <button class="tab-btn" id="tab-btn-user-settings" role="tab" aria-selected="false" aria-controls="user-settings" onclick="switchTab('user-settings', this)">Einstellungen</button>
-            </div>
-        </div>
 
         <div id="user-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-user-overview">
             <div class="hero-card" style="cursor:default;">
@@ -220,12 +205,38 @@
 
 </div>
 
-<button class="fab" onclick="toggleFab()" aria-label="Aktionsmenü öffnen" aria-expanded="false" aria-haspopup="true" aria-controls="fabMenu">+</button>
 <div class="fab-menu" id="fabMenu">
     <button type="button" class="fab-item" onclick="openModal('add-person-modal'); toggleFab()">👤 Person</button>
     <button type="button" class="fab-item" onclick="openModal('add-donation-modal'); toggleFab()">💝 Spende</button>
     <button type="button" class="fab-item" onclick="openModal('add-expense-modal'); toggleFab()">💸 Ausgabe</button>
 </div>
+
+<nav id="admin-bottom-nav" class="bottom-nav" style="display:none;">
+    <button class="nav-item active" onclick="switchTab('overview', this)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <span>Übersicht</span>
+    </button>
+    <div class="nav-center">
+        <button class="nav-fab" onclick="toggleFab()" aria-label="Aktionsmenü öffnen" aria-expanded="false" aria-haspopup="true" aria-controls="fabMenu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+    </div>
+    <button class="nav-item" onclick="switchTab('settings', this)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Einstellungen</span>
+    </button>
+</nav>
+
+<nav id="user-bottom-nav" class="bottom-nav" style="display:none;">
+    <button class="nav-item active" onclick="switchTab('user-overview', this)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <span>Übersicht</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('user-settings', this)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Einstellungen</span>
+    </button>
+</nav>
 
 <div id="add-person-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-person">
     <div class="modal-content">
