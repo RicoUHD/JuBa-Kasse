@@ -307,12 +307,12 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     z-index: -1;
 
     /* Cutout Mask */
-    --notch-radius: 38px;
-    -webkit-mask: radial-gradient(circle at 50% 0, transparent var(--notch-radius), black calc(var(--notch-radius) + 0.5px));
-    mask: radial-gradient(circle at 50% 0, transparent var(--notch-radius), black calc(var(--notch-radius) + 0.5px));
+    /* circle at 50% -10px creates shallower/smoother angles at the intersection */
+    -webkit-mask: radial-gradient(circle at 50% -10px, transparent 36px, black 36.5px);
+    mask: radial-gradient(circle at 50% -10px, transparent 36px, black 36.5px);
 
-    /* Border (simulated) and Shadow */
-    filter: drop-shadow(0 -1px 0 var(--border)) drop-shadow(0 -4px 20px rgba(0,0,0,0.05));
+    /* Border (simulated) and Shadow - Darker shadow for visibility */
+    filter: drop-shadow(0 -1px 0 #94a3b8) drop-shadow(0 -4px 20px rgba(0,0,0,0.05));
 }
 
 .nav-item {
