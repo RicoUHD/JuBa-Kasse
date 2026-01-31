@@ -48,7 +48,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 .container { max-width: 800px; margin: 0 auto; padding: 20px; }
 
 .header {
-    display: none;
+    display: flex;
     align-items: center; justify-content: center; gap: 12px;
     padding: 20px 0 30px;
 }
