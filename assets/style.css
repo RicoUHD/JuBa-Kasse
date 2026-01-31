@@ -279,17 +279,22 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 /* --- Bottom Navigation --- */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; width: 100%;
+    background-color: #ffffff;
+    border-top: 1px solid var(--border-light);
+    display: flex; justify-content: space-around; align-items: center;
+    padding: 5px 0 10px; /* Extra padding for safe area */
+    min-height: 60px;
+    box-shadow: none;
+    z-index: 1000;
+}
+
+#admin-bottom-nav {
     background-color: transparent;
-    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAwIDgwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCBWIDgwIEggMCBaIiBmaWxsPSJ3aGl0ZSIgLz4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiIC8+Cjwvc3ZnPg==");
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAwIDYwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCBWIDYwIEggMCBaIiBmaWxsPSJ3aGl0ZSIgLz4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiIC8+Cjwvc3ZnPgo=");
     background-position: center top;
     background-repeat: no-repeat;
     background-size: 2000px 100%;
     border-top: none;
-    display: flex; justify-content: space-around; align-items: center;
-    padding: 10px 0 15px; /* Extra padding for safe area */
-    min-height: 80px;
-    box-shadow: none;
-    z-index: 1000;
 }
 
 .nav-item {
