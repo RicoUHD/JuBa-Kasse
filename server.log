@@ -1,0 +1,16 @@
+127.0.0.1 - - [05/Feb/2026 12:40:56] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:40:56] "GET /assets/logo.svg HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:40:56] "GET /assets/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:40:56] "GET /assets/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:40:57] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:40:57] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:40:57] "GET /icon-512.png HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:40:57] "GET /manifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET /assets/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET /assets/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET /assets/logo.svg HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET /manifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [05/Feb/2026 12:41:29] "GET /icon-512.png HTTP/1.1" 200 -
