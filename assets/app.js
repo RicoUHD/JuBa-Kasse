@@ -672,15 +672,15 @@ function renderAdminRequests() {
         }
 
         return `
-            <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 8px 0;">
-                <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:8px; align-items:flex-start;">
-                    <span style="font-weight:800;">${typeLabel}</span>
-                    <span style="font-size:0.8rem; color:var(--text-secondary); white-space:nowrap;">${new Date(req.timestamp).toLocaleString()}</span>
+            <div class="request-card">
+                <div class="request-header">
+                    <span class="request-title">${typeLabel}</span>
+                    <span class="request-date">${new Date(req.timestamp).toLocaleString()}</span>
                 </div>
-                <div style="margin-bottom:10px;">${details}</div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button class="btn btn-primary btn-small" style="width:auto;" onclick="approveRequest('${req.id}')">Genehmigen</button>
-                    <button class="btn btn-danger btn-small" style="width:auto;" onclick="rejectRequest('${req.id}')">Ablehnen</button>
+                <div style="margin-bottom:12px;">${details}</div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-primary btn-sm" onclick="approveRequest('${req.id}')">Genehmigen</button>
+                    <button class="btn btn-danger btn-sm" onclick="rejectRequest('${req.id}')">Ablehnen</button>
                 </div>
             </div>
         `;
@@ -691,8 +691,8 @@ function renderAdminRequests() {
         .map(([personName, items]) => {
             const sorted = items.slice().sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             return `
-                <div style="margin-top: 12px;">
-                    <div style="font-weight: 900; margin-bottom: 6px;">${personName}</div>
+                <div style="margin-top: 16px;">
+                    <div class="text-sm font-bold text-muted" style="margin-bottom: 8px; text-transform:uppercase;">${personName}</div>
                     ${sorted.map(renderReq).join('')}
                 </div>
             `;
@@ -700,7 +700,7 @@ function renderAdminRequests() {
         .join('');
 
     target.innerHTML = `
-        <div class="card" style="margin-bottom: 20px;">
+        <div class="card">
             <div class="card-header">📥 Offene Anfragen (${pending.length})</div>
             <div class="card-body">${groupBlocks}</div>
         </div>
@@ -723,25 +723,25 @@ function renderUnlinkedUsers() {
 
     const rows = unlinked.map(u => {
         return `
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
-                <div style="flex:1; min-width:200px;">
+            <div class="list-item" style="flex-wrap:wrap; gap:12px;">
+                <div style="flex:1; min-width:180px;">
                     <div style="font-weight:700;">${(u.firstName || '?')} ${(u.lastName || '')}</div>
-                    <div style="font-size:0.85rem; color:var(--text-secondary);">${u.email || ''}</div>
+                    <div class="text-sm text-muted">${u.email || ''}</div>
                 </div>
-                <select id="link-select-${u.uid}" class="form-select" style="flex:1; min-width:220px;">
+                <select id="link-select-${u.uid}" class="form-select" style="flex:1; min-width:180px;">
                     <option value="">Person auswählen</option>
                     ${options}
                 </select>
-                <button class="btn btn-primary btn-small" style="width:auto;" onclick="assignUserToPerson('${u.uid}')">Zuordnen</button>
+                <button class="btn btn-primary btn-sm" onclick="assignUserToPerson('${u.uid}')">Zuordnen</button>
             </div>
         `;
     }).join('');
 
     target.innerHTML = `
-        <div class="card" style="margin-bottom:20px;">
+        <div class="card">
             <div class="card-header">🧩 Nicht zugeordnete Benutzer (${unlinked.length})</div>
             <div class="card-body">
-                ${availablePeople.length === 0 ? '<div style="color:var(--text-secondary);">Keine freien Personen ohne Zuordnung vorhanden.</div>' : rows}
+                ${availablePeople.length === 0 ? '<div class="text-muted text-center">Keine freien Personen ohne Zuordnung vorhanden.</div>' : rows}
             </div>
         </div>
     `;
@@ -888,44 +888,46 @@ function renderUserView() {
     document.getElementById('user-status-card').innerHTML = `
         <!-- Status Hero Card -->
         <div class="user-hero-status ${statusClass}">
-            <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
-            <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
+            <div style="font-size: 3.5rem; margin-bottom: 12px; line-height: 1;">${statusIcon}</div>
+            <h2 style="color: ${statusColor}; font-size: 1.25rem; font-weight: 800; margin-bottom: 8px;">
                 ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
             </h2>
-            <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
-            <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
+            <div style="font-size: 1rem; font-weight: 600; margin-bottom: 6px;">Bezahlt bis <strong>${dateText}</strong></div>
+            <div class="text-sm text-muted">${statusMeta.text}</div>
             ${statusMeta.isOverdue ? `
-                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                    <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; color: var(--danger);">Offener Betrag</div>
-                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger);">${formatCurrency(overdueAmount)} €</div>
+                <div style="margin-top: 16px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-md); border: 1px solid rgba(239, 68, 68, 0.2);">
+                    <div class="text-xs text-danger font-bold uppercase mb-1">Offener Betrag</div>
+                    <div class="text-xl font-bold text-danger">${formatCurrency(overdueAmount)} €</div>
                 </div>
             ` : ''}
         </div>
 
         <!-- Info Grid -->
-        <div class="user-info-grid">
-            <div class="user-info-box">
-                <div class="user-info-label">Status</div>
-                <div class="user-info-value">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
-                <div class="user-info-sub" style="color:var(--text);">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Status</div>
+                <div class="stat-value">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
+                <div class="text-sm text-muted mt-1">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
             </div>
-            <div class="user-info-box">
-                <div class="user-info-label">Beitrag</div>
-                <div class="user-info-value">${formatCurrency(settings[currentStatus] || 0)}€</div>
-                <div class="user-info-sub">pro Monat</div>
+            <div class="stat-box">
+                <div class="stat-label">Beitrag</div>
+                <div class="stat-value">${formatCurrency(settings[currentStatus] || 0)}€</div>
+                <div class="text-sm text-muted mt-1">pro Monat</div>
             </div>
         </div>
 
         <!-- Status History (Collapsible) -->
-        <details class="user-details-box">
-            <summary class="user-details-summary">
-                <span>📜 Status-Verlauf</span>
-                <span style="opacity: 0.4; font-size: 0.8rem;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${generateStatusHistoryHTML(p)}
-            </div>
-        </details>
+        <div class="card" style="margin-bottom:24px">
+            <details class="user-details-box">
+                <summary class="card-header" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <span>📜 Status-Verlauf</span>
+                    <span style="opacity: 0.5;">▼</span>
+                </summary>
+                <div class="card-body">
+                    ${generateStatusHistoryHTML(p)}
+                </div>
+            </details>
+        </div>
     `;
 
     // Payment History (Collapsible)
@@ -935,7 +937,7 @@ function renderUserView() {
         paymentsHtml = paymentsList.slice().reverse().map(pay => `
             <div class="trans-item">
                 <div class="trans-left">
-                    <span>${pay.description || 'Zahlung'}</span>
+                    <span class="font-bold text-sm">${pay.description || 'Zahlung'}</span>
                     <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
                 </div>
                 <div class="trans-amount text-success">+${formatCurrency(pay.amount)}€</div>
@@ -943,23 +945,25 @@ function renderUserView() {
         `).join('');
     } else {
         paymentsHtml = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary); font-style: italic;">
+            <div class="text-center text-muted italic p-4">
                 Keine Zahlungen vorhanden.
             </div>
         `;
     }
 
     document.getElementById('user-payment-history').innerHTML = `
-        <h3 class="list-section-title">💳 Zahlungsverlauf</h3>
-        <details class="user-details-box" open>
-            <summary class="user-details-summary">
-                <span>💰 Zahlungsverlauf</span>
-                <span style="opacity: 0.5;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${paymentsHtml}
-            </div>
-        </details>
+        <div class="list-section-title">Finanzen</div>
+        <div class="card">
+            <details class="user-details-box" open>
+                <summary class="card-header" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <span>💳 Zahlungsverlauf</span>
+                    <span style="opacity: 0.5;">▼</span>
+                </summary>
+                <div class="card-body">
+                    ${paymentsHtml}
+                </div>
+            </details>
+        </div>
     `;
 
     // User Requests List
@@ -971,11 +975,11 @@ function renderUserView() {
             let statusBadge, statusBg, statusText;
             if(req.status === 'rejected') {
                 statusBadge = '❌';
-                statusBg = '#ef444415';
+                statusBg = 'rgba(239, 68, 68, 0.1)';
                 statusText = 'Abgelehnt';
             } else {
                 statusBadge = '⏳';
-                statusBg = '#f59e0b15';
+                statusBg = 'rgba(245, 158, 11, 0.1)';
                 statusText = 'In Prüfung';
             }
 
@@ -984,17 +988,17 @@ function renderUserView() {
 
             let details = '';
             if(req.status === 'rejected') {
-                details = `<div style="color:var(--danger); font-size:0.85rem; margin-top:8px; padding:10px; background:var(--danger)10; border-radius:8px;">⚠️ ${req.rejectionReason || 'Keine Begründung'}</div>`;
+                details = `<div class="text-sm text-danger mt-2 p-2 bg-red-50 rounded">⚠️ ${req.rejectionReason || 'Keine Begründung'}</div>`;
             }
 
             return `
-                <div class="user-request-item">
+                <div class="request-card">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                         <div>
-                            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(req.timestamp).toLocaleDateString('de-DE', {day:'numeric', month:'short', year:'numeric'})}</div>
+                            <div class="font-bold text-base mb-1">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
+                            <div class="text-xs text-muted">${new Date(req.timestamp).toLocaleDateString('de-DE', {day:'numeric', month:'short', year:'numeric'})}</div>
                         </div>
-                        <div style="background: ${statusBg}; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
+                        <div style="background: ${statusBg}; padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700;">
                             ${statusBadge} ${statusText}
                         </div>
                     </div>
@@ -1004,7 +1008,7 @@ function renderUserView() {
         }).join('');
     } else {
         reqList.innerHTML = `
-            <div style="text-align:center; padding: 30px 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px;">
+            <div class="card p-6 text-center text-muted">
                 Keine offenen Anfragen
             </div>
         `;
@@ -1059,13 +1063,17 @@ function generatePersonHTML(p) {
 
     let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
     let pillClass = 'status-ok';
-    let cardClass = 'success';
+    let cardBg = 'rgba(16, 185, 129, 0.05)';
+    let cardBorder = 'rgba(16, 185, 129, 0.2)';
 
     if(statusMeta.isOverdue) {
         pillClass = 'status-err';
-        cardClass = 'danger';
+        cardBg = 'rgba(239, 68, 68, 0.05)';
+        cardBorder = 'rgba(239, 68, 68, 0.2)';
     } else if(statusMeta.isSoonDue) {
         pillClass = 'status-warn';
+        cardBg = 'rgba(245, 158, 11, 0.05)';
+        cardBorder = 'rgba(245, 158, 11, 0.2)';
     }
 
     const paymentsList = safeList(p.payments);
@@ -1082,50 +1090,51 @@ function generatePersonHTML(p) {
                         <span class="person-status">${currentStatus}</span>
                     </div>
                     <div class="person-right">
-                        <span class="payment-pill ${pillClass}">${dateText}</span>
-                        <span class="time-remaining">${statusMeta.text}</span>
+                        <span class="status-pill ${pillClass}">${dateText}</span>
+                        <span class="text-xs text-muted font-bold">${statusMeta.text}</span>
                     </div>
                 </div>
             </div>
             <div id="drawer-${p.id}" class="person-details">
                 <div class="details-content">
 
-                    <div class="details-status-card ${cardClass}">
-                        <div class="details-row">
-                            <span class="details-label">Bezahlt bis</span>
-                            <span class="details-value">${dateText}</span>
+                    <div style="background: ${cardBg}; border: 1px solid ${cardBorder}; border-radius: var(--radius-md); padding: 16px; margin-bottom: 24px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <span class="text-sm text-muted font-bold">Bezahlt bis</span>
+                            <span class="font-bold">${dateText}</span>
                         </div>
-                        <div class="details-row">
-                            <span class="details-label">Status</span>
-                            <span class="details-value" style="text-transform:capitalize">${p.status}</span>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span class="text-sm text-muted font-bold">Status</span>
+                            <span class="font-bold" style="text-transform:capitalize">${p.status}</span>
                         </div>
                         ${statusMeta.isOverdue ? `
-                        <div class="details-row" style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.05)">
-                            <span class="details-label text-danger">Offener Betrag</span>
-                            <span class="details-value text-danger">${formatCurrency(overdueAmount)} €</span>
+                        <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.05); display:flex; justify-content:space-between;">
+                            <span class="text-sm text-danger font-bold">Offener Betrag</span>
+                            <span class="font-bold text-danger">${formatCurrency(overdueAmount)} €</span>
                         </div>
                         ` : ''}
                     </div>
 
-                    <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
-                        <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
-                        <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
-                        <button class="btn btn-danger" onclick="deletePerson('${p.id}')" aria-label="Person löschen">🗑️</button>
+                    <div class="list-section-title">Aktionen</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 24px; ${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
+                        <button class="btn btn-primary btn-sm" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
+                        <button class="btn btn-danger btn-sm" onclick="deletePerson('${p.id}')" aria-label="Person löschen">🗑️</button>
                     </div>
 
-                    <div class="history-header">📋 Statushistorie</div>
+                    <div class="list-section-title">Statushistorie</div>
                     ${generateStatusHistoryHTML(p)}
 
-                    <div class="history-header">💳 Zahlungshistorie</div>
+                    <div class="list-section-title">Zahlungshistorie</div>
                     ${paymentsList.length > 0 ? paymentsList.slice().reverse().map(pay => `
                         <div class="trans-item">
                             <div class="trans-left">
-                                <span>${pay.description || 'Zahlung'}</span>
+                                <span class="font-bold text-sm">${pay.description || 'Zahlung'}</span>
                                 <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
                             </div>
                             <div class="trans-amount text-success">+${formatCurrency(pay.amount)}€</div>
                         </div>
-                    `).join('') : '<div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">Keine Zahlungen vorhanden.</div>'}
+                    `).join('') : '<div class="text-sm text-muted text-center italic">Keine Zahlungen vorhanden.</div>'}
                 </div>
             </div>
         </div>
@@ -1189,7 +1198,7 @@ window.showTransactionModal = function() {
     all.sort((a,b) => b.dateObj - a.dateObj);
 
     if (all.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">Keine Buchungen vorhanden.</div>';
+        container.innerHTML = '<div class="text-center p-4 text-muted">Keine Buchungen vorhanden.</div>';
     } else {
         container.innerHTML = all.map(t => {
             const isExp = t.type === 'exp';
@@ -1199,7 +1208,7 @@ window.showTransactionModal = function() {
             return `
                 <div class="trans-item">
                     <div class="trans-left">
-                        <span style="font-weight:600;">${icon} ${t.who}</span>
+                        <span class="font-bold text-sm">${icon} ${t.who}</span>
                         <div class="trans-meta">${t.description || '-'} • ${t.date ? new Date(t.date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
                     </div>
                     <div class="trans-amount ${color}">${sign}${formatCurrency(t.amount)}€</div>
