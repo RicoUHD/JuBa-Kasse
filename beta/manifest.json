@@ -1,6 +1,6 @@
 {
-  "name": "JuBa-Kasse",
-  "short_name": "JuBa-Kasse",
+  "name": "JuBa-Kasse Beta",
+  "short_name": "JuBa-Kasse Beta",
   "description": "Kassenverwaltung für die Jugendarbeit",
   "start_url": "/JuBa-Kasse/beta/index.html",
   "display": "standalone",
