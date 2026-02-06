@@ -1,4 +1,4 @@
-const CACHE_NAME = 'juba-kasse-v1.11';
+const CACHE_NAME = 'juba-kasse-v1.12';
 const URLS_TO_CACHE = [
     './',
     './index.html',
@@ -8,7 +8,8 @@ const URLS_TO_CACHE = [
     './icon-512.png',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js',
-    'https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js'
+    'https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js',
+    'https://www.gstatic.com/firebasejs/11.9.0/firebase-storage.js'
 ];
 
 self.addEventListener('install', event => {

@@ -574,3 +574,76 @@ input:checked + .slider:before { transform: translateX(22px); }
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
 }
+
+/* --- Image Grid --- */
+.images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.image-tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    transition: transform 0.2s;
+}
+
+.image-tile:active {
+    transform: scale(0.95);
+}
+
+.image-view-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.image-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-add-btn {
+    border: 2px dashed var(--border);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.image-add-btn:hover {
+    border-color: var(--primary);
+    background: rgba(6, 182, 212, 0.05);
+}
+
+.image-delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.image-delete-btn:hover {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}

@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
 import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo, runTransaction, remove } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD5z2-ND8Ukx46wDhYJlUQhiUqHITrLxy0",
@@ -15,6 +16,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 let people = [];
 let donations = [];
@@ -1069,6 +1071,7 @@ function generatePersonHTML(p) {
     }
 
     const paymentsList = safeList(p.payments);
+    const imagesList = [...safeList(p.images)].sort((a,b) => b.uploadedAt - a.uploadedAt);
 
     return `
         <div class="person-wrapper">
@@ -1112,6 +1115,22 @@ function generatePersonHTML(p) {
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
                         <button class="btn btn-danger" onclick="deletePerson('${p.id}')" aria-label="Person löschen">🗑️</button>
                     </div>
+
+                    <div class="history-header">📷 Dokumente / Bilder</div>
+                    <div class="images-grid">
+                        ${imagesList.map(img => `
+                            <div class="image-tile">
+                                <a href="${img.url}" target="_blank" class="image-view-link">
+                                    <img src="${img.url}" alt="Dokument">
+                                </a>
+                                <button class="image-delete-btn" onclick="removeImage('${p.id}', '${img.id}', '${img.storagePath}')">&times;</button>
+                            </div>
+                        `).join('')}
+                        <div class="image-tile image-add-btn" onclick="triggerImageUpload('${p.id}')">
+                            <span style="font-size:1.5rem; color:var(--primary)">+</span>
+                        </div>
+                    </div>
+                    <input type="file" id="upload-${p.id}" style="display:none" accept="image/*" onchange="handleImageUpload(event, '${p.id}')">
 
                     <div class="history-header">📋 Statushistorie</div>
                     ${generateStatusHistoryHTML(p)}
@@ -1417,6 +1436,50 @@ window.saveStatusChange = async () => {
     }
 };
 
+window.triggerImageUpload = (id) => {
+    const el = document.getElementById('upload-' + id);
+    if(el) el.click();
+};
+
+window.handleImageUpload = async (event, id) => {
+    const file = event.target.files[0];
+    if(!file) return;
+
+    const loader = document.getElementById('loading-overlay');
+    if(loader) {
+        loader.style.display = 'flex';
+        document.getElementById('loading-message').textContent = "Lade Bild hoch...";
+    }
+
+    try {
+        await uploadPersonImage(id, file);
+        renderAll();
+    } catch (err) {
+        alert("Fehler beim Hochladen: " + err.message);
+    } finally {
+        if(loader) loader.style.display = 'none';
+    }
+};
+
+window.removeImage = async (pid, imgId, path) => {
+    if(!confirm("Bild wirklich löschen?")) return;
+
+    const loader = document.getElementById('loading-overlay');
+    if(loader) {
+        loader.style.display = 'flex';
+        document.getElementById('loading-message').textContent = "Lösche Bild...";
+    }
+
+    try {
+        await deletePersonImage(pid, imgId, path);
+        renderAll();
+    } catch (err) {
+        alert("Fehler beim Löschen: " + err.message);
+    } finally {
+        if(loader) loader.style.display = 'none';
+    }
+};
+
 window.saveSettings = async () => {
     settings.vollverdiener = parseFloat(document.getElementById('rate-vollverdiener').value.replace(',', '.'));
     settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value.replace(',', '.'));
@@ -1465,6 +1528,54 @@ function replacePersonInMemory(person) {
     }
 }
 
+async function uploadPersonImage(personId, file) {
+    if (!personId || !file) return;
+    const ext = file.name.split('.').pop();
+    const filename = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+    const path = `people/${personId}/${filename}`;
+    const sRef = storageRef(storage, path);
+
+    try {
+        const snap = await uploadBytes(sRef, file);
+        const url = await getDownloadURL(snap.ref);
+
+        await mutatePerson(personId, (person) => {
+            const images = safeList(person.images);
+            images.push({
+                id: Date.now().toString(),
+                url: url,
+                storagePath: path,
+                uploadedAt: Date.now()
+            });
+            return { ...person, images };
+        });
+    } catch (err) {
+        console.error("Upload failed:", err);
+        throw err;
+    }
+}
+
+async function deletePersonImage(personId, imageId, storagePath) {
+    if (!personId || !imageId) return;
+
+    // 1. Delete from Storage (if path exists)
+    if (storagePath) {
+        const sRef = storageRef(storage, storagePath);
+        try {
+            await deleteObject(sRef);
+        } catch (err) {
+            console.warn("Storage delete failed (might not exist):", err);
+        }
+    }
+
+    // 2. Remove from DB
+    await mutatePerson(personId, (person) => {
+        let images = safeList(person.images);
+        images = images.filter(img => img.id !== imageId);
+        return { ...person, images };
+    });
+}
+
 async function mutatePerson(personId, mutator) {
     const personRef = ref(db, 'people/' + personId);
     const result = await runTransaction(personRef, (current) => {
@@ -1472,6 +1583,7 @@ async function mutatePerson(personId, mutator) {
         const draft = { ...current };
         draft.payments = safeList(draft.payments);
         draft.statusHistory = safeList(draft.statusHistory);
+        draft.images = safeList(draft.images);
         return mutator(draft);
     });
     const updated = result.snapshot.val();
