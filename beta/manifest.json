@@ -1,0 +1,20 @@
+{
+  "name": "JuBa-Kasse",
+  "short_name": "JuBa-Kasse",
+  "description": "Kassenverwaltung für die Jugendarbeit",
+  "start_url": "/JuBa-Kasse/index.html",
+  "display": "standalone",
+  "background_color": "#06b6d4",
+  "theme_color": "#06b6d4",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "lang": "de"
+}
