@@ -141,6 +141,26 @@ window.toggleFab = function() {
     fab.setAttribute('aria-expanded', isExpanded);
 };
 
+window.toggleActionMenu = function(id, event) {
+    if(event) event.stopPropagation();
+    const menu = document.getElementById(`action-menu-${id}`);
+    const isOpen = menu.classList.contains('show');
+
+    // Close all others
+    document.querySelectorAll('.action-dropdown').forEach(el => el.classList.remove('show'));
+
+    if (!isOpen) {
+        menu.classList.add('show');
+    }
+};
+
+// Global click to close dropdowns
+window.addEventListener('click', (e) => {
+    if (!e.target.closest('.action-menu-container')) {
+        document.querySelectorAll('.action-dropdown').forEach(el => el.classList.remove('show'));
+    }
+});
+
 window.openModal = (id) => { document.getElementById(id).classList.add('show'); };
 window.closeModal = (id) => { document.getElementById(id).classList.remove('show'); };
 
@@ -1085,6 +1105,19 @@ function generatePersonHTML(p) {
                         <span class="payment-pill ${pillClass}">${dateText}</span>
                         <span class="time-remaining">${statusMeta.text}</span>
                     </div>
+
+                    ${(currentUser && currentUser.admin) ? `
+                    <div class="action-menu-container">
+                        <button class="action-menu-btn" onclick="window.toggleActionMenu('${p.id}', event)" aria-label="Aktionen öffnen">⋮</button>
+                        <div id="action-menu-${p.id}" class="action-dropdown">
+                            <button class="action-dropdown-item" onclick="window.toggleActionMenu('${p.id}', event); openPaymentModal('${p.id}')">💰 Zahlung erfassen</button>
+                            <button class="action-dropdown-item" onclick="window.toggleActionMenu('${p.id}', event); openChangeStatusModal('${p.id}')">🔄 Status ändern</button>
+                            <div class="dropdown-divider"></div>
+                            <button class="action-dropdown-item text-danger" onclick="window.toggleActionMenu('${p.id}', event); deletePerson('${p.id}')">🗑️ Person löschen</button>
+                        </div>
+                    </div>
+                    ` : ''}
+
                 </div>
             </div>
             <div id="drawer-${p.id}" class="person-details">
@@ -1105,12 +1138,6 @@ function generatePersonHTML(p) {
                             <span class="details-value text-danger">${formatCurrency(overdueAmount)} €</span>
                         </div>
                         ` : ''}
-                    </div>
-
-                    <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
-                        <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
-                        <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
-                        <button class="btn btn-danger" onclick="deletePerson('${p.id}')" aria-label="Person löschen">🗑️</button>
                     </div>
 
                     <div class="history-header">📋 Statushistorie</div>
