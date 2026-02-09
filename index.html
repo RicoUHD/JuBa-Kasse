@@ -125,6 +125,13 @@
                 </div>
             </div>
 
+            <div class="card card-settings" id="card-standing-orders">
+                <div class="card-header">Aktive Daueraufträge</div>
+                <div class="card-body">
+                    <div id="standing-orders-list" style="margin-bottom:15px;">Lade...</div>
+                </div>
+            </div>
+
             <button class="btn btn-primary" onclick="saveSettings()" style="margin-bottom:30px;">Alle Einstellungen Speichern</button>
         </div>
     </div>
@@ -301,6 +308,10 @@
         <div class="form-group">
             <label class="form-label">Notiz</label>
             <input type="text" id="payment-desc" class="form-input" placeholder="z.B. Beitrag Mai">
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="payment-recurring" style="width: 20px; height: 20px;">
+            <label for="payment-recurring" style="margin: 0;">Als Dauerauftrag anlegen</label>
         </div>
         <button id="btn-add-payment" class="btn btn-primary" onclick="addPayment()">Buchen</button>
     </div>

@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
+let standingOrders = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, reportStartDate: null };
 let currentPersonId = null;
 let isAuthenticated = false;
@@ -455,9 +456,94 @@ function generateStatusHistoryHTML(person) {
     return html;
 }
 
+function parseDate(str) {
+    if(!str) return new Date();
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function toLocalISO(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function addMonthSafe(date) {
+    const d = new Date(date);
+    const originalDay = d.getDate();
+    d.setMonth(d.getMonth() + 1);
+    if (d.getDate() !== originalDay) {
+        d.setDate(0);
+    }
+    return d;
+}
+
 // --- ENDE MATHEMATIK & LOGIK ---
 
 let requests = [];
+
+async function checkStandingOrders() {
+    if (!currentUser || !currentUser.admin || standingOrders.length === 0) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let updates = {};
+    let newRequests = {};
+    let madeChanges = false;
+
+    standingOrders.forEach(so => {
+        let nextDue = parseDate(so.nextDueDate);
+        let iterations = 0;
+
+        // Find person name
+        const person = people.find(p => String(p.id) === String(so.personId));
+        const pName = person ? person.name : (so.personName || 'Unbekannt');
+
+        while (nextDue <= today && iterations < 12) {
+            const reqId = Date.now().toString() + Math.floor(Math.random() * 1000);
+
+            const newReq = {
+                id: reqId,
+                type: 'payment',
+                userId: 'system',
+                personId: so.personId,
+                personName: pName,
+                data: {
+                    amount: so.amount,
+                    date: toLocalISO(nextDue),
+                    note: (so.note ? so.note + ' ' : '') + '(Dauerauftrag)'
+                },
+                status: 'pending',
+                timestamp: Date.now(),
+                isStandingOrder: true,
+                standingOrderId: so.id
+            };
+
+            newRequests['requests/' + reqId] = newReq;
+
+            // Advance date by 1 month
+            nextDue = addMonthSafe(nextDue);
+            iterations++;
+            madeChanges = true;
+        }
+
+        if (iterations > 0) {
+            updates['standingOrders/' + so.id + '/nextDueDate'] = toLocalISO(nextDue);
+        }
+    });
+
+    if (madeChanges) {
+        try {
+            await update(ref(db), { ...updates, ...newRequests });
+            console.log("Standing orders processed.");
+            loadData();
+        } catch (err) {
+            console.error("Error processing standing orders:", err);
+        }
+    }
+}
 
 async function loadData() {
     // Ladebildschirm anzeigen
@@ -567,20 +653,22 @@ async function loadData() {
 
     } else {
         // Admin: fetch full dataset
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap, soSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
             get(child(dbRef, 'system/inviteCode')),
             get(child(dbRef, 'requests')),
-            get(child(dbRef, 'users'))
+            get(child(dbRef, 'users')),
+            get(child(dbRef, 'standingOrders'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
+        standingOrders = safeList(soSnap.val());
         if (sSnap.exists()) settings = sSnap.val();
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
@@ -646,12 +734,57 @@ function renderAll() {
         renderStats();
         renderAdminRequests();
         renderUnlinkedUsers();
+        renderStandingOrders();
         document.getElementById('rate-vollverdiener').value = settings.vollverdiener;
         document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
         document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
         document.getElementById('report-start-date').value = settings.reportStartDate || '';
+        checkStandingOrders();
     }
 }
+
+function renderStandingOrders() {
+    const list = document.getElementById('standing-orders-list');
+    if (!list) return;
+
+    if (standingOrders.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-secondary); font-style:italic;">Keine aktiven Daueraufträge.</div>';
+        return;
+    }
+
+    list.innerHTML = standingOrders.map(so => {
+        const person = people.find(p => String(p.id) === String(so.personId));
+        const pName = person ? person.name : (so.personName || 'Unbekannt');
+
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border);">
+                <div>
+                    <div style="font-weight:700;">${escapeHtml(pName)}</div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary);">
+                        ${formatCurrency(so.amount)} € • Nächste: ${new Date(so.nextDueDate).toLocaleDateString('de-DE')}
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">
+                        ${escapeHtml(so.note || '')}
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-small" style="width:auto;" onclick="deleteStandingOrder('${so.id}')">Löschen</button>
+            </div>
+        `;
+    }).join('');
+}
+
+window.deleteStandingOrder = async (id) => {
+    if(!confirm("Dauerauftrag wirklich löschen?")) return;
+
+    try {
+        await remove(ref(db, 'standingOrders/' + id));
+        standingOrders = standingOrders.filter(so => String(so.id) !== String(id));
+        renderStandingOrders();
+    } catch (err) {
+        console.error("Fehler beim Löschen des Dauerauftrags:", err);
+        alert("Fehler beim Löschen.");
+    }
+};
 
 function renderAdminRequests() {
     const pending = requests.filter(r => r.status === 'pending');
@@ -1308,6 +1441,7 @@ window.addPayment = async () => {
     const amt = parseFloat(document.getElementById('payment-amount').value.replace(',', '.'));
     const date = document.getElementById('payment-date').value;
     const desc = document.getElementById('payment-desc').value;
+    const isRecurring = document.getElementById('payment-recurring').checked;
 
     if(!currentPersonId || isNaN(amt)) {
         setButtonLoading('btn-add-payment', false);
@@ -1327,8 +1461,29 @@ window.addPayment = async () => {
             return;
         }
 
+        if (isRecurring) {
+            const startDate = parseDate(date);
+            let nextDue = new Date(startDate);
+            nextDue = addMonthSafe(nextDue);
+            const nextDueStr = toLocalISO(nextDue);
+
+            const newSO = {
+                id: Date.now().toString(),
+                personId: currentPersonId,
+                personName: updated.name,
+                amount: amt,
+                note: desc,
+                startDate: date,
+                nextDueDate: nextDueStr
+            };
+
+            await set(ref(db, 'standingOrders/' + newSO.id), newSO);
+            standingOrders.push(newSO);
+        }
+
         renderAll();
         closeModal('add-payment-modal');
+        document.getElementById('payment-recurring').checked = false;
     } catch (err) {
         console.error('Fehler beim Speichern der Zahlung:', err);
         alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');
