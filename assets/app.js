@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
+let standingOrders = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, reportStartDate: null };
 let currentPersonId = null;
 let isAuthenticated = false;
@@ -567,20 +568,22 @@ async function loadData() {
 
     } else {
         // Admin: fetch full dataset
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap, soSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
             get(child(dbRef, 'system/inviteCode')),
             get(child(dbRef, 'requests')),
-            get(child(dbRef, 'users'))
+            get(child(dbRef, 'users')),
+            get(child(dbRef, 'standingOrders'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
+        standingOrders = safeList(soSnap.val());
         if (sSnap.exists()) settings = sSnap.val();
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
@@ -601,6 +604,9 @@ async function loadData() {
         if(userBottomNav) userBottomNav.style.display = 'none';
 
         document.getElementById('settings').style.display = '';
+
+        // Check for due standing orders
+        await checkStandingOrders();
     }
 
     // Normalize people data
@@ -646,6 +652,7 @@ function renderAll() {
         renderStats();
         renderAdminRequests();
         renderUnlinkedUsers();
+        renderStandingOrders();
         document.getElementById('rate-vollverdiener').value = settings.vollverdiener;
         document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
         document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
@@ -761,6 +768,46 @@ function renderUnlinkedUsers() {
         </div>
     `;
 }
+
+function renderStandingOrders() {
+    const container = document.getElementById('standing-orders-list');
+    if (!container) return;
+
+    if (!standingOrders || standingOrders.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary); text-align:center;">Keine aktiven Daueraufträge.</div>';
+        return;
+    }
+
+    container.innerHTML = standingOrders.map(order => {
+        const person = people.find(p => String(p.id) === String(order.personId));
+        const personName = person ? person.name : 'Unbekannt';
+        const formattedDate = order.nextDueDate ? new Date(order.nextDueDate).toLocaleDateString('de-DE') : 'Unbekannt';
+
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border);">
+                <div>
+                    <div style="font-weight:600;">${escapeHtml(personName)}</div>
+                    <div style="font-size:0.85rem;">${formatCurrency(order.amount)}€ • Nächste: ${formattedDate}</div>
+                    <div style="font-size:0.8rem; color:var(--text-secondary);">${escapeHtml(order.note)}</div>
+                </div>
+                <button class="btn btn-danger btn-small" style="padding:5px 10px; width:auto;" onclick="deleteStandingOrder('${order.id}')">Löschen</button>
+            </div>
+        `;
+    }).join('');
+}
+
+window.deleteStandingOrder = async (id) => {
+    if (!confirm("Dauerauftrag wirklich löschen?")) return;
+
+    try {
+        await remove(ref(db, 'standingOrders/' + id));
+        standingOrders = standingOrders.filter(so => String(so.id) !== String(id));
+        renderStandingOrders();
+    } catch(e) {
+        console.error("Failed to delete standing order", e);
+        alert("Löschen fehlgeschlagen.");
+    }
+};
 
 window.assignUserToPerson = async (uid) => {
     const select = document.getElementById(`link-select-${uid}`);
@@ -1221,6 +1268,87 @@ function renderStats() {
     document.getElementById('totalExpenses').textContent = periodExp.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
 }
 
+async function checkStandingOrders() {
+    if (!standingOrders || standingOrders.length === 0) return;
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    let createdAny = false;
+
+    for (const order of standingOrders) {
+        if (!order.nextDueDate) continue;
+
+        let nextDue = new Date(order.nextDueDate);
+        let updatedNextDue = new Date(nextDue);
+        let hasChanges = false;
+
+        // Loop max 12 months to avoid infinite loops
+        let iterations = 0;
+
+        while (updatedNextDue <= today && iterations < 12) {
+            const dueStr = updatedNextDue.toISOString().split('T')[0];
+
+            // Check if request already exists for this standing order and date
+            const alreadyExists = requests.some(r =>
+                r.standingOrderId === order.id &&
+                r.data && r.data.date === dueStr
+            );
+
+            if (!alreadyExists) {
+                const person = people.find(p => String(p.id) === String(order.personId));
+                const personName = person ? person.name : 'Unbekannt';
+
+                const reqId = Date.now().toString() + "_" + Math.floor(Math.random()*1000);
+
+                const newReq = {
+                    id: reqId,
+                    type: 'payment',
+                    userId: 'system',
+                    personId: order.personId,
+                    personName: personName,
+                    data: {
+                        amount: order.amount,
+                        date: dueStr,
+                        note: (order.note || 'Dauerauftrag') + ' (Automatisch)'
+                    },
+                    status: 'pending',
+                    timestamp: Date.now(),
+                    standingOrderId: order.id,
+                    isStandingOrder: true
+                };
+
+                try {
+                    await set(ref(db, 'requests/' + newReq.id), newReq);
+                    requests.push(newReq);
+                    createdAny = true;
+                    hasChanges = true;
+                } catch(e) {
+                    console.error("Failed to create standing order request", e);
+                }
+            } else {
+                hasChanges = true;
+            }
+
+            // Advance 1 month
+            updatedNextDue.setMonth(updatedNextDue.getMonth() + 1);
+            iterations++;
+        }
+
+        if (hasChanges) {
+            try {
+                await update(ref(db, 'standingOrders/' + order.id), {
+                    nextDueDate: updatedNextDue.toISOString().split('T')[0]
+                });
+                // Update local model
+                order.nextDueDate = updatedNextDue.toISOString().split('T')[0];
+            } catch(e) {
+                console.error("Failed to update standing order", e);
+            }
+        }
+    }
+}
+
 window.showTransactionModal = function() {
     const container = document.getElementById('full-transaction-list');
     let all = [];
@@ -1308,6 +1436,7 @@ window.addPayment = async () => {
     const amt = parseFloat(document.getElementById('payment-amount').value.replace(',', '.'));
     const date = document.getElementById('payment-date').value;
     const desc = document.getElementById('payment-desc').value;
+    const isRecurring = document.getElementById('payment-recurring').checked;
 
     if(!currentPersonId || isNaN(amt)) {
         setButtonLoading('btn-add-payment', false);
@@ -1315,6 +1444,27 @@ window.addPayment = async () => {
     }
 
     try {
+        if (isRecurring) {
+            const startDate = new Date(date);
+            const nextDue = new Date(startDate);
+            nextDue.setMonth(nextDue.getMonth() + 1);
+
+            // Handle month overflow (e.g. Jan 31 -> Feb 28/29 -> Mar 28/29)
+            // While simple setMonth is okay, user might expect payment on last day.
+            // But for simplicity of this request, standard Date behavior is acceptable.
+
+            const soId = Date.now().toString() + "_so";
+            const newSO = {
+                id: soId,
+                personId: currentPersonId,
+                amount: amt,
+                nextDueDate: nextDue.toISOString().split('T')[0],
+                note: desc || 'Dauerauftrag'
+            };
+
+            await set(ref(db, 'standingOrders/' + soId), newSO);
+        }
+
         const updated = await mutatePerson(currentPersonId, (person) => {
             const payments = safeList(person.payments);
             payments.push({ amount: amt, date, description: desc, id: Date.now() });
@@ -1329,6 +1479,7 @@ window.addPayment = async () => {
 
         renderAll();
         closeModal('add-payment-modal');
+        document.getElementById('payment-recurring').checked = false;
     } catch (err) {
         console.error('Fehler beim Speichern der Zahlung:', err);
         alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');

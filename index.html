@@ -98,6 +98,13 @@
                 </div>
             </div>
 
+            <div class="card card-settings" id="card-standing-orders">
+                <div class="card-header">Aktive Daueraufträge</div>
+                <div class="card-body">
+                    <div id="standing-orders-list">Lade...</div>
+                </div>
+            </div>
+
             <div class="card card-settings" id="card-invite">
                 <div class="card-header">Registrierungscode</div>
                 <div class="card-body">
@@ -301,6 +308,10 @@
         <div class="form-group">
             <label class="form-label">Notiz</label>
             <input type="text" id="payment-desc" class="form-input" placeholder="z.B. Beitrag Mai">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:10px; margin-top:10px; margin-bottom:20px;">
+            <input type="checkbox" id="payment-recurring" style="width:20px; height:20px;">
+            <label for="payment-recurring" style="margin:0; font-weight:500;">Als Dauerauftrag anlegen</label>
         </div>
         <button id="btn-add-payment" class="btn btn-primary" onclick="addPayment()">Buchen</button>
     </div>
