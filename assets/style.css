@@ -128,34 +128,39 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 
 /* Wrapper for the whole card item */
 .person-wrapper {
-    margin-bottom: 12px;
+    margin-bottom: 20px;
     transition: all 0.3s ease;
 }
 
-/* The Main Clickable Card */
-.person-item {
-    background: #ffffff;
+.payment-card {
+    background: var(--surface);
     border-radius: 16px;
-    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Soft drop shadow */
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+/* The Main Clickable Card Header */
+.person-item {
+    background: transparent;
+    border-radius: 0;
+    padding: 16px 20px;
     border: none;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    box-shadow: none;
     cursor: pointer;
     position: relative;
     z-index: 2;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.2s;
 }
 
 /* Active state for the main card */
 .person-item.active {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom-color: transparent;
     background: var(--surface-alt);
-    border-color: var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
-.person-item:active { transform: scale(0.99); }
-.person-item:focus { outline: none; border-color: var(--text-secondary); }
+.person-item:active { background: var(--surface-alt); }
+.person-item:focus { outline: none; background: var(--surface-alt); }
 
 .person-pill { display: flex; justify-content: space-between; align-items: center; width: 100%; }
 .person-left { display: flex; flex-direction: column; gap: 4px; }
@@ -192,24 +197,19 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: none;
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
-    margin-top: -1px; /* Overlap border */
+    background: transparent;
+    border: none;
+    margin-top: 0;
 
     /* Animation Physics */
     transition: max-height 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
     position: relative;
     z-index: 1;
-    box-shadow: var(--shadow);
+    box-shadow: none;
 }
 
 .person-details.active {
     opacity: 1;
-    /* Max-height is set via JS for perfect slide */
-    border-color: var(--border); /* Match active parent border */
 }
 
 .details-content { padding: 20px; }
@@ -258,7 +258,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
     cursor: pointer; transition: 0.2s; font-size: 0.95rem; width: 100%;
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-primary { background: var(--gradient-primary); color: white; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); }
+.btn-primary { background: linear-gradient(to right, #06b6d4, #10b981); color: white; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); }
 .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
 .btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
 .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
@@ -388,6 +388,64 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 .trans-left { display: flex; flex-direction: column; }
 .trans-meta { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
 .trans-amount { font-weight: 700; }
+
+/* Timeline Component */
+.timeline {
+    border-left: 2px solid var(--border);
+    margin-left: 10px;
+    padding-left: 24px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -31px; /* Align center of 12px marker with 2px border */
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--primary);
+    z-index: 1;
+}
+
+.timeline-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.timeline-main {
+    display: flex;
+    flex-direction: column;
+}
+
+.timeline-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.timeline-date {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.timeline-amount {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
 
 /* Switch */
 .switch { position: relative; display: inline-block; width: 50px; height: 28px; }

@@ -408,36 +408,40 @@ function generateStatusHistoryHTML(person) {
     };
 
     let html = `
-        <div class="trans-item" style="background: rgba(6, 182, 212, 0.05); margin: -5px; padding: 12px; border-radius: 8px;">
-            <div class="trans-left">
-                <span style="font-weight:600;">${statusLabels[person.status] || person.status}</span>
-                <div class="trans-meta">Seit ${new Date(currentStatusStart).toLocaleDateString('de-DE')} • Aktuell</div>
+        <div class="timeline-item">
+            <div class="timeline-marker" style="background: var(--success); border-color: var(--success);"></div>
+            <div class="timeline-content">
+                <div class="timeline-main">
+                    <div class="timeline-title">${statusLabels[person.status] || person.status}</div>
+                    <div class="timeline-date">Seit ${new Date(currentStatusStart).toLocaleDateString('de-DE')} • Aktuell</div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--success); font-weight:600;">AKTIV</div>
             </div>
-            <div style="font-size:0.75rem; color:var(--success); font-weight:600;">AKTIV</div>
         </div>
     `;
 
-    if (history.length === 0) {
-        return html;
+    if (history.length > 0) {
+        html += history.map(entry => {
+            const start = new Date(entry.startDate).toLocaleDateString('de-DE');
+            const end = entry.endDate ? new Date(entry.endDate).toLocaleDateString('de-DE') : 'Offen';
+            const rate = settings[entry.status] || 0;
+
+            return `
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-main">
+                            <div class="timeline-title">${statusLabels[entry.status] || entry.status}</div>
+                            <div class="timeline-date">${start} – ${end}</div>
+                        </div>
+                        <div class="timeline-amount" style="font-weight:400; font-size:0.8rem; color:var(--text-secondary);">${formatCurrency(rate)}€/Monat</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
-    html += history.map(entry => {
-        const start = new Date(entry.startDate).toLocaleDateString('de-DE');
-        const end = entry.endDate ? new Date(entry.endDate).toLocaleDateString('de-DE') : 'Offen';
-        const rate = settings[entry.status] || 0;
-
-        return `
-            <div class="trans-item">
-                <div class="trans-left">
-                    <span>${statusLabels[entry.status] || entry.status}</span>
-                    <div class="trans-meta">${start} – ${end}</div>
-                </div>
-                <div style="font-size:0.8rem; color:var(--text-secondary);">${formatCurrency(rate)}€/Monat</div>
-            </div>
-        `;
-    }).join('');
-
-    return html;
+    return `<div class="timeline">${html}</div>`;
 }
 
 // --- ENDE MATHEMATIK & LOGIK ---
@@ -1036,17 +1040,8 @@ function renderPeople() {
 
     let html = '';
 
-    if(overduePeople.length > 0) {
-        html += `<div class="list-section-title" style="color:var(--danger)">⚠️ Überfällige Zahlungen (${overduePeople.length})</div>`;
-        html += overduePeople.map(p => generatePersonHTML(p)).join('');
-    }
-
-    if(currentPeople.length > 0) {
-        html += `<div class="list-section-title" style="color:var(--success)">✅ Aktuelle Mitglieder (${currentPeople.length})</div>`;
-        html += currentPeople.map(p => generatePersonHTML(p)).join('');
-    }
-
-    list.innerHTML = html;
+    const allPeople = [...overduePeople, ...currentPeople];
+    list.innerHTML = allPeople.map(p => generatePersonHTML(p)).join('');
 }
 
 function generatePersonHTML(p) {
@@ -1071,7 +1066,7 @@ function generatePersonHTML(p) {
     const paymentsList = safeList(p.payments);
 
     return `
-        <div class="person-wrapper">
+        <div class="person-wrapper payment-card">
             <div id="person-item-${p.id}" class="person-item" role="button" tabindex="0" aria-expanded="false" onclick="toggleDetails('${p.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); toggleDetails('${p.id}');}">
                 <div class="person-pill">
                     <div class="person-left">
@@ -1110,22 +1105,24 @@ function generatePersonHTML(p) {
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
-                        <button class="btn btn-danger" onclick="deletePerson('${p.id}')" aria-label="Person löschen">🗑️</button>
                     </div>
 
                     <div class="history-header">📋 Statushistorie</div>
                     ${generateStatusHistoryHTML(p)}
 
                     <div class="history-header">💳 Zahlungshistorie</div>
-                    ${paymentsList.length > 0 ? paymentsList.slice().reverse().map(pay => `
-                        <div class="trans-item">
-                            <div class="trans-left">
-                                <span>${pay.description || 'Zahlung'}</span>
-                                <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
+                    ${paymentsList.length > 0 ? `<div class="timeline">` + paymentsList.slice().reverse().map(pay => `
+                        <div class="timeline-item">
+                            <div class="timeline-marker" style="border-color: var(--success);"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-main">
+                                    <div class="timeline-title">${pay.description || 'Zahlung'}</div>
+                                    <div class="timeline-date">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
+                                </div>
+                                <div class="timeline-amount text-success">+${formatCurrency(pay.amount)}€</div>
                             </div>
-                            <div class="trans-amount text-success">+${formatCurrency(pay.amount)}€</div>
                         </div>
-                    `).join('') : '<div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">Keine Zahlungen vorhanden.</div>'}
+                    `).join('') + `</div>` : '<div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">Keine Zahlungen vorhanden.</div>'}
                 </div>
             </div>
         </div>
