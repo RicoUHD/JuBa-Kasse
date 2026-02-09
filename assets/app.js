@@ -71,6 +71,16 @@ function safeList(val) {
     return Object.values(val);
 }
 
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function formatCurrency(amount) {
     const val = parseFloat(amount);
     if (isNaN(val)) return "0,00";
@@ -148,6 +158,7 @@ window.closeModal = (id) => { document.getElementById(id).classList.remove('show
 window.toggleDetails = function(id) {
     const drawer = document.getElementById(`drawer-${id}`);
     const header = document.getElementById(`person-item-${id}`);
+    const wrapper = header.closest('.person-wrapper');
 
     const isOpen = drawer.style.maxHeight;
 
@@ -159,12 +170,16 @@ window.toggleDetails = function(id) {
         el.classList.remove('active');
         el.setAttribute('aria-expanded', 'false');
     });
+    document.querySelectorAll('.person-wrapper').forEach(el => {
+        el.classList.remove('active');
+    });
 
     if (!isOpen) {
         header.classList.add('active');
         header.setAttribute('aria-expanded', 'true');
         drawer.classList.add('active');
         drawer.style.maxHeight = drawer.scrollHeight + "px";
+        if(wrapper) wrapper.classList.add('active');
     }
 };
 
@@ -1037,7 +1052,6 @@ function renderPeople() {
     let html = '';
 
     if(overduePeople.length > 0) {
-        html += `<div class="list-section-title" style="color:var(--danger)">⚠️ Überfällige Zahlungen (${overduePeople.length})</div>`;
         html += overduePeople.map(p => generatePersonHTML(p)).join('');
     }
 
@@ -1047,6 +1061,62 @@ function renderPeople() {
     }
 
     list.innerHTML = html;
+}
+
+function generateTimelineHTML(person) {
+    const history = safeList(person.statusHistory).map(h => ({
+        type: 'status',
+        date: new Date(h.startDate),
+        status: h.status,
+        endDate: h.endDate ? new Date(h.endDate) : null
+    }));
+
+    const payments = safeList(person.payments).map(p => ({
+        type: 'payment',
+        date: new Date(p.date),
+        amount: p.amount,
+        description: p.description
+    }));
+
+    const allEvents = [...history, ...payments].sort((a, b) => b.date - a.date);
+
+    if (allEvents.length === 0) {
+        return '<div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">Keine Einträge vorhanden.</div>';
+    }
+
+    const statusLabels = {
+        'vollverdiener': '💼 Vollverdiener',
+        'geringverdiener': '📉 Geringverdiener',
+        'keinverdiener': '🎓 Keinverdiener'
+    };
+
+    const timelineItems = allEvents.map(event => {
+        const dateStr = event.date.toLocaleDateString('de-DE');
+        let content = '';
+        let dotClass = 'timeline-dot';
+
+        if (event.type === 'status') {
+            const label = statusLabels[event.status] || event.status;
+            content = `
+                <div style="font-weight: 600;">Statusänderung: ${label}</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">Gültig ab ${dateStr}</div>
+            `;
+        } else {
+            content = `
+                <div style="font-weight: 600;">Zahlung: ${formatCurrency(event.amount)}€</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(event.description) || 'Keine Notiz'} • ${dateStr}</div>
+            `;
+        }
+
+        return `
+            <div class="timeline-item">
+                <div class="${dotClass}"></div>
+                <div class="timeline-content">${content}</div>
+            </div>
+        `;
+    }).join('');
+
+    return `<div class="timeline">${timelineItems}</div>`;
 }
 
 function generatePersonHTML(p) {
@@ -1076,7 +1146,7 @@ function generatePersonHTML(p) {
                 <div class="person-pill">
                     <div class="person-left">
                         <div class="person-name">
-                            ${p.name}
+                            ${escapeHtml(p.name)}
                             <span class="chevron">›</span>
                         </div>
                         <span class="person-status">${currentStatus}</span>
@@ -1110,22 +1180,10 @@ function generatePersonHTML(p) {
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
-                        <button class="btn btn-danger" onclick="deletePerson('${p.id}')" aria-label="Person löschen">🗑️</button>
                     </div>
 
-                    <div class="history-header">📋 Statushistorie</div>
-                    ${generateStatusHistoryHTML(p)}
-
-                    <div class="history-header">💳 Zahlungshistorie</div>
-                    ${paymentsList.length > 0 ? paymentsList.slice().reverse().map(pay => `
-                        <div class="trans-item">
-                            <div class="trans-left">
-                                <span>${pay.description || 'Zahlung'}</span>
-                                <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
-                            </div>
-                            <div class="trans-amount text-success">+${formatCurrency(pay.amount)}€</div>
-                        </div>
-                    `).join('') : '<div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">Keine Zahlungen vorhanden.</div>'}
+                    <div class="history-header">Verlauf</div>
+                    ${generateTimelineHTML(p)}
                 </div>
             </div>
         </div>
