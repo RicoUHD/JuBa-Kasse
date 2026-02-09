@@ -132,6 +132,14 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
     transition: all 0.3s ease;
 }
 
+.person-wrapper.active {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+    overflow: hidden;
+}
+
 /* The Main Clickable Card */
 .person-item {
     background: #ffffff;
@@ -147,11 +155,12 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 
 /* Active state for the main card */
 .person-item.active {
+    background: #ffffff;
+    /* When active inside wrapper, remove shadow and bottom radius to merge */
+    box-shadow: none;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-    border-bottom-color: transparent;
-    background: var(--surface-alt);
-    border-color: var(--border);
+    border-bottom: 1px solid var(--border-light);
 }
 
 .person-item:active { transform: scale(0.99); }
@@ -171,7 +180,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 }
 .status-ok { background: var(--success); }
 .status-warn { background: var(--warning); }
-.status-err { background: var(--danger); }
+.status-err { background: linear-gradient(90deg, #ef4444 0%, #b91c1c 100%); }
 .time-remaining { font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; }
 
 /* Chevron Icon */
@@ -192,24 +201,46 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: none;
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
-    margin-top: -1px; /* Overlap border */
+    background: transparent;
+    border: none;
+    margin: 0;
+    padding: 0;
 
     /* Animation Physics */
     transition: max-height 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
     position: relative;
     z-index: 1;
-    box-shadow: var(--shadow);
 }
 
 .person-details.active {
     opacity: 1;
-    /* Max-height is set via JS for perfect slide */
-    border-color: var(--border); /* Match active parent border */
+}
+
+/* Timeline Component */
+.timeline {
+    position: relative;
+    padding-left: 24px;
+    border-left: 2px solid var(--border-light);
+    margin-left: 8px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+}
+.timeline-item:last-child { margin-bottom: 0; }
+
+.timeline-dot {
+    position: absolute;
+    left: -31px; /* 24px padding + 2px border + 5px center align */
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    background: var(--primary);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px #fff; /* Mask line */
 }
 
 .details-content { padding: 20px; }
@@ -258,7 +289,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
     cursor: pointer; transition: 0.2s; font-size: 0.95rem; width: 100%;
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-primary { background: var(--gradient-primary); color: white; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); }
+.btn-primary { background: linear-gradient(90deg, #06b6d4 0%, #10b981 100%); color: white; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); }
 .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
 .btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
 .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
