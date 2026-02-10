@@ -537,9 +537,18 @@ input:checked + .slider:before { transform: translateX(22px); }
     gap: 8px;
     height: 100%;
 }
-.user-action-icon {
-    font-size: 2rem;
+.user-action-icon svg {
+    width: 32px;
+    height: 32px;
+    stroke: var(--text-secondary);
+    transition: 0.2s;
 }
+
+.user-action-btn:hover .user-action-icon svg {
+    stroke: var(--primary);
+    transform: scale(1.1);
+}
+
 .user-action-label {
     font-size: 0.85rem;
 }
