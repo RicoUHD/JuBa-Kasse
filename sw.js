@@ -5,7 +5,7 @@ const URLS_TO_CACHE = [
     './assets/style.css',
     './assets/app.js',
     './manifest.json',
-    './icon-512.png',
+    './assets/icon.png',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js'
