@@ -916,65 +916,13 @@ function renderUserView() {
                 </div>
             ` : ''}
         </div>
-
-        <!-- Info Grid -->
-        <div class="user-info-grid">
-            <div class="user-info-box">
-                <div class="user-info-label">Status</div>
-                <div class="user-info-value">${statusLabels[currentStatus]?.split(' ')[0] || '💼'}</div>
-                <div class="user-info-sub" style="color:var(--text);">${statusLabels[currentStatus]?.split(' ').slice(1).join(' ') || currentStatus}</div>
-            </div>
-            <div class="user-info-box">
-                <div class="user-info-label">Beitrag</div>
-                <div class="user-info-value">${formatCurrency(settings[currentStatus] || 0)}€</div>
-                <div class="user-info-sub">pro Monat</div>
-            </div>
-        </div>
-
-        <!-- Status History (Collapsible) -->
-        <details class="user-details-box">
-            <summary class="user-details-summary">
-                <span>📜 Status-Verlauf</span>
-                <span style="opacity: 0.4; font-size: 0.8rem;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${generateStatusHistoryHTML(p)}
-            </div>
-        </details>
     `;
 
-    // Payment History (Collapsible)
-    const paymentsList = safeList(p.payments);
-    let paymentsHtml = '';
-    if (paymentsList.length > 0) {
-        paymentsHtml = paymentsList.slice().reverse().map(pay => `
-            <div class="trans-item">
-                <div class="trans-left">
-                    <span>${pay.description || 'Zahlung'}</span>
-                    <div class="trans-meta">${new Date(pay.date).toLocaleDateString('de-DE')}</div>
-                </div>
-                <div class="trans-amount text-success">+${formatCurrency(pay.amount)}€</div>
-            </div>
-        `).join('');
-    } else {
-        paymentsHtml = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary); font-style: italic;">
-                Keine Zahlungen vorhanden.
-            </div>
-        `;
-    }
-
+    // Combined History (Timeline)
+    const timeline = generateTimelineHTML(p);
     document.getElementById('user-payment-history').innerHTML = `
-        <h3 class="list-section-title">💳 Zahlungsverlauf</h3>
-        <details class="user-details-box" open>
-            <summary class="user-details-summary">
-                <span>💰 Zahlungsverlauf</span>
-                <span style="opacity: 0.5;">▼</span>
-            </summary>
-            <div class="user-details-content">
-                ${paymentsHtml}
-            </div>
-        </details>
+        <div class="history-header">Verlauf</div>
+        ${timeline}
     `;
 
     // User Requests List
