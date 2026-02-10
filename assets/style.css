@@ -43,7 +43,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-tap-highlight-color: transparent; }
-body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding-bottom: 100px; transition: background-color 0.3s ease; }
+body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 100px; transition: background-color 0.3s ease; }
 
 .container { max-width: 800px; margin: 0 auto; padding: 20px; }
 
@@ -87,7 +87,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
 .stat-box {
-    background: #ffffff; padding: 16px; border-radius: 20px;
+    background: var(--surface); padding: 16px; border-radius: 20px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: none;
 }
@@ -133,7 +133,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 }
 
 .person-wrapper.active {
-    background: #ffffff;
+    background: var(--surface);
     border-radius: 16px;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     margin-bottom: 25px;
@@ -142,7 +142,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 
 /* The Main Clickable Card */
 .person-item {
-    background: #ffffff;
+    background: var(--surface);
     border-radius: 16px;
     padding: 16px;
     border: none;
@@ -155,7 +155,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 
 /* Active state for the main card */
 .person-item.active {
-    background: #ffffff;
+    background: var(--surface);
     /* When active inside wrapper, remove shadow and bottom radius to merge */
     box-shadow: none;
     border-bottom-left-radius: 0;
@@ -310,7 +310,7 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
 /* --- Bottom Navigation --- */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; width: 100%;
-    background-color: #ffffff;
+    background-color: var(--surface);
     border-top: 1px solid var(--border-light);
     display: flex; justify-content: space-around; align-items: center;
     padding: 5px 0 10px; /* Extra padding for safe area */
@@ -326,6 +326,10 @@ body { background-color: #f0f9ff; color: var(--text); min-height: 100vh; padding
     background-repeat: no-repeat;
     background-size: 2000px 100%;
     border-top: none;
+}
+
+[data-theme="dark"] #admin-bottom-nav {
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAwIDYwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCBWIDYwIEggMCBaIiBmaWxsPSIjMWUyOTNiIiAvPgo8cGF0aCBkPSJNIDAgMCBIIDk1MC4wNCBBIDEwIDEwIDAgMCAxIDk2MC4wMyAxMC40MCBBIDQwIDQwIDAgMCAwIDEwMzkuOTcgMTAuNDAgQSAxMCAxMCAwIDAgMSAxMDQ5Ljk2IDAgSCAyMDAwIiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzQxNTUiIHN0cm9rZS13aWR0aD0iMSIgLz4KPC9zdmc+Cg==");
 }
 
 .nav-item {
