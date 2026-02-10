@@ -619,3 +619,48 @@ input:checked + .slider:before { transform: translateX(22px); }
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
 }
+
+/* --- Install Popup --- */
+.install-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 9999;
+    display: none;
+    justify-content: flex-end; /* Align to right side */
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.install-popup.show {
+    display: flex;
+    opacity: 1;
+}
+
+.install-content {
+    width: 85%;
+    max-width: 380px;
+    height: 100%;
+    background: var(--surface);
+    box-shadow: -5px 0 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.install-popup.show .install-content {
+    transform: translateX(0);
+}
+
+@media (min-width: 600px) {
+    .install-content {
+        width: 400px;
+    }
+}
