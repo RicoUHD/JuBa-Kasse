@@ -1064,12 +1064,30 @@ function renderPeople() {
 }
 
 function generateTimelineHTML(person) {
-    const history = safeList(person.statusHistory).map(h => ({
+    const historyList = safeList(person.statusHistory);
+    const history = historyList.map(h => ({
         type: 'status',
         date: new Date(h.startDate),
         status: h.status,
         endDate: h.endDate ? new Date(h.endDate) : null
     }));
+
+    // Find start date of current status
+    let currentStatusStart;
+    if (historyList.length > 0) {
+        currentStatusStart = historyList[historyList.length - 1].endDate;
+    } else {
+        currentStatusStart = person.originalMemberSince || person.memberSince;
+    }
+
+    if (currentStatusStart) {
+        history.push({
+            type: 'status',
+            date: new Date(currentStatusStart),
+            status: person.status,
+            endDate: null
+        });
+    }
 
     const payments = safeList(person.payments).map(p => ({
         type: 'payment',
