@@ -421,64 +421,6 @@
     }
 </script>
 
-<div id="install-popup" class="install-popup">
-    <div class="install-content">
-        <div style="margin-bottom: 20px; font-size: 3rem;">📱</div>
-        <h2 style="margin-bottom: 10px; text-align: center;">App installieren</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 30px; text-align: center; line-height: 1.5;">
-            Installiere die JuBa-Kasse App für schnelleren Zugriff und Offline-Funktionen.
-        </p>
-        <button id="btn-install-app" class="btn btn-primary" style="margin-bottom: 10px;">Jetzt installieren</button>
-        <button id="btn-use-web" class="btn btn-secondary">Im Browser nutzen</button>
-    </div>
-</div>
-
-<script>
-    let deferredPrompt;
-    const installPopup = document.getElementById('install-popup');
-    const btnInstall = document.getElementById('btn-install-app');
-    const btnWeb = document.getElementById('btn-use-web');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent the mini-infobar from appearing on mobile
-        e.preventDefault();
-        // Stash the event so it can be triggered later.
-        deferredPrompt = e;
-
-        // Check if dismissed in this session
-        if (!sessionStorage.getItem('installPopupDismissed')) {
-            showInstallPopup();
-        }
-    });
-
-    function showInstallPopup() {
-        if(installPopup) installPopup.classList.add('show');
-    }
-
-    function hideInstallPopup() {
-        if(installPopup) installPopup.classList.remove('show');
-    }
-
-    if(btnInstall) {
-        btnInstall.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response to the install prompt: ${outcome}`);
-                deferredPrompt = null;
-            }
-            hideInstallPopup();
-        });
-    }
-
-    if(btnWeb) {
-        btnWeb.addEventListener('click', () => {
-            hideInstallPopup();
-            sessionStorage.setItem('installPopupDismissed', 'true');
-        });
-    }
-</script>
-
 <script type="module" src="assets/app.js"></script>
 </body>
 </html>
