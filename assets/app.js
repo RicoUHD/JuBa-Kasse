@@ -367,12 +367,19 @@ function calculateTimeRemaining(person) {
                      + (paidMonth.getMonth() - currentMonth.getMonth());
 
     if (monthsDiff < 0) {
+        if (person.hasStandingOrder && monthsDiff === -1) {
+            return { text: 'Dauerauftrag aktiv', isOverdue: false, isSoonDue: false, isStandingOrder: true };
+        }
         const overdueMonths = Math.abs(monthsDiff);
         return {
             text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`,
             isOverdue: true,
             isSoonDue: false
         };
+    }
+
+    if (person.hasStandingOrder) {
+        return { text: 'Dauerauftrag aktiv', isOverdue: false, isSoonDue: false, isStandingOrder: true };
     }
 
     if (monthsDiff === 0) {
@@ -900,12 +907,18 @@ function renderUserView() {
         statusIcon = '⏳';
     }
 
+    let statusTitle = statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung');
+    if (statusMeta.isStandingOrder) {
+        statusTitle = 'Dauerauftrag aktiv';
+        statusIcon = '🔄';
+    }
+
     document.getElementById('user-status-card').innerHTML = `
         <!-- Status Hero Card -->
         <div class="user-hero-status ${statusClass}">
             <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
             <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
-                ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
+                ${statusTitle}
             </h2>
             <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
             <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
@@ -1113,6 +1126,7 @@ function generatePersonHTML(p) {
                     <div class="person-left">
                         <div class="person-name">
                             ${escapeHtml(p.name)}
+                            ${p.hasStandingOrder ? '<span style="margin-left:5px; font-size:0.9rem;" title="Dauerauftrag aktiv">🔄</span>' : ''}
                             <span class="chevron">›</span>
                         </div>
                         <span class="person-status">${currentStatus}</span>
@@ -1141,6 +1155,16 @@ function generatePersonHTML(p) {
                             <span class="details-value text-danger">${formatCurrency(overdueAmount)} €</span>
                         </div>
                         ` : ''}
+
+                        <div class="details-row" style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.05); display:${(currentUser && !currentUser.admin) ? 'none' : 'flex'}">
+                            <span class="details-label">Dauerauftrag</span>
+                            <div style="display:flex; align-items:center;">
+                                <label class="switch" style="transform:scale(0.8); margin-right:0;">
+                                    <input type="checkbox" onchange="toggleStandingOrder('${p.id}', this.checked)" ${p.hasStandingOrder ? 'checked' : ''}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
@@ -1241,6 +1265,7 @@ window.addPerson = async () => {
     const name = document.getElementById('new-person-name').value;
     const status = document.getElementById('new-person-status').value;
     const start = document.getElementById('new-person-start').value;
+    const standingOrder = document.getElementById('new-person-standing-order').checked;
 
     const newP = {
         id: Date.now().toString(),
@@ -1248,6 +1273,7 @@ window.addPerson = async () => {
         status,
         memberSince: start,
         originalMemberSince: start,
+        hasStandingOrder: standingOrder,
         totalPaid: 0,
         statusHistory: [],
         payments: []
@@ -1258,11 +1284,24 @@ window.addPerson = async () => {
         renderAll();
         closeModal('add-person-modal');
         document.getElementById('new-person-name').value = ''; // Clear input on success
+        document.getElementById('new-person-standing-order').checked = false;
     } catch (err) {
         console.error('Fehler beim Anlegen der Person:', err);
         alert('Speichern fehlgeschlagen. Bitte erneut versuchen.');
     } finally {
         setButtonLoading('btn-add-person', false);
+    }
+};
+
+window.toggleStandingOrder = async (id, isChecked) => {
+    try {
+        await mutatePerson(id, (person) => {
+            return { ...person, hasStandingOrder: isChecked };
+        });
+        renderAll();
+    } catch (err) {
+        console.error('Fehler beim Ändern des Dauerauftrag-Status:', err);
+        alert('Änderung konnte nicht gespeichert werden.');
     }
 };
 
