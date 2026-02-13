@@ -354,6 +354,42 @@
     </div>
 </div>
 
+<div id="add-standing-order-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-so">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-add-so">Dauerauftrag</span> <button class="close-btn" onclick="closeModal('add-standing-order-modal')" aria-label="Schließen">&times;</button></div>
+        <div class="form-group">
+            <label class="form-label">Betrag (€)</label>
+            <input type="text" inputmode="decimal" id="so-amount" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Startdatum</label>
+            <input type="date" id="so-start-date" class="form-input">
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                Zahlungen erfolgen immer am 1. des Monats.
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Notiz</label>
+            <input type="text" id="so-note" class="form-input" placeholder="z.B. Monatlicher Beitrag">
+        </div>
+        <button id="btn-add-so" class="btn btn-primary" onclick="addStandingOrder()">Speichern</button>
+    </div>
+</div>
+
+<div id="terminate-standing-order-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-term-so">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-term-so">Dauerauftrag Beenden</span> <button class="close-btn" onclick="closeModal('terminate-standing-order-modal')" aria-label="Schließen">&times;</button></div>
+        <div class="form-group">
+            <label class="form-label">Enddatum</label>
+            <input type="date" id="so-end-date" class="form-input">
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                Der Dauerauftrag läuft bis zu diesem Datum.
+            </div>
+        </div>
+        <button id="btn-term-so" class="btn btn-danger" onclick="confirmTerminateStandingOrder()">Beenden</button>
+    </div>
+</div>
+
 <div id="login-modal" class="modal show" style="z-index:2000;" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <div class="modal-content" style="max-width: 400px;">
         <div style="text-align: center; margin-bottom: 20px;">
