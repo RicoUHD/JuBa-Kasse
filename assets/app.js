@@ -887,6 +887,15 @@ function renderUserView() {
     // Format date to show only month and year
     let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
 
+    // Fix: If Standing Order is active and covers the current month (buffer), show current month as paid
+    if (statusMeta.isStandingOrder && paidUntil) {
+        const today = new Date();
+        const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        if (paidUntil < currentMonthEnd) {
+            dateText = currentMonthEnd.toLocaleDateString('de-DE', {month:'long', year:'numeric'});
+        }
+    }
+
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
         'geringverdiener': '📉 Geringverdiener',
@@ -1107,6 +1116,16 @@ function generatePersonHTML(p) {
     const currentStatus = getCurrentStatus(p);
 
     let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
+
+    // Fix: If Standing Order is active and covers the current month (buffer), show current month as paid
+    if (statusMeta.isStandingOrder && paidUntil) {
+        const today = new Date();
+        const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        if (paidUntil < currentMonthEnd) {
+            dateText = currentMonthEnd.toLocaleDateString('de-DE', {month:'long', year:'numeric'});
+        }
+    }
+
     let pillClass = 'status-ok';
     let cardClass = 'success';
 
