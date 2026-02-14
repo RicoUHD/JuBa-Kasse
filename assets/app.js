@@ -353,6 +353,34 @@ function calculatePaidUntil(person) {
  * @returns {Object} - { text, isOverdue, isSoonDue }
  */
 function calculateTimeRemaining(person) {
+    // START CHECK
+    const standingOrders = safeList(person.standingOrders);
+    const todayForSO = new Date();
+    todayForSO.setHours(0,0,0,0);
+
+    const hasActiveSO = standingOrders.some(so => {
+         const start = new Date(so.startDate);
+         const end = so.endDate ? new Date(so.endDate) : null;
+
+         if (start > todayForSO) return false;
+
+         if (end) {
+             end.setHours(23, 59, 59, 999);
+             if (end < todayForSO) return false;
+         }
+         return true;
+    });
+
+    if (hasActiveSO) {
+        return {
+            text: 'Dauerauftrag aktiv',
+            isOverdue: false,
+            isSoonDue: false,
+            isActiveStandingOrder: true
+        };
+    }
+    // END CHECK
+
     const paidUntil = calculatePaidUntil(person);
     if (!paidUntil) {
         return { text: 'Keine Zahlungen', isOverdue: true, isSoonDue: false };
@@ -1089,7 +1117,7 @@ function renderUserView() {
             <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
                 ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
             </h2>
-            <div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>
+            ${statusMeta.isActiveStandingOrder ? '' : `<div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>`}
             <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
             ${statusMeta.isOverdue ? `
                 <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
@@ -1333,7 +1361,7 @@ function generatePersonHTML(p) {
                         <span class="person-status">${currentStatus}</span>
                     </div>
                     <div class="person-right">
-                        <span class="payment-pill ${pillClass}">${dateText}</span>
+                        ${statusMeta.isActiveStandingOrder ? '' : `<span class="payment-pill ${pillClass}">${dateText}</span>`}
                         <span class="time-remaining">${statusMeta.text}</span>
                     </div>
                 </div>
@@ -1342,10 +1370,11 @@ function generatePersonHTML(p) {
                 <div class="details-content">
 
                     <div class="details-status-card ${cardClass}">
+                        ${statusMeta.isActiveStandingOrder ? '' : `
                         <div class="details-row">
                             <span class="details-label">Bezahlt bis</span>
                             <span class="details-value">${dateText}</span>
-                        </div>
+                        </div>`}
                         <div class="details-row">
                             <span class="details-label">Status</span>
                             <span class="details-value" style="text-transform:capitalize">${p.status}</span>
