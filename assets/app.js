@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
+let themes = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
 let currentPersonId = null;
 let isAuthenticated = false;
@@ -139,7 +140,7 @@ window.switchTab = function(tabName, btn) {
     }
 
     if (tabName === 'recordings' || tabName === 'user-recordings') {
-        loadRecordings(tabName);
+        renderThemes(tabName);
     }
 };
 
@@ -753,20 +754,22 @@ async function loadData() {
 
     } else {
         // Admin: fetch full dataset
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap, tSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
             get(child(dbRef, 'system/inviteCode')),
             get(child(dbRef, 'requests')),
-            get(child(dbRef, 'users'))
+            get(child(dbRef, 'users')),
+            get(child(dbRef, 'themes'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
+        themes = safeList(tSnap.val());
         if (sSnap.exists()) settings = sSnap.val();
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
@@ -2225,137 +2228,6 @@ window.uploadReceipt = async function(file) {
     }
 };
 
-window.loadRecordings = async function(tabName) {
-    if (!tabName) {
-        const adminTab = document.getElementById('recordings');
-        const userTab = document.getElementById('user-recordings');
-        if (adminTab && adminTab.classList.contains('active')) tabName = 'recordings';
-        else if (userTab && userTab.classList.contains('active')) tabName = 'user-recordings';
-        else return;
-    }
-
-    const isUser = tabName === 'user-recordings';
-    const containerId = isUser ? 'user-recordings-list' : 'admin-recordings-list';
-    const container = document.getElementById(containerId);
-
-    if(!container) return;
-
-    container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);"><div class="spinner" style="margin:0 auto 10px;"></div>Lade Aufnahmen...</div>`;
-
-    try {
-        const files = await fetchRecordings();
-        renderRecordings(files, containerId);
-    } catch (error) {
-        container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger);">Fehler beim Laden: ${error.message}</div>`;
-    }
-};
-
-window.renderRecordings = function(files, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (files.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);">Keine Aufnahmen vorhanden.</div>`;
-        return;
-    }
-
-    const html = files.map(file => {
-        const ext = file.name.split('.').pop().toLowerCase();
-        const isAudio = ['mp3', 'wav', 'm4a', 'ogg'].includes(ext);
-        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-        const dateStr = file.lastModified.toLocaleDateString('de-DE') + ' ' + file.lastModified.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'});
-
-        let icon = '📄';
-        let action = '';
-
-        if (isAudio) {
-            icon = '🎵';
-            action = `<button class="btn btn-sm btn-primary" onclick="playRecording('${escapeHtml(file.name)}', '${containerId}_${file.name.replace(/\\W/g,'')}')">▶️ Abspielen</button>`;
-        } else if (isImage) {
-            icon = '🖼️';
-            action = `<button class="btn btn-sm btn-secondary" onclick="viewRecording('${escapeHtml(file.name)}')">👁️ Ansehen</button>`;
-        } else {
-            action = `<button class="btn btn-sm btn-secondary" onclick="downloadRecording('${escapeHtml(file.name)}')">⬇️ Laden</button>`;
-        }
-
-        return `
-            <div class="recording-item" style="background:var(--surface); padding:15px; border-radius:12px; margin-bottom:10px; border:1px solid var(--border); display:flex; align-items:center; gap:15px;">
-                <div style="font-size:1.5rem;">${icon}</div>
-                <div style="flex:1; overflow:hidden;">
-                    <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(file.name)}</div>
-                    <div style="font-size:0.8rem; color:var(--text-secondary);">${dateStr} • ${(file.size / 1024 / 1024).toFixed(2)} MB</div>
-                    <div id="player_${containerId}_${file.name.replace(/\\W/g,'')}" style="margin-top:10px; display:none;"></div>
-                </div>
-                <div>${action}</div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = html;
-};
-
-window.playRecording = async function(filename, playerId) {
-    const playerContainer = document.getElementById('player_' + playerId);
-    if (!playerContainer) return;
-
-    if (playerContainer.style.display === 'block') {
-        return;
-    }
-
-    playerContainer.style.display = 'block';
-    playerContainer.innerHTML = '<div style="font-size:0.8rem;">Lade Audio...</div>';
-
-    try {
-        const blob = await fetchRecordingBlob(filename);
-        const url = URL.createObjectURL(blob);
-
-        playerContainer.innerHTML = `
-            <audio controls autoplay style="width:100%; height:40px;">
-                <source src="${url}">
-                Dein Browser unterstützt kein Audio-Element.
-            </audio>
-        `;
-    } catch (err) {
-        playerContainer.innerHTML = `<div style="color:var(--danger);">Fehler: ${err.message}</div>`;
-    }
-};
-
-window.viewRecording = async function(filename) {
-    openModal('transaction-details-modal');
-    const content = document.getElementById('transaction-details-content');
-    content.innerHTML = '<div class="spinner" style="margin:20px auto;"></div><div style="text-align:center">Lade Bild...</div>';
-
-    try {
-        const blob = await fetchRecordingBlob(filename);
-        const url = URL.createObjectURL(blob);
-
-        content.innerHTML = `
-            <div style="text-align:center; font-weight:700; margin-bottom:10px;">${escapeHtml(filename)}</div>
-            <img src="${url}" style="max-width:100%; border-radius:12px;" alt="${escapeHtml(filename)}">
-            <div style="margin-top:15px; text-align:center;">
-                <a href="${url}" download="${escapeHtml(filename)}" class="btn btn-secondary">Speichern</a>
-            </div>
-        `;
-    } catch (err) {
-        content.innerHTML = `<div style="color:var(--danger); text-align:center;">Fehler beim Laden: ${err.message}</div>`;
-    }
-};
-
-window.downloadRecording = async function(filename) {
-    try {
-        const blob = await fetchRecordingBlob(filename);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (err) {
-        alert("Download Fehler: " + err.message);
-    }
-};
 
 window.fetchReceiptImage = async function(filename) {
     const username = 'juba-bot';
@@ -2454,33 +2326,270 @@ window.showTransactionDetails = async function(id, type) {
     content.innerHTML = html;
 };
 
-// --- WebDAV Recordings Handling ---
+// --- Theme & Recordings Handling ---
 
+// SECURITY WARNING: Credentials stored in client-side code are visible to all users.
+// Ideally, this should be handled by a backend proxy.
 const WEBDAV_RECORDINGS_URL = 'https://cloud.lehn.site/remote.php/dav/files/juba-bot/Themen/';
 const WEBDAV_USER = 'juba-bot';
 const WEBDAV_PASS = 'JuBa-!Bot+#21';
 
-window.uploadRecording = async function(role) {
-    const inputId = role === 'admin' ? 'admin-recording-file' : 'user-recording-file';
-    const fileInput = document.getElementById(inputId);
+window.renderThemes = function(tabName) {
+    if (!tabName) {
+        const adminTab = document.getElementById('recordings');
+        const userTab = document.getElementById('user-recordings');
+        if (adminTab && adminTab.classList.contains('active')) tabName = 'recordings';
+        else if (userTab && userTab.classList.contains('active')) tabName = 'user-recordings';
+        else return;
+    }
 
-    if (!fileInput || fileInput.files.length === 0) {
-        alert("Bitte eine Datei auswählen.");
+    const isUser = tabName === 'user-recordings';
+    const containerId = isUser ? 'user-recordings-list' : 'admin-recordings-list';
+    const container = document.getElementById(containerId);
+
+    if(!container) return;
+
+    if (themes.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);">Keine Themen vorhanden.</div>`;
         return;
     }
 
-    const file = fileInput.files[0];
-    const btn = document.querySelector(`#${role === 'admin' ? 'recordings' : 'user-recordings'} button`);
-    let originalText = "Hochladen";
-    if(btn) {
-        originalText = btn.innerText;
-        btn.innerText = "Lade hoch...";
-        btn.disabled = true;
+    // Sort themes by date descending
+    const sortedThemes = [...themes].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    const html = sortedThemes.map(theme => {
+        const dateStr = new Date(theme.date).toLocaleDateString('de-DE');
+        const fileCount = theme.files ? Object.keys(theme.files).length : 0;
+
+        return `
+            <div class="recording-item" style="background:var(--surface); padding:20px; border-radius:16px; margin-bottom:15px; border:1px solid var(--border); cursor:pointer;" onclick="openThemeDetails('${theme.id}')">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <div style="font-weight:700; font-size:1.1rem; margin-bottom:4px;">${escapeHtml(theme.title)}</div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">📅 ${dateStr} • 📁 ${fileCount} Dateien</div>
+                    </div>
+                    <div style="color:var(--primary);">›</div>
+                </div>
+                ${theme.description ? `<div style="margin-top:10px; font-size:0.9rem; color:var(--text); opacity:0.9; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(theme.description)}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+};
+
+window.createTheme = async function() {
+    const title = document.getElementById('theme-title').value;
+    const date = document.getElementById('theme-date').value;
+    const desc = document.getElementById('theme-desc').value;
+
+    if (!title || !date) {
+        alert("Bitte Titel und Datum angeben.");
+        return;
     }
 
-    // Use original filename but sanitize it slightly to avoid WebDAV issues
+    setButtonLoading('btn-create-theme', true, "Speichere...");
+
+    const newTheme = {
+        id: Date.now().toString(),
+        title,
+        date,
+        description: desc,
+        files: []
+    };
+
+    try {
+        await set(ref(db, 'themes/' + newTheme.id), newTheme);
+        // Add to local list and re-render
+        themes.push(newTheme);
+        renderThemes();
+        closeModal('create-theme-modal');
+
+        // Reset form
+        document.getElementById('theme-title').value = '';
+        document.getElementById('theme-date').value = '';
+        document.getElementById('theme-desc').value = '';
+    } catch (err) {
+        console.error("Fehler beim Erstellen des Themas:", err);
+        alert("Fehler beim Speichern.");
+    } finally {
+        setButtonLoading('btn-create-theme', false);
+    }
+};
+
+let currentThemeId = null;
+
+window.openThemeDetails = function(themeId) {
+    const theme = themes.find(t => t.id === String(themeId));
+    if(!theme) return;
+    currentThemeId = themeId;
+
+    const modal = document.getElementById('theme-details-modal');
+    const content = document.getElementById('theme-details-content');
+
+    // Check if user is allowed to edit (Admin or Owner - currently all authenticated)
+    const canEdit = true;
+
+    const dateStr = new Date(theme.date).toLocaleDateString('de-DE');
+    const filesList = safeList(theme.files);
+
+    let filesHtml = '';
+    if (filesList.length === 0) {
+        filesHtml = '<div style="text-align:center; padding:15px; color:var(--text-secondary); font-style:italic;">Keine Dateien hochgeladen.</div>';
+    } else {
+        filesHtml = filesList.map(file => {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const isAudio = ['mp3', 'wav', 'm4a', 'ogg'].includes(ext);
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+            let icon = '📄';
+            let actionBtn = '';
+
+            if (isAudio) {
+                icon = '🎵';
+                actionBtn = `<button class="btn btn-sm btn-primary" onclick="playThemeFile('${escapeHtml(file.davFilename)}', 'player_${file.id}')">▶️ Play</button>`;
+            } else if (isImage) {
+                icon = '🖼️';
+                actionBtn = `<button class="btn btn-sm btn-secondary" onclick="viewThemeFile('${escapeHtml(file.davFilename)}')">👁️ Ansehen</button>`;
+            } else {
+                actionBtn = `<button class="btn btn-sm btn-secondary" onclick="downloadThemeFile('${escapeHtml(file.davFilename)}')">⬇️ Laden</button>`;
+            }
+
+            return `
+                <div style="display:flex; align-items:center; gap:10px; background:var(--surface-alt); padding:10px; border-radius:10px; margin-bottom:8px;">
+                    <div style="font-size:1.2rem;">${icon}</div>
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(file.name)}</div>
+                        <div id="player_${file.id}" style="margin-top:5px; display:none;"></div>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        ${actionBtn}
+                        ${canEdit ? `<button class="btn btn-sm btn-danger" onclick="deleteFileFromTheme('${theme.id}', '${file.id}', '${escapeHtml(file.davFilename)}')" title="Löschen">🗑️</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    content.innerHTML = `
+        <div style="margin-bottom:20px;">
+            <div style="font-size:1.3rem; font-weight:800; line-height:1.2;">${escapeHtml(theme.title)}</div>
+            <div style="color:var(--text-secondary); margin-top:4px;">${dateStr}</div>
+        </div>
+
+        <div style="background:var(--surface-alt); padding:15px; border-radius:12px; margin-bottom:20px; font-size:0.95rem; line-height:1.5;">
+            ${escapeHtml(theme.description || 'Keine Beschreibung.')}
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <div style="font-weight:700; margin-bottom:10px;">Dateien (${filesList.length})</div>
+            ${filesHtml}
+        </div>
+
+        ${canEdit ? `
+        <div style="display:grid; gap:10px;">
+            <label class="btn btn-primary" style="display:flex; justify-content:center; cursor:pointer;">
+                <input type="file" id="theme-upload-input" style="display:none;" onchange="uploadFileToTheme(this)">
+                📤 Datei hochladen
+            </label>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="openEditThemeModal('${theme.id}')">✏️ Bearbeiten</button>
+                <button class="btn btn-danger" style="flex:1;" onclick="deleteTheme('${theme.id}')">🗑️ Löschen</button>
+            </div>
+        </div>
+        ` : ''}
+    `;
+
+    openModal('theme-details-modal');
+};
+
+window.openEditThemeModal = function(themeId) {
+    const theme = themes.find(t => t.id === String(themeId));
+    if(!theme) return;
+
+    closeModal('theme-details-modal');
+    openModal('edit-theme-modal');
+
+    document.getElementById('edit-theme-title').value = theme.title;
+    document.getElementById('edit-theme-date').value = theme.date;
+    document.getElementById('edit-theme-desc').value = theme.description || '';
+};
+
+window.saveThemeChanges = async function() {
+    if(!currentThemeId) return;
+
+    const title = document.getElementById('edit-theme-title').value;
+    const date = document.getElementById('edit-theme-date').value;
+    const desc = document.getElementById('edit-theme-desc').value;
+
+    setButtonLoading('btn-save-theme', true, "Speichere...");
+
+    try {
+        await update(ref(db, 'themes/' + currentThemeId), {
+            title,
+            date,
+            description: desc
+        });
+
+        // Update local
+        const t = themes.find(x => x.id === String(currentThemeId));
+        if(t) { t.title = title; t.date = date; t.description = desc; }
+
+        renderThemes();
+        closeModal('edit-theme-modal');
+        openThemeDetails(currentThemeId); // Reopen details
+    } catch(err) {
+        console.error(err);
+        alert("Fehler beim Speichern.");
+    } finally {
+        setButtonLoading('btn-save-theme', false);
+    }
+};
+
+window.deleteTheme = async function(themeId) {
+    if(!confirm("Thema und alle zugehörigen Dateien wirklich löschen?")) return;
+
+    const theme = themes.find(t => t.id === String(themeId));
+    if(!theme) return;
+
+    // Delete all files first
+    const files = safeList(theme.files);
+    for(const f of files) {
+        try {
+            await deleteWebDAVFile(f.davFilename);
+        } catch(e) {
+            console.warn("Could not delete file from WebDAV:", f.davFilename, e);
+        }
+    }
+
+    try {
+        await remove(ref(db, 'themes/' + themeId));
+        themes = themes.filter(t => t.id !== String(themeId));
+        renderThemes();
+        closeModal('theme-details-modal');
+    } catch(err) {
+        console.error(err);
+        alert("Fehler beim Löschen des Themas.");
+    }
+};
+
+window.uploadFileToTheme = async function(input) {
+    if(!input.files.length || !currentThemeId) return;
+
+    const file = input.files[0];
+    const theme = themes.find(t => t.id === String(currentThemeId));
+    if(!theme) return;
+
+    // Show loading in button label temporarily (tricky since it is a label)
+    const label = input.parentElement;
+    const originalText = label.innerText;
+    label.innerText = "Lade hoch...";
+    label.style.opacity = "0.7";
+    input.disabled = true;
+
+    const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_ ]/g, '_');
-    const url = `${WEBDAV_RECORDINGS_URL}${safeName}`;
+    const davFilename = `${currentThemeId}_${timestamp}_${safeName}`;
+    const url = `${WEBDAV_RECORDINGS_URL}${davFilename}`;
 
     const headers = new Headers();
     headers.set('Authorization', 'Basic ' + btoa(WEBDAV_USER + ':' + WEBDAV_PASS));
@@ -2493,120 +2602,141 @@ window.uploadRecording = async function(role) {
             body: file
         });
 
-        if (!response.ok) {
-            throw new Error('Upload failed: ' + response.statusText);
-        }
+        if (!response.ok) throw new Error('Upload failed: ' + response.statusText);
 
-        alert("Upload erfolgreich!");
-        fileInput.value = '';
-        loadRecordings(); // Refresh list
-    } catch (error) {
-        console.error('Upload error:', error);
-        alert("Fehler beim Hochladen: " + error.message);
+        // Add to Firebase
+        const fileId = Date.now().toString();
+        const fileData = {
+            id: fileId,
+            name: file.name,
+            davFilename: davFilename,
+            type: file.type,
+            size: file.size,
+            uploadedAt: Date.now()
+        };
+
+        // Use a list push approach or keyed object. "files" in local is array, in DB usually object.
+        // We'll use object with ID keys.
+        await update(ref(db, `themes/${currentThemeId}/files/${fileId}`), fileData);
+
+        // Update local
+        if(!theme.files) theme.files = [];
+        // if theme.files is array (from safeList) vs object (if we just pushed to array locally)
+        // safeList returns array. But if we update via DB ref, we should reload or patch local.
+        // Let's patch local array.
+        if(Array.isArray(theme.files)) theme.files.push(fileData);
+        else theme.files = [fileData]; // Should handle safeList conversion
+
+        openThemeDetails(currentThemeId); // Refresh view
+
+    } catch(err) {
+        console.error(err);
+        alert("Upload fehlgeschlagen: " + err.message);
     } finally {
-        if(btn) {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
+        label.innerText = originalText; // It was "📤 Datei hochladen" basically
+        label.innerHTML = `<input type="file" id="theme-upload-input" style="display:none;" onchange="uploadFileToTheme(this)"> 📤 Datei hochladen`; // Restore input
+        label.style.opacity = "";
     }
 };
 
-window.fetchRecordings = async function() {
-    const headers = new Headers();
-    headers.set('Authorization', 'Basic ' + btoa(WEBDAV_USER + ':' + WEBDAV_PASS));
-    headers.set('Depth', '1');
+window.deleteFileFromTheme = async function(themeId, fileId, davFilename) {
+    if(!confirm("Datei wirklich löschen?")) return;
 
     try {
-        const response = await fetch(WEBDAV_RECORDINGS_URL, {
-            method: 'PROPFIND',
-            headers: headers
-        });
+        await deleteWebDAVFile(davFilename);
+        await remove(ref(db, `themes/${themeId}/files/${fileId}`));
 
-        if (!response.ok) {
-            throw new Error('List failed: ' + response.statusText);
+        // Update local
+        const theme = themes.find(t => t.id === String(themeId));
+        if(theme && theme.files) {
+            theme.files = safeList(theme.files).filter(f => f.id !== String(fileId));
         }
 
-        const text = await response.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(text, "text/xml");
-
-        // Try to handle namespace robustly using localName
-        const responses = Array.from(xml.getElementsByTagName("*")).filter(el => el.localName === "response");
-
-        const files = [];
-
-        responses.forEach(resp => {
-            const hrefNode = Array.from(resp.getElementsByTagName("*")).find(el => el.localName === "href");
-            if(!hrefNode) return;
-            const href = hrefNode.textContent;
-
-            // Get properties
-            const propstats = Array.from(resp.getElementsByTagName("*")).filter(el => el.localName === "propstat");
-
-            for (const propstat of propstats) {
-                const statusNode = Array.from(propstat.getElementsByTagName("*")).find(el => el.localName === "status");
-                const status = statusNode ? statusNode.textContent : "";
-
-                if (status.includes('200')) {
-                    const prop = Array.from(propstat.getElementsByTagName("*")).find(el => el.localName === "prop");
-                    if(!prop) continue;
-
-                    const restype = Array.from(prop.getElementsByTagName("*")).find(el => el.localName === "resourcetype");
-                    const isCollection = restype && Array.from(restype.getElementsByTagName("*")).some(el => el.localName === "collection");
-
-                    if (!isCollection) {
-                        const lastModNode = Array.from(prop.getElementsByTagName("*")).find(el => el.localName === "getlastmodified");
-                        const lastMod = lastModNode ? lastModNode.textContent : new Date().toISOString();
-
-                        const sizeNode = Array.from(prop.getElementsByTagName("*")).find(el => el.localName === "getcontentlength");
-                        const size = sizeNode ? sizeNode.textContent : 0;
-
-                    // Extract filename from href
-                    // href usually /remote.php/dav/files/user/path/to/file
-                    // We need to decode it
-                    const decodedHref = decodeURIComponent(href);
-                    const parts = decodedHref.split('/');
-                    const filename = parts[parts.length - 1] || parts[parts.length - 2]; // handle trailing slash if any
-
-                    files.push({
-                        name: filename,
-                        lastModified: new Date(lastMod),
-                        size: parseInt(size),
-                        href: href
-                    });
-                }
-            }
-            }
-        });
-
-        return files.sort((a,b) => b.lastModified - a.lastModified); // Newest first
-
-    } catch (error) {
-        console.error('List recordings error:', error);
-        throw error;
+        openThemeDetails(themeId); // Refresh view
+    } catch(err) {
+        console.error(err);
+        alert("Fehler beim Löschen der Datei.");
     }
 };
 
+async function deleteWebDAVFile(filename) {
+    const url = `${WEBDAV_RECORDINGS_URL}${filename}`;
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(WEBDAV_USER + ':' + WEBDAV_PASS));
+
+    const response = await fetch(url, { method: 'DELETE', headers: headers });
+    if (!response.ok && response.status !== 404) {
+        throw new Error('WebDAV Delete failed: ' + response.statusText);
+    }
+}
+
+// Helpers for playback
 window.fetchRecordingBlob = async function(filename) {
-    // Filename needs to be URL encoded for the path
     const url = `${WEBDAV_RECORDINGS_URL}${encodeURIComponent(filename)}`;
-
     const headers = new Headers();
     headers.set('Authorization', 'Basic ' + btoa(WEBDAV_USER + ':' + WEBDAV_PASS));
 
+    const response = await fetch(url, { method: 'GET', headers: headers });
+    if (!response.ok) throw new Error('Fetch failed');
+    return await response.blob();
+};
+
+window.playThemeFile = async function(filename, containerId) {
+    const container = document.getElementById(containerId);
+    if(!container) return;
+
+    if(container.style.display === 'block') return; // Already playing
+
+    container.style.display = 'block';
+    container.innerHTML = '<div style="font-size:0.8rem;">Lade Audio...</div>';
+
     try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers
-        });
+        const blob = await fetchRecordingBlob(filename);
+        const url = URL.createObjectURL(blob);
+        container.innerHTML = `
+            <audio controls autoplay style="width:100%; height:40px;">
+                <source src="${url}">
+            </audio>
+        `;
+    } catch(err) {
+        container.innerHTML = `<div style="color:var(--danger);">Fehler: ${err.message}</div>`;
+    }
+};
 
-        if (!response.ok) {
-            throw new Error('Fetch failed: ' + response.statusText);
-        }
+window.viewThemeFile = async function(filename) {
+    const modalId = 'transaction-details-modal'; // reusing this generic one
+    const content = document.getElementById('transaction-details-content');
+    openModal(modalId);
+    // boost z-index of this modal
+    document.getElementById(modalId).style.zIndex = "1050";
 
-        return await response.blob();
-    } catch (error) {
-        console.error('Fetch blob error:', error);
-        throw error;
+    content.innerHTML = '<div class="spinner" style="margin:20px auto;"></div>';
+
+    try {
+        const blob = await fetchRecordingBlob(filename);
+        const url = URL.createObjectURL(blob);
+        content.innerHTML = `
+            <img src="${url}" style="max-width:100%; border-radius:12px;">
+            <div style="text-align:center; margin-top:10px;">
+                <button class="btn btn-secondary" onclick="closeModal('${modalId}')">Schließen</button>
+            </div>
+        `;
+    } catch(err) {
+        content.innerHTML = "Fehler beim Laden.";
+    }
+};
+
+window.downloadThemeFile = async function(filename) {
+    try {
+        const blob = await fetchRecordingBlob(filename);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch(err) {
+        alert("Fehler: " + err.message);
     }
 };
