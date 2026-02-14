@@ -355,19 +355,12 @@ function calculatePaidUntil(person) {
 function calculateTimeRemaining(person) {
     // START CHECK
     const standingOrders = safeList(person.standingOrders);
-    const todayForSO = new Date();
-    todayForSO.setHours(0,0,0,0);
+    const now = new Date();
+    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     const hasActiveSO = standingOrders.some(so => {
-         const start = new Date(so.startDate);
-         const end = so.endDate ? new Date(so.endDate) : null;
-
-         if (start > todayForSO) return false;
-
-         if (end) {
-             end.setHours(23, 59, 59, 999);
-             if (end < todayForSO) return false;
-         }
+         if (so.startDate > todayStr) return false;
+         if (so.endDate && so.endDate < todayStr) return false;
          return true;
     });
 
