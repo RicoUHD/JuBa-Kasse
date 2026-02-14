@@ -534,11 +534,27 @@ function checkAndExecuteStandingOrders(person) {
     const today = new Date();
     today.setHours(23,59,59,999); // Use end of day to avoid timezone lag (UTC vs Local)
 
-    const updatedStandingOrders = standingOrders.map(so => {
+    const updatedStandingOrders = [];
+
+    for (const so of standingOrders) {
         let soModified = false;
-        const startDate = new Date(so.startDate);
+        let currentSO = { ...so };
+        const startDate = new Date(currentSO.startDate);
         const dayOfMonth = startDate.getDate();
-        let lastAuto = so.lastAutoPayment ? new Date(so.lastAutoPayment) : null;
+        let lastAuto = currentSO.lastAutoPayment ? new Date(currentSO.lastAutoPayment) : null;
+
+        // Determine limit date: min(today, endDate)
+        let limitDate = new Date(today);
+        let isExpired = false;
+
+        if (currentSO.endDate) {
+            const end = new Date(currentSO.endDate);
+            end.setHours(23, 59, 59, 999);
+            if (end < today) {
+                limitDate = end;
+                isExpired = true;
+            }
+        }
 
         // Determine where to start checking
         let nextDueDate;
@@ -552,28 +568,21 @@ function checkAndExecuteStandingOrders(person) {
             nextDueDate.setDate(Math.min(dayOfMonth, maxDays));
         }
 
-        // Loop until today
+        // Loop until limitDate
         // Safety break to prevent infinite loops if dates are messed up
         let safety = 0;
-        while (nextDueDate <= today && safety < 120) {
-            // Check end date
-            if (so.endDate) {
-                const end = new Date(so.endDate);
-                end.setHours(23, 59, 59, 999);
-                if (nextDueDate > end) break;
-            }
-
+        while (nextDueDate <= limitDate && safety < 120) {
             const dateStr = nextDueDate.toISOString().split('T')[0];
-            const paymentId = `auto_${so.id}_${dateStr}`;
+            const paymentId = `auto_${currentSO.id}_${dateStr}`;
 
             const exists = payments.some(p => p.id === paymentId);
 
             if (!exists) {
                 payments.push({
                     id: paymentId,
-                    amount: parseFloat(so.amount),
+                    amount: parseFloat(currentSO.amount),
                     date: dateStr,
-                    description: (so.note || 'Dauerauftrag') + ' (Auto)',
+                    description: (currentSO.note || 'Dauerauftrag') + ' (Auto)',
                     isAuto: true
                 });
                 modified = true;
@@ -591,10 +600,17 @@ function checkAndExecuteStandingOrders(person) {
         }
 
         if (soModified && lastAuto) {
-            return { ...so, lastAutoPayment: lastAuto.toISOString().split('T')[0] };
+            currentSO.lastAutoPayment = lastAuto.toISOString().split('T')[0];
         }
-        return so;
-    });
+
+        if (isExpired) {
+            // Remove from list if expired
+            modified = true;
+        } else {
+            updatedStandingOrders.push(currentSO);
+            if (soModified) modified = true;
+        }
+    }
 
     if (modified) {
         return { ...person, payments, standingOrders: updatedStandingOrders };
@@ -1621,17 +1637,37 @@ window.saveStandingOrderEnd = async () => {
 
     try {
         const updated = await mutatePerson(editingPersonId, (person) => {
-            const standingOrders = safeList(person.standingOrders).map(so => {
+            const endDateObj = new Date(endDate);
+            endDateObj.setHours(23, 59, 59, 999);
+            const today = new Date();
+
+            // 1. Update SO end date
+            let standingOrders = safeList(person.standingOrders).map(so => {
                 if (String(so.id) === String(editingSoId)) {
                     return { ...so, endDate };
                 }
                 return so;
             });
-            return { ...person, standingOrders };
-        });
 
-        // Trigger check logic immediately to stop it if it was running?
-        // Actually, if we set end date in past, logic won't run.
+            // 2. Remove future auto-payments related to this SO
+            const payments = safeList(person.payments).filter(p => {
+                if (p.isAuto && p.id.startsWith(`auto_${editingSoId}_`)) {
+                    const pDate = new Date(p.date);
+                    if (pDate > endDateObj) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // 3. Remove SO if expired (delete itself after end date)
+            if (endDateObj < today) {
+                 standingOrders = standingOrders.filter(so => String(so.id) !== String(editingSoId));
+            }
+
+            const totalPaid = payments.reduce((acc, p) => acc + parseFloat(p.amount), 0);
+            return { ...person, standingOrders, payments, totalPaid };
+        });
 
         renderAll();
         closeModal('end-standing-order-modal');
