@@ -52,6 +52,26 @@
             </div>
         </div>
 
+        <div id="admin-topics" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-admin-topics">
+            <div class="hero-card" style="cursor:default; background: var(--gradient-primary);">
+                <span class="hero-label">Themen</span>
+                <div class="hero-amount" style="font-size: 2rem;">Service Recordings</div>
+                <div class="hero-subtitle">Bilder & Audios verwalten</div>
+            </div>
+
+            <div style="margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 class="list-section-title" style="margin:0;">Alle Themen</h3>
+                    <button class="btn btn-primary btn-small" onclick="openModal('add-topic-modal')">Neues Thema</button>
+                </div>
+                <div id="admin-topics-list">
+                    <div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+                        Keine Themen vorhanden.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="settings" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-settings">
             
             <div class="card card-settings" id="card-design">
@@ -110,6 +130,23 @@
                         <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
                             Dieser Code wird für neue Registrierungen benötigt.
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-settings" id="card-webdav">
+                <div class="card-header">Dateispeicher (WebDAV)</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Benutzername</label>
+                        <input type="text" id="webdav-username" class="form-input" placeholder="z.B. juba-bot">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Passwort</label>
+                        <input type="password" id="webdav-password" class="form-input" placeholder="Passwort">
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                        Zugangsdaten für den Dateiupload.
                     </div>
                 </div>
             </div>
@@ -186,6 +223,27 @@
             </div>
         </div>
 
+        <div id="user-topics" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-topics">
+            <div class="hero-card" style="cursor:default; background: var(--gradient-primary);">
+                <span class="hero-label">Themen</span>
+                <div class="hero-amount" style="font-size: 2rem;">Service Recordings</div>
+                <div class="hero-subtitle">Bilder & Audios ansehen</div>
+            </div>
+
+            <div style="margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 class="list-section-title" style="margin:0;">Alle Themen</h3>
+                    <!-- Users can also add topics? Request says "people can upload". I'll allow it. -->
+                    <button class="btn btn-primary btn-small" onclick="openModal('add-topic-modal')">Neues Thema</button>
+                </div>
+                <div id="user-topics-list">
+                    <div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+                        Keine Themen vorhanden.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="user-settings" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-settings">
             <div class="card">
                 <div class="card-header">⚙️ Einstellungen</div>
@@ -222,6 +280,11 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
         <span>Übersicht</span>
     </button>
+    <button class="nav-item" onclick="switchTab('admin-topics', this)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        <span>Themen</span>
+    </button>
+    <div class="nav-item" style="pointer-events: none;"></div>
     <div class="nav-center">
         <button class="nav-fab" onclick="toggleFab()" aria-label="Aktionsmenü öffnen" aria-expanded="false" aria-haspopup="true" aria-controls="fabMenu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -237,6 +300,10 @@
     <button class="nav-item active" onclick="switchTab('user-overview', this)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
         <span>Übersicht</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('user-topics', this)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        <span>Themen</span>
     </button>
     <button class="nav-item" onclick="switchTab('user-settings', this)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -386,6 +453,65 @@
         <div class="modal-header"><span id="req-modal-title">Anfrage</span> <button class="close-btn" onclick="closeModal('user-request-modal')" aria-label="Schließen">&times;</button></div>
         <div id="req-form-content"></div>
         <button id="btn-submit-request" class="btn btn-primary" onclick="submitUserRequest()" style="margin-top:15px; width:100%">Absenden</button>
+    </div>
+</div>
+
+<div id="add-topic-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-topic">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-add-topic">Neues Thema</span> <button class="close-btn" onclick="closeModal('add-topic-modal')" aria-label="Schließen">&times;</button></div>
+        <div class="form-group">
+            <label class="form-label">Titel</label>
+            <input type="text" id="new-topic-title" class="form-input" placeholder="Titel">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Datum</label>
+            <input type="date" id="new-topic-date" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Beschreibung</label>
+            <textarea id="new-topic-desc" class="form-input" rows="3" placeholder="Beschreibung..."></textarea>
+        </div>
+        <button id="btn-add-topic" class="btn btn-primary" onclick="addTopic()">Erstellen</button>
+    </div>
+</div>
+
+<div id="edit-topic-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-edit-topic">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-edit-topic">Thema bearbeiten</span> <button class="close-btn" onclick="closeModal('edit-topic-modal')" aria-label="Schließen">&times;</button></div>
+        <input type="hidden" id="edit-topic-id">
+        <div class="form-group">
+            <label class="form-label">Titel</label>
+            <input type="text" id="edit-topic-title" class="form-input" placeholder="Titel">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Datum</label>
+            <input type="date" id="edit-topic-date" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Beschreibung</label>
+            <textarea id="edit-topic-desc" class="form-input" rows="3" placeholder="Beschreibung..."></textarea>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button id="btn-save-topic" class="btn btn-primary" onclick="saveTopicEdit()">Speichern</button>
+            <button class="btn btn-danger" onclick="deleteTopic(document.getElementById('edit-topic-id').value)">Löschen</button>
+        </div>
+    </div>
+</div>
+
+<div id="topic-details-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-topic-details">
+    <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header">
+            <span id="title-topic-details">Details</span>
+            <button class="close-btn" onclick="closeModal('topic-details-modal')" aria-label="Schließen">&times;</button>
+        </div>
+        <div id="topic-details-content"></div>
+        <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
+            <h4 style="margin-bottom:10px;">Datei hochladen</h4>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="file" id="topic-file-upload" class="form-input" accept="image/*,audio/*" style="flex:1;">
+                <button id="btn-upload-topic-file" class="btn btn-primary" style="width:auto;" onclick="uploadFileToCurrentTopic()">⬆️</button>
+            </div>
+        </div>
     </div>
 </div>
 

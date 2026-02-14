@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo, runTransaction, remove } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo, runTransaction, remove, push } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -19,7 +19,8 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
-let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
+let topics = [];
+let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null, webdavUsername: '', webdavPassword: '' };
 let currentPersonId = null;
 let isAuthenticated = false;
 let currentUser = null;
@@ -732,6 +733,30 @@ async function loadData() {
         // If we fell back to all requests, filter them now
         requests = allRequests.filter(r => r.userId === currentUser.uid);
 
+        // 4. Fetch Topics
+        const tSnap = await get(child(dbRef, 'topics'));
+        const tVal = tSnap.val() || {};
+        topics = Object.entries(tVal).map(([k, v]) => ({ ...v, id: k }));
+
+        // Normalize files structure
+        topics.forEach(t => {
+            if (t.files && !Array.isArray(t.files)) {
+                t.files = Object.entries(t.files).map(([fk, fv]) => ({ ...fv, fileId: fk }));
+            }
+        });
+
+        const tVal = tSnap.val() || {};
+        topics = Object.entries(tVal).map(([k, v]) => ({ ...v, id: k }));
+
+        topics.forEach(t => {
+            if (t.files && !Array.isArray(t.files)) {
+                t.files = Object.entries(t.files).map(([fk, fv]) => ({ ...fv, fileId: fk }));
+            }
+        });
+
+        // Sort topics by date desc
+        topics.sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
+
         // UI toggles
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('user-view').style.display = 'block';
@@ -749,20 +774,25 @@ async function loadData() {
 
     } else {
         // Admin: fetch full dataset
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap, tSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
             get(child(dbRef, 'system/inviteCode')),
             get(child(dbRef, 'requests')),
-            get(child(dbRef, 'users'))
+            get(child(dbRef, 'users')),
+            get(child(dbRef, 'topics'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
+        topics = safeList(tSnap.val());
+        // Sort topics by date desc
+        topics.sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
+
         if (sSnap.exists()) settings = sSnap.val();
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
@@ -852,7 +882,10 @@ function renderAll() {
         document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
         document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
         document.getElementById('report-start-date').value = settings.reportStartDate || '';
+        document.getElementById('webdav-username').value = settings.webdavUsername || '';
+        document.getElementById('webdav-password').value = settings.webdavPassword || '';
     }
+    renderTopics();
 }
 
 function renderAdminRequests() {
@@ -1828,6 +1861,9 @@ window.saveSettings = async () => {
     settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value.replace(',', '.'));
     settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value.replace(',', '.'));
     settings.reportStartDate = document.getElementById('report-start-date').value || null;
+    settings.webdavUsername = document.getElementById('webdav-username').value;
+    settings.webdavPassword = document.getElementById('webdav-password').value;
+
     try {
         await set(ref(db, 'settings'), settings);
         renderAll();
@@ -2192,8 +2228,10 @@ window.generateNewCode = async () => {
 // --- WebDAV Receipt Handling ---
 
 window.uploadReceipt = async function(file) {
-    const username = 'juba-bot';
-    const password = 'JuBa-!Bot+#21';
+    const username = settings.webdavUsername || 'juba-bot';
+    const password = settings.webdavPassword;
+    if (!password) throw new Error('WebDAV Passwort fehlt (siehe Einstellungen).');
+
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${timestamp}_${safeName}`;
@@ -2222,8 +2260,10 @@ window.uploadReceipt = async function(file) {
 };
 
 window.fetchReceiptImage = async function(filename) {
-    const username = 'juba-bot';
-    const password = 'JuBa-!Bot+#21';
+    const username = settings.webdavUsername || 'juba-bot';
+    const password = settings.webdavPassword;
+    if (!password) throw new Error('WebDAV Passwort fehlt (siehe Einstellungen).');
+
     const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Kassenbongs/${filename}`;
 
     const headers = new Headers();
@@ -2316,4 +2356,353 @@ window.showTransactionDetails = async function(id, type) {
     }
 
     content.innerHTML = html;
+};
+
+// --- WebDAV Topic Handling ---
+
+window.uploadTopicFile = async function(file) {
+    const username = settings.webdavUsername || 'juba-bot';
+    const password = settings.webdavPassword;
+    if (!password) throw new Error('WebDAV Passwort fehlt (siehe Einstellungen).');
+
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filename = `${timestamp}_${safeName}`;
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Themen/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+    headers.set('Content-Type', file.type);
+
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: headers,
+            body: file
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed: ' + response.statusText);
+        }
+
+        return filename;
+    } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+    }
+};
+
+window.fetchTopicFile = async function(filename) {
+    const username = settings.webdavUsername || 'juba-bot';
+    const password = settings.webdavPassword;
+    if (!password) throw new Error('WebDAV Passwort fehlt (siehe Einstellungen).');
+
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Themen/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Fetch failed: ' + response.statusText);
+        }
+
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch (error) {
+        console.error('Fetch file error:', error);
+        throw error;
+    }
+};
+
+window.deleteWebDAVFile = async function(filename) {
+    const username = settings.webdavUsername || 'juba-bot';
+    const password = settings.webdavPassword;
+    if (!password) throw new Error('WebDAV Passwort fehlt (siehe Einstellungen).');
+
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Themen/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+
+    try {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (!response.ok && response.status !== 404) {
+            throw new Error('Delete failed: ' + response.statusText);
+        }
+    } catch (error) {
+        console.error('Delete file error:', error);
+    }
+};
+
+// --- Topics Logic ---
+
+window.renderTopics = function() {
+    // Render for Admin
+    const adminContainer = document.getElementById('admin-topics-list');
+    if (adminContainer) {
+        adminContainer.innerHTML = generateTopicsHTML(true); // true for admin controls
+    }
+
+    // Render for User
+    const userContainer = document.getElementById('user-topics-list');
+    if (userContainer) {
+        userContainer.innerHTML = generateTopicsHTML(false);
+    }
+};
+
+function generateTopicsHTML(isAdmin) {
+    if (topics.length === 0) {
+        return '<div style="text-align:center; padding: 40px; color: var(--text-secondary);">Keine Themen vorhanden.</div>';
+    }
+
+    return topics.map(t => {
+        const dateStr = t.date ? new Date(t.date).toLocaleDateString('de-DE') : 'Kein Datum';
+        return `
+            <div class="card" onclick="showTopicDetails('${t.id}')" style="cursor:pointer;">
+                <div class="card-body">
+                    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${escapeHtml(t.title)}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">${dateStr}</div>
+                    <div style="font-size: 0.95rem; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        ${escapeHtml(t.description)}
+                    </div>
+                    ${isAdmin ? `
+                    <div style="margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn btn-secondary btn-small" style="width: auto;" onclick="event.stopPropagation(); editTopic('${t.id}')">Bearbeiten</button>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.addTopic = async function() {
+    if (!validateRequired(['new-topic-title', 'new-topic-date'])) return;
+
+    setButtonLoading('btn-add-topic', true, "Erstelle...");
+
+    const title = document.getElementById('new-topic-title').value;
+    const date = document.getElementById('new-topic-date').value;
+    const desc = document.getElementById('new-topic-desc').value;
+
+    try {
+        const newRef = push(ref(db, 'topics'));
+        const newTopic = {
+            title,
+            date,
+            description: desc
+        };
+        await set(newRef, newTopic);
+
+        await loadData();
+        renderTopics();
+        closeModal('add-topic-modal');
+        // Reset form
+        document.getElementById('new-topic-title').value = '';
+        document.getElementById('new-topic-desc').value = '';
+    } catch (err) {
+        console.error('Fehler beim Erstellen:', err);
+        alert('Konnte Thema nicht erstellen.');
+    } finally {
+        setButtonLoading('btn-add-topic', false);
+    }
+};
+
+let currentEditingTopicId = null;
+
+window.editTopic = function(id) {
+    const t = topics.find(x => x.id === id);
+    if (!t) return;
+    currentEditingTopicId = id;
+    document.getElementById('edit-topic-id').value = id;
+    document.getElementById('edit-topic-title').value = t.title;
+    document.getElementById('edit-topic-date').value = t.date;
+    document.getElementById('edit-topic-desc').value = t.description || '';
+    openModal('edit-topic-modal');
+};
+
+window.saveTopicEdit = async function() {
+    if (!currentEditingTopicId) return;
+    if (!validateRequired(['edit-topic-title', 'edit-topic-date'])) return;
+
+    setButtonLoading('btn-save-topic', true, "Speichere...");
+
+    const title = document.getElementById('edit-topic-title').value;
+    const date = document.getElementById('edit-topic-date').value;
+    const desc = document.getElementById('edit-topic-desc').value;
+
+    try {
+        await update(ref(db, 'topics/' + currentEditingTopicId), { title, date, description: desc });
+        await loadData();
+        renderTopics();
+        closeModal('edit-topic-modal');
+    } catch (err) {
+        console.error('Fehler beim Speichern:', err);
+        alert('Konnte Änderungen nicht speichern.');
+    } finally {
+        setButtonLoading('btn-save-topic', false);
+    }
+};
+
+window.deleteTopic = async function(id) {
+    if (!confirm("Thema wirklich löschen? Alle zugehörigen Dateien werden entfernt.")) return;
+
+    const t = topics.find(x => x.id === id);
+    if (!t) return;
+
+    // Delete files first
+    if (t.files && Array.isArray(t.files)) {
+        for (const f of t.files) {
+            await deleteWebDAVFile(f.filename);
+        }
+    }
+
+    try {
+        await remove(ref(db, 'topics/' + id));
+        await loadData();
+        renderTopics();
+        closeModal('edit-topic-modal');
+    } catch (err) {
+        console.error('Fehler beim Löschen:', err);
+        alert('Konnte Thema nicht löschen.');
+    }
+};
+
+let currentDetailTopicId = null;
+
+window.showTopicDetails = async function(id) {
+    currentDetailTopicId = id;
+    const t = topics.find(x => x.id === id);
+    if (!t) return;
+
+    openModal('topic-details-modal');
+    renderTopicDetailsContent(t);
+};
+
+async function renderTopicDetailsContent(t) {
+    const container = document.getElementById('topic-details-content');
+
+    // Files List
+    let filesHtml = '<div style="color:var(--text-secondary); font-style:italic;">Keine Dateien hochgeladen.</div>';
+
+    if (t.files && t.files.length > 0) {
+        const filePromises = t.files.map(async f => {
+            let preview = '';
+            if (f.type.startsWith('image/')) {
+                // Fetch image blob url
+                try {
+                    const url = await fetchTopicFile(f.filename);
+                    preview = `<img src="${url}" style="width:100%; border-radius:8px; margin-top:5px;">`;
+                } catch (e) {
+                    preview = '<div style="color:red; font-size:0.8rem;">Bild konnte nicht geladen werden</div>';
+                }
+            } else if (f.type.startsWith('audio/')) {
+                 try {
+                    const url = await fetchTopicFile(f.filename);
+                    preview = `<audio controls src="${url}" style="width:100%; margin-top:5px;"></audio>`;
+                } catch (e) {
+                    preview = '<div style="color:red; font-size:0.8rem;">Audio konnte nicht geladen werden</div>';
+                }
+            }
+
+            return `
+                <div style="background:var(--surface-alt); padding:10px; border-radius:12px; margin-bottom:10px; position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.9rem; font-weight:600;">${escapeHtml(f.originalName)}</span>
+                        <button class="btn-icon text-danger" onclick="deleteFileFromTopic('${t.id}', '${f.filename}', '${f.fileId}')" style="background:none; border:none;">🗑️</button>
+                    </div>
+                    ${preview}
+                </div>
+            `;
+        });
+
+        container.innerHTML = `<div style="text-align:center; padding:20px;"><div class="spinner" style="margin:0 auto 10px;"></div><div>Lade Dateien...</div></div>`;
+
+        const fileItems = await Promise.all(filePromises);
+        filesHtml = fileItems.join('');
+    }
+
+    const dateStr = t.date ? new Date(t.date).toLocaleDateString('de-DE') : '-';
+
+    container.innerHTML = `
+        <h3 style="margin-bottom:5px;">${escapeHtml(t.title)}</h3>
+        <div style="color:var(--text-secondary); margin-bottom:15px; font-size:0.9rem;">${dateStr}</div>
+        <div style="margin-bottom:20px; white-space:pre-wrap;">${escapeHtml(t.description)}</div>
+
+        <h4 style="margin-bottom:10px;">Dateien (${t.files ? t.files.length : 0})</h4>
+        <div>${filesHtml}</div>
+    `;
+}
+
+window.uploadFileToCurrentTopic = async function() {
+    if (!currentDetailTopicId) return;
+    const fileInput = document.getElementById('topic-file-upload');
+    if (!fileInput || fileInput.files.length === 0) {
+        alert("Bitte eine Datei auswählen.");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    setButtonLoading('btn-upload-topic-file', true, "⏳");
+
+    try {
+        const filename = await uploadTopicFile(file);
+
+        // Update DB with push
+        const fileRef = push(ref(db, 'topics/' + currentDetailTopicId + '/files'));
+        const newFile = {
+            filename,
+            originalName: file.name,
+            type: file.type,
+            uploadedAt: Date.now()
+        };
+        await set(fileRef, newFile);
+
+        // Update local state by reloading
+        await loadData();
+
+        // Re-render details
+        const t = topics.find(x => x.id === currentDetailTopicId);
+        if(t) await renderTopicDetailsContent(t);
+
+        fileInput.value = '';
+    } catch (err) {
+        console.error("Upload fail:", err);
+        alert("Upload fehlgeschlagen: " + err.message);
+    } finally {
+        setButtonLoading('btn-upload-topic-file', false, "⬆️");
+    }
+};
+
+window.deleteFileFromTopic = async function(topicId, filename, fileId) {
+    if (!confirm("Datei löschen?")) return;
+
+    try {
+        await deleteWebDAVFile(filename);
+
+        if (fileId) {
+             await remove(ref(db, 'topics/' + topicId + '/files/' + fileId));
+        }
+
+        await loadData();
+
+        // Re-render
+        if (currentDetailTopicId === topicId) {
+             const t = topics.find(x => x.id === topicId);
+             if(t) renderTopicDetailsContent(t);
+        }
+    } catch (err) {
+        console.error("Delete file fail:", err);
+        alert("Löschen fehlgeschlagen.");
+    }
 };
