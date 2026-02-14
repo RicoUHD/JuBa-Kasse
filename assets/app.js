@@ -886,6 +886,10 @@ function renderAdminRequests() {
         } else if (req.type === 'expense') {
             typeLabel = '💸 Ausgabe';
             details = `${formatCurrency(req.data.amount)} € für "${req.data.description}" am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+        } else if (req.type === 'standing_order') {
+            typeLabel = '🔄 Dauerauftrag';
+            details = `${formatCurrency(req.data.amount)} € / Monat<br>Start: ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            if (req.data.note) details += `<br><small>"${escapeHtml(req.data.note)}"</small>`;
         }
 
         return `
@@ -1036,6 +1040,27 @@ window.approveRequest = async (reqId) => {
             const nextExpenses = [...expenses, newExpense];
             await set(ref(db, 'expenses'), nextExpenses);
             expenses = nextExpenses;
+        } else if(req.type === 'standing_order') {
+            await mutatePerson(req.personId, (person) => {
+                const standingOrders = safeList(person.standingOrders);
+                const newSO = {
+                    id: Date.now().toString(),
+                    amount: parseFloat(req.data.amount),
+                    startDate: req.data.date,
+                    note: req.data.note || 'Dauerauftrag (Genehmigt)',
+                    lastAutoPayment: null
+                };
+                standingOrders.push(newSO);
+                // Also trigger execution logic immediately
+                const draftPerson = { ...person, standingOrders };
+                const execResult = checkAndExecuteStandingOrders(draftPerson);
+                // Calculate totalPaid from payments if updated
+                if (execResult) {
+                    const newTotal = safeList(execResult.payments).reduce((acc, p) => acc + parseFloat(p.amount), 0);
+                    return { ...execResult, totalPaid: newTotal };
+                }
+                return draftPerson;
+            });
         }
 
         await update(ref(db, 'requests/' + reqId), { status: 'approved' });
@@ -1146,8 +1171,8 @@ function renderUserView() {
                 statusText = 'In Prüfung';
             }
 
-            const typeIcons = { payment: '💰', status: '🔄', expense: '💸' };
-            const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe' };
+            const typeIcons = { payment: '💰', status: '🔄', expense: '💸', standing_order: '🔁' };
+            const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe', standing_order: 'Dauerauftrag' };
 
             let details = '';
             if(req.status === 'rejected') {
@@ -2054,12 +2079,16 @@ window.openUserRequestModal = (type) => {
     if(type === 'payment') {
         title.innerText = "Zahlung melden";
         container.innerHTML = `
+            <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="req-is-standing-order" style="width:20px; height:20px;" onchange="document.getElementById('req-date-label').innerText = this.checked ? 'Startdatum' : 'Datum'">
+                <label for="req-is-standing-order" style="margin:0; font-weight:600; cursor:pointer">Dauerauftrag</label>
+            </div>
             <div class="form-group">
                 <label class="form-label">Betrag (€)</label>
                 <input type="text" inputmode="decimal" id="req-amount" class="form-input">
             </div>
             <div class="form-group">
-                <label class="form-label">Datum</label>
+                <label class="form-label" id="req-date-label">Datum</label>
                 <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
             </div>
             <div class="form-group">
@@ -2122,10 +2151,18 @@ window.submitUserRequest = async () => {
     if(currentRequestType === 'payment') {
         const amount = document.getElementById('req-amount').value.replace(',', '.');
         const note = document.getElementById('req-note').value;
+        const isStandingOrder = document.getElementById('req-is-standing-order') && document.getElementById('req-is-standing-order').checked;
+
         if(!amount || !date) { alert("Bitte alle Felder ausfüllen"); return; }
+        if(isNaN(parseFloat(amount))) { alert("Ungültiger Betrag"); return; }
+
         reqData.amount = amount;
         reqData.date = date;
         reqData.note = note;
+
+        if (isStandingOrder) {
+            currentRequestType = 'standing_order';
+        }
     } else if(currentRequestType === 'status') {
         const status = document.getElementById('req-status').value;
         if(!status || !date) { alert("Bitte alle Felder ausfüllen"); return; }
