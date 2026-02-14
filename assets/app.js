@@ -137,6 +137,10 @@ window.switchTab = function(tabName, btn) {
         btn.classList.add('active');
         btn.setAttribute('aria-selected', 'true');
     }
+
+    if (tabName === 'recordings' || tabName === 'user-recordings') {
+        loadRecordings(tabName);
+    }
 };
 
 window.toggleFab = function() {
@@ -2221,6 +2225,138 @@ window.uploadReceipt = async function(file) {
     }
 };
 
+window.loadRecordings = async function(tabName) {
+    if (!tabName) {
+        const adminTab = document.getElementById('recordings');
+        const userTab = document.getElementById('user-recordings');
+        if (adminTab && adminTab.classList.contains('active')) tabName = 'recordings';
+        else if (userTab && userTab.classList.contains('active')) tabName = 'user-recordings';
+        else return;
+    }
+
+    const isUser = tabName === 'user-recordings';
+    const containerId = isUser ? 'user-recordings-list' : 'admin-recordings-list';
+    const container = document.getElementById(containerId);
+
+    if(!container) return;
+
+    container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);"><div class="spinner" style="margin:0 auto 10px;"></div>Lade Aufnahmen...</div>`;
+
+    try {
+        const files = await fetchRecordings();
+        renderRecordings(files, containerId);
+    } catch (error) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger);">Fehler beim Laden: ${error.message}</div>`;
+    }
+};
+
+window.renderRecordings = function(files, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (files.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);">Keine Aufnahmen vorhanden.</div>`;
+        return;
+    }
+
+    const html = files.map(file => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const isAudio = ['mp3', 'wav', 'm4a', 'ogg'].includes(ext);
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+        const dateStr = file.lastModified.toLocaleDateString('de-DE') + ' ' + file.lastModified.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'});
+
+        let icon = '📄';
+        let action = '';
+
+        if (isAudio) {
+            icon = '🎵';
+            action = `<button class="btn btn-sm btn-primary" onclick="playRecording('${escapeHtml(file.name)}', '${containerId}_${file.name.replace(/\\W/g,'')}')">▶️ Abspielen</button>`;
+        } else if (isImage) {
+            icon = '🖼️';
+            action = `<button class="btn btn-sm btn-secondary" onclick="viewRecording('${escapeHtml(file.name)}')">👁️ Ansehen</button>`;
+        } else {
+            action = `<button class="btn btn-sm btn-secondary" onclick="downloadRecording('${escapeHtml(file.name)}')">⬇️ Laden</button>`;
+        }
+
+        return `
+            <div class="recording-item" style="background:var(--surface); padding:15px; border-radius:12px; margin-bottom:10px; border:1px solid var(--border); display:flex; align-items:center; gap:15px;">
+                <div style="font-size:1.5rem;">${icon}</div>
+                <div style="flex:1; overflow:hidden;">
+                    <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(file.name)}</div>
+                    <div style="font-size:0.8rem; color:var(--text-secondary);">${dateStr} • ${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    <div id="player_${containerId}_${file.name.replace(/\\W/g,'')}" style="margin-top:10px; display:none;"></div>
+                </div>
+                <div>${action}</div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+};
+
+window.playRecording = async function(filename, playerId) {
+    const playerContainer = document.getElementById('player_' + playerId);
+    if (!playerContainer) return;
+
+    if (playerContainer.style.display === 'block') {
+        return;
+    }
+
+    playerContainer.style.display = 'block';
+    playerContainer.innerHTML = '<div style="font-size:0.8rem;">Lade Audio...</div>';
+
+    try {
+        const blob = await fetchRecordingBlob(filename);
+        const url = URL.createObjectURL(blob);
+
+        playerContainer.innerHTML = `
+            <audio controls autoplay style="width:100%; height:40px;">
+                <source src="${url}">
+                Dein Browser unterstützt kein Audio-Element.
+            </audio>
+        `;
+    } catch (err) {
+        playerContainer.innerHTML = `<div style="color:var(--danger);">Fehler: ${err.message}</div>`;
+    }
+};
+
+window.viewRecording = async function(filename) {
+    openModal('transaction-details-modal');
+    const content = document.getElementById('transaction-details-content');
+    content.innerHTML = '<div class="spinner" style="margin:20px auto;"></div><div style="text-align:center">Lade Bild...</div>';
+
+    try {
+        const blob = await fetchRecordingBlob(filename);
+        const url = URL.createObjectURL(blob);
+
+        content.innerHTML = `
+            <div style="text-align:center; font-weight:700; margin-bottom:10px;">${escapeHtml(filename)}</div>
+            <img src="${url}" style="max-width:100%; border-radius:12px;" alt="${escapeHtml(filename)}">
+            <div style="margin-top:15px; text-align:center;">
+                <a href="${url}" download="${escapeHtml(filename)}" class="btn btn-secondary">Speichern</a>
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div style="color:var(--danger); text-align:center;">Fehler beim Laden: ${err.message}</div>`;
+    }
+};
+
+window.downloadRecording = async function(filename) {
+    try {
+        const blob = await fetchRecordingBlob(filename);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert("Download Fehler: " + err.message);
+    }
+};
+
 window.fetchReceiptImage = async function(filename) {
     const username = 'juba-bot';
     const password = 'JuBa-!Bot+#21';
@@ -2316,4 +2452,161 @@ window.showTransactionDetails = async function(id, type) {
     }
 
     content.innerHTML = html;
+};
+
+// --- WebDAV Recordings Handling ---
+
+const WEBDAV_RECORDINGS_URL = 'https://cloud.lehn.site/remote.php/dav/files/juba-bot/Themen/';
+const WEBDAV_USER = 'juba-bot';
+const WEBDAV_PASS = 'JuBa-!Bot+#21';
+
+window.uploadRecording = async function(role) {
+    const inputId = role === 'admin' ? 'admin-recording-file' : 'user-recording-file';
+    const fileInput = document.getElementById(inputId);
+
+    if (!fileInput || fileInput.files.length === 0) {
+        alert("Bitte eine Datei auswählen.");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const btn = document.querySelector(`#${role === 'admin' ? 'recordings' : 'user-recordings'} button`);
+    let originalText = "Hochladen";
+    if(btn) {
+        originalText = btn.innerText;
+        btn.innerText = "Lade hoch...";
+        btn.disabled = true;
+    }
+
+    // Use original filename but sanitize it slightly to avoid WebDAV issues
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_ ]/g, '_');
+    const url = `${WEBDAV_RECORDINGS_URL}${safeName}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(WEBDAV_USER + ':' + WEBDAV_PASS));
+    headers.set('Content-Type', file.type);
+
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: headers,
+            body: file
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed: ' + response.statusText);
+        }
+
+        alert("Upload erfolgreich!");
+        fileInput.value = '';
+        loadRecordings(); // Refresh list
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert("Fehler beim Hochladen: " + error.message);
+    } finally {
+        if(btn) {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+};
+
+window.fetchRecordings = async function() {
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(WEBDAV_USER + ':' + WEBDAV_PASS));
+    headers.set('Depth', '1');
+
+    try {
+        const response = await fetch(WEBDAV_RECORDINGS_URL, {
+            method: 'PROPFIND',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('List failed: ' + response.statusText);
+        }
+
+        const text = await response.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "text/xml");
+
+        // Try to handle namespace robustly using localName
+        const responses = Array.from(xml.getElementsByTagName("*")).filter(el => el.localName === "response");
+
+        const files = [];
+
+        responses.forEach(resp => {
+            const hrefNode = Array.from(resp.getElementsByTagName("*")).find(el => el.localName === "href");
+            if(!hrefNode) return;
+            const href = hrefNode.textContent;
+
+            // Get properties
+            const propstats = Array.from(resp.getElementsByTagName("*")).filter(el => el.localName === "propstat");
+
+            for (const propstat of propstats) {
+                const statusNode = Array.from(propstat.getElementsByTagName("*")).find(el => el.localName === "status");
+                const status = statusNode ? statusNode.textContent : "";
+
+                if (status.includes('200')) {
+                    const prop = Array.from(propstat.getElementsByTagName("*")).find(el => el.localName === "prop");
+                    if(!prop) continue;
+
+                    const restype = Array.from(prop.getElementsByTagName("*")).find(el => el.localName === "resourcetype");
+                    const isCollection = restype && Array.from(restype.getElementsByTagName("*")).some(el => el.localName === "collection");
+
+                    if (!isCollection) {
+                        const lastModNode = Array.from(prop.getElementsByTagName("*")).find(el => el.localName === "getlastmodified");
+                        const lastMod = lastModNode ? lastModNode.textContent : new Date().toISOString();
+
+                        const sizeNode = Array.from(prop.getElementsByTagName("*")).find(el => el.localName === "getcontentlength");
+                        const size = sizeNode ? sizeNode.textContent : 0;
+
+                    // Extract filename from href
+                    // href usually /remote.php/dav/files/user/path/to/file
+                    // We need to decode it
+                    const decodedHref = decodeURIComponent(href);
+                    const parts = decodedHref.split('/');
+                    const filename = parts[parts.length - 1] || parts[parts.length - 2]; // handle trailing slash if any
+
+                    files.push({
+                        name: filename,
+                        lastModified: new Date(lastMod),
+                        size: parseInt(size),
+                        href: href
+                    });
+                }
+            }
+            }
+        });
+
+        return files.sort((a,b) => b.lastModified - a.lastModified); // Newest first
+
+    } catch (error) {
+        console.error('List recordings error:', error);
+        throw error;
+    }
+};
+
+window.fetchRecordingBlob = async function(filename) {
+    // Filename needs to be URL encoded for the path
+    const url = `${WEBDAV_RECORDINGS_URL}${encodeURIComponent(filename)}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(WEBDAV_USER + ':' + WEBDAV_PASS));
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Fetch failed: ' + response.statusText);
+        }
+
+        return await response.blob();
+    } catch (error) {
+        console.error('Fetch blob error:', error);
+        throw error;
+    }
 };
