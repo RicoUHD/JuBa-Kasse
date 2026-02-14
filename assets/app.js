@@ -378,6 +378,38 @@ function calculateTimeRemaining(person) {
                 const targetMonth = currentMonth.getMonth();
                 const targetYear = currentMonth.getFullYear();
 
+                // Check if the standing order ends before this target month
+                if (so.endDate) {
+                    const end = new Date(so.endDate);
+                    // End date must be >= last day of target month to cover it fully?
+                    // Or at least >= first day?
+                    // If I set end date 15.02, does it cover Feb? Yes, payment happens on 15.02.
+                    // If I set end date 01.02, it covers Feb.
+                    // If I set end date 31.01, it does NOT cover Feb.
+                    // So we check if the PAYMENT DATE for this month is <= endDate.
+
+                    // Estimate payment date for this target month
+                    // We know the day of month from startDate
+                    const start = new Date(so.startDate);
+                    const dayOfMonth = start.getDate();
+
+                    const paymentDateInTargetMonth = new Date(targetYear, targetMonth, dayOfMonth);
+                    // Handle short months
+                    if (paymentDateInTargetMonth.getMonth() !== targetMonth) {
+                        paymentDateInTargetMonth.setDate(0); // Set to last day of previous month? No, last day of target month.
+                        // Actually new Date(2024, 1, 30) -> March 1st or 2nd.
+                        // Correct logic:
+                        const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+                        paymentDateInTargetMonth.setMonth(targetMonth);
+                        paymentDateInTargetMonth.setDate(Math.min(dayOfMonth, lastDay));
+                    }
+
+                    const endDay = new Date(so.endDate);
+                    endDay.setHours(23, 59, 59, 999);
+
+                    if (paymentDateInTargetMonth > endDay) return false;
+                }
+
                 if (so.lastAutoPayment) {
                     const last = new Date(so.lastAutoPayment);
                     // Next payment is last + 1 month
@@ -524,6 +556,13 @@ function checkAndExecuteStandingOrders(person) {
         // Safety break to prevent infinite loops if dates are messed up
         let safety = 0;
         while (nextDueDate <= today && safety < 120) {
+            // Check end date
+            if (so.endDate) {
+                const end = new Date(so.endDate);
+                end.setHours(23, 59, 59, 999);
+                if (nextDueDate > end) break;
+            }
+
             const dateStr = nextDueDate.toISOString().split('T')[0];
             const paymentId = `auto_${so.id}_${dateStr}`;
 
@@ -1241,20 +1280,27 @@ function generatePersonHTML(p) {
         <div class="card" style="margin-top:15px; margin-bottom:15px; background:var(--surface-alt);">
             <div class="card-header" style="font-size:0.9rem; padding:10px 15px;">🔄 Aktive Daueraufträge</div>
             <div class="card-body" style="padding:10px 15px;">
-                ${standingOrders.map(so => `
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
+                ${standingOrders.map(so => {
+                    const isEnded = so.endDate && new Date(so.endDate) < new Date();
+                    const style = isEnded ? 'opacity:0.6;' : '';
+                    return `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px; ${style}">
                         <div>
                             <div style="font-size:0.9rem; font-weight:600;">${formatCurrency(so.amount)} € / Monat</div>
-                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">${so.note || 'Ohne Notiz'}</div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">Start: ${new Date(so.startDate).toLocaleDateString('de-DE')}</div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">${escapeHtml(so.note || 'Ohne Notiz')}</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
+                                Start: ${new Date(so.startDate).toLocaleDateString('de-DE')}
+                                ${so.endDate ? `<br>Ende: ${new Date(so.endDate).toLocaleDateString('de-DE')}` : ''}
+                            </div>
                         </div>
-                        ${(currentUser && currentUser.admin) ? `
-                        <button class="btn-icon text-danger" onclick="deleteStandingOrder('${p.id}', '${so.id}')" title="Löschen" style="background:none; border:none; padding:4px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        ${(true) ? `
+                        <button class="btn-icon text-danger" onclick="openEndStandingOrderModal('${p.id}', '${so.id}')" title="Bearbeiten/Beenden" style="background:none; border:none; padding:4px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                         ` : ''}
                     </div>
-                `).join('<hr style="margin:8px 0; border:0; border-top:1px solid var(--border);">')}
+                    `;
+                }).join('<hr style="margin:8px 0; border:0; border-top:1px solid var(--border);">')}
             </div>
         </div>
     ` : '';
@@ -1546,19 +1592,74 @@ window.deletePerson = async (id) => {
     }
 };
 
-window.deleteStandingOrder = async (personId, soId) => {
-    if (!confirm("Dauerauftrag löschen? Bereits gebuchte Zahlungen bleiben erhalten.")) return;
+let editingSoId = null;
+let editingPersonId = null;
+
+window.openEndStandingOrderModal = (personId, soId) => {
+    editingPersonId = personId;
+    editingSoId = soId;
+
+    // Find SO to set default date?
+    const person = people.find(p => String(p.id) === String(personId));
+    if (person) {
+        const so = safeList(person.standingOrders).find(s => String(s.id) === String(soId));
+        if (so && so.endDate) {
+            document.getElementById('end-so-date').value = so.endDate;
+        } else {
+            document.getElementById('end-so-date').value = new Date().toISOString().split('T')[0];
+        }
+    }
+
+    openModal('end-standing-order-modal');
+};
+
+window.saveStandingOrderEnd = async () => {
+    if (!editingPersonId || !editingSoId) return;
+
+    const endDate = document.getElementById('end-so-date').value;
+    if (!endDate) { alert("Bitte Datum wählen"); return; }
 
     try {
-        await mutatePerson(personId, (person) => {
-            const standingOrders = safeList(person.standingOrders).filter(so => String(so.id) !== String(soId));
+        const updated = await mutatePerson(editingPersonId, (person) => {
+            const standingOrders = safeList(person.standingOrders).map(so => {
+                if (String(so.id) === String(editingSoId)) {
+                    return { ...so, endDate };
+                }
+                return so;
+            });
+            return { ...person, standingOrders };
+        });
+
+        // Trigger check logic immediately to stop it if it was running?
+        // Actually, if we set end date in past, logic won't run.
+
+        renderAll();
+        closeModal('end-standing-order-modal');
+    } catch (err) {
+        console.error('Fehler beim Beenden:', err);
+        alert('Fehler beim Speichern.');
+    }
+};
+
+window.deleteStandingOrderCompletely = async () => {
+    if (!confirm("Dauerauftrag wirklich komplett entfernen? Historie geht verloren.")) return;
+
+    try {
+        await mutatePerson(editingPersonId, (person) => {
+            const standingOrders = safeList(person.standingOrders).filter(so => String(so.id) !== String(editingSoId));
             return { ...person, standingOrders };
         });
         renderAll();
+        closeModal('end-standing-order-modal');
     } catch (err) {
-        console.error('Fehler beim Löschen des Dauerauftrags:', err);
+        console.error('Fehler beim Löschen:', err);
         alert('Fehler beim Löschen.');
     }
+};
+
+window.deleteStandingOrder = async (personId, soId) => {
+    // Legacy mapping or just redirect
+    openEndStandingOrderModal(personId, soId);
 };
 
 // --- STATUS CHANGE HANDLERS ---

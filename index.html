@@ -352,6 +352,26 @@
     </div>
 </div>
 
+<div id="end-standing-order-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-end-so">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-end-so">Dauerauftrag verwalten</span> <button class="close-btn" onclick="closeModal('end-standing-order-modal')" aria-label="Schließen">&times;</button></div>
+        <p style="margin-bottom:15px; color:var(--text-secondary); font-size:0.9rem;">Wann soll dieser Dauerauftrag enden?</p>
+
+        <div class="form-group">
+            <label class="form-label">Enddatum</label>
+            <input type="date" id="end-so-date" class="form-input">
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                Zahlungen werden nur bis zu diesem Datum erstellt.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;">
+            <button class="btn btn-primary" onclick="saveStandingOrderEnd()" style="flex:1;">Beenden / Speichern</button>
+        </div>
+        <button class="btn btn-danger" onclick="deleteStandingOrderCompletely()" style="width:100%; margin-top:15px; background:none; border:1px solid var(--danger); color:var(--danger);">🗑️ Eintrag ganz löschen</button>
+    </div>
+</div>
+
 <div id="user-request-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="req-modal-title">
     <div class="modal-content">
         <div class="modal-header"><span id="req-modal-title">Anfrage</span> <button class="close-btn" onclick="closeModal('user-request-modal')" aria-label="Schließen">&times;</button></div>
