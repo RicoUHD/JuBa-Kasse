@@ -886,6 +886,13 @@ function renderAdminRequests() {
         } else if (req.type === 'expense') {
             typeLabel = '💸 Ausgabe';
             details = `${formatCurrency(req.data.amount)} € für "${req.data.description}" am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            if (req.data.receipt) {
+                const safeReceipt = escapeHtml(req.data.receipt.replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
+                const safeId = escapeHtml(req.id);
+                details += `<div id="receipt-container-${safeId}" style="margin-top:10px;">
+                    <button class="btn btn-secondary btn-small" onclick="viewRequestReceipt('${safeReceipt}', 'receipt-container-${safeId}')">📷 Beleg anzeigen</button>
+                </div>`;
+            }
         } else if (req.type === 'standing_order') {
             typeLabel = '🔄 Dauerauftrag';
             details = `${formatCurrency(req.data.amount)} € / Monat<br>Start: ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
@@ -2281,6 +2288,23 @@ window.fetchReceiptImage = async function(filename) {
     } catch (error) {
         console.error('Fetch image error:', error);
         throw error;
+    }
+};
+
+window.viewRequestReceipt = async function(filename, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '<div class="spinner" style="margin:10px auto;"></div><div style="text-align:center; font-size:0.8rem; color:var(--text-secondary);">Lade Beleg...</div>';
+
+    try {
+        const imgUrl = await fetchReceiptImage(filename);
+        container.innerHTML = `
+            <img src="${imgUrl}" style="width:100%; max-width:100%; border-radius:8px; border:1px solid var(--border); margin-top:10px;" alt="Beleg">
+        `;
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div style="color:var(--danger); font-size:0.8rem; margin-top:10px;">Fehler beim Laden des Belegs.</div>`;
     }
 };
 
