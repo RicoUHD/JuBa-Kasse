@@ -298,12 +298,16 @@
 <div id="add-payment-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-payment">
     <div class="modal-content">
         <div class="modal-header"><span id="title-add-payment">Zahlung buchen</span> <button class="close-btn" onclick="closeModal('add-payment-modal')" aria-label="Schließen">&times;</button></div>
+        <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" id="payment-is-standing-order" style="width:20px; height:20px;" onchange="document.getElementById('payment-date-label').innerText = this.checked ? 'Startdatum' : 'Datum'">
+            <label for="payment-is-standing-order" style="margin:0; font-weight:600; cursor:pointer">Dauerauftrag</label>
+        </div>
         <div class="form-group">
             <label class="form-label">Betrag (€)</label>
             <input type="text" inputmode="decimal" id="payment-amount" class="form-input">
         </div>
         <div class="form-group">
-            <label class="form-label">Datum</label>
+            <label class="form-label" id="payment-date-label">Datum</label>
             <input type="date" id="payment-date" class="form-input">
         </div>
         <div class="form-group">
@@ -345,6 +349,26 @@
     <div class="modal-content">
         <div class="modal-header"><span id="title-transaction">Verlauf</span> <button class="close-btn" onclick="closeModal('transaction-modal')" aria-label="Schließen">&times;</button></div>
         <div id="full-transaction-list"></div>
+    </div>
+</div>
+
+<div id="end-standing-order-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-end-so">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-end-so">Dauerauftrag verwalten</span> <button class="close-btn" onclick="closeModal('end-standing-order-modal')" aria-label="Schließen">&times;</button></div>
+        <p style="margin-bottom:15px; color:var(--text-secondary); font-size:0.9rem;">Wann soll dieser Dauerauftrag enden?</p>
+
+        <div class="form-group">
+            <label class="form-label">Enddatum</label>
+            <input type="date" id="end-so-date" class="form-input">
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                Zahlungen werden nur bis zu diesem Datum erstellt.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;">
+            <button class="btn btn-primary" onclick="saveStandingOrderEnd()" style="flex:1;">Beenden / Speichern</button>
+        </div>
+        <button class="btn btn-danger" onclick="deleteStandingOrderCompletely()" style="width:100%; margin-top:15px; background:none; border:1px solid var(--danger); color:var(--danger);">🗑️ Eintrag ganz löschen</button>
     </div>
 </div>
 

@@ -368,6 +368,73 @@ function calculateTimeRemaining(person) {
 
     if (monthsDiff < 0) {
         const overdueMonths = Math.abs(monthsDiff);
+
+        // Check if standing order covers the current missing month
+        if (overdueMonths === 1) {
+            const standingOrders = safeList(person.standingOrders);
+            const hasCoverage = standingOrders.some(so => {
+                // If we have a standing order, check if it targets this month
+                // Simplified: If last payment was last month, or start date is this month
+                const targetMonth = currentMonth.getMonth();
+                const targetYear = currentMonth.getFullYear();
+
+                // Check if the standing order ends before this target month
+                if (so.endDate) {
+                    const end = new Date(so.endDate);
+                    // End date must be >= last day of target month to cover it fully?
+                    // Or at least >= first day?
+                    // If I set end date 15.02, does it cover Feb? Yes, payment happens on 15.02.
+                    // If I set end date 01.02, it covers Feb.
+                    // If I set end date 31.01, it does NOT cover Feb.
+                    // So we check if the PAYMENT DATE for this month is <= endDate.
+
+                    // Estimate payment date for this target month
+                    // We know the day of month from startDate
+                    const start = new Date(so.startDate);
+                    const dayOfMonth = start.getDate();
+
+                    const paymentDateInTargetMonth = new Date(targetYear, targetMonth, dayOfMonth);
+                    // Handle short months
+                    if (paymentDateInTargetMonth.getMonth() !== targetMonth) {
+                        paymentDateInTargetMonth.setDate(0); // Set to last day of previous month? No, last day of target month.
+                        // Actually new Date(2024, 1, 30) -> March 1st or 2nd.
+                        // Correct logic:
+                        const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+                        paymentDateInTargetMonth.setMonth(targetMonth);
+                        paymentDateInTargetMonth.setDate(Math.min(dayOfMonth, lastDay));
+                    }
+
+                    const endDay = new Date(so.endDate);
+                    endDay.setHours(23, 59, 59, 999);
+
+                    if (paymentDateInTargetMonth > endDay) return false;
+                }
+
+                if (so.lastAutoPayment) {
+                    const last = new Date(so.lastAutoPayment);
+                    // Next payment is last + 1 month
+                    last.setMonth(last.getMonth() + 1);
+                    return last.getMonth() === targetMonth && last.getFullYear() === targetYear;
+                } else {
+                    const start = new Date(so.startDate);
+                    // If start is this month or earlier (and not paid yet means it's due/pending)
+                    // If start is earlier, and no payment exists, it means we are overdue, but
+                    // if the SO exists, we might treat it as "will be paid".
+                    // But here strict check: start date falls in this month
+                    return start.getMonth() === targetMonth && start.getFullYear() === targetYear;
+                }
+            });
+
+            if (hasCoverage) {
+                return {
+                    text: 'Dauerauftrag geplant',
+                    isOverdue: false,
+                    isSoonDue: false,
+                    isPlanned: true
+                };
+            }
+        }
+
         return {
             text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`,
             isOverdue: true,
@@ -457,6 +524,99 @@ function generateStatusHistoryHTML(person) {
 }
 
 // --- ENDE MATHEMATIK & LOGIK ---
+
+function checkAndExecuteStandingOrders(person) {
+    if (!person.standingOrders || !Array.isArray(person.standingOrders) || person.standingOrders.length === 0) return null;
+
+    let modified = false;
+    const payments = safeList(person.payments);
+    const standingOrders = safeList(person.standingOrders);
+    const today = new Date();
+    today.setHours(23,59,59,999); // Use end of day to avoid timezone lag (UTC vs Local)
+
+    const updatedStandingOrders = [];
+
+    for (const so of standingOrders) {
+        let soModified = false;
+        let currentSO = { ...so };
+        const startDate = new Date(currentSO.startDate);
+        const dayOfMonth = startDate.getDate();
+        let lastAuto = currentSO.lastAutoPayment ? new Date(currentSO.lastAutoPayment) : null;
+
+        // Determine limit date: min(today, endDate)
+        let limitDate = new Date(today);
+        let isExpired = false;
+
+        if (currentSO.endDate) {
+            const end = new Date(currentSO.endDate);
+            end.setHours(23, 59, 59, 999);
+            if (end < today) {
+                limitDate = end;
+                isExpired = true;
+            }
+        }
+
+        // Determine where to start checking
+        let nextDueDate;
+        if (!lastAuto) {
+            nextDueDate = new Date(startDate);
+        } else {
+            nextDueDate = new Date(lastAuto);
+            nextDueDate.setDate(1);
+            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+            const maxDays = new Date(nextDueDate.getFullYear(), nextDueDate.getMonth() + 1, 0).getDate();
+            nextDueDate.setDate(Math.min(dayOfMonth, maxDays));
+        }
+
+        // Loop until limitDate
+        // Safety break to prevent infinite loops if dates are messed up
+        let safety = 0;
+        while (nextDueDate <= limitDate && safety < 120) {
+            const dateStr = nextDueDate.toISOString().split('T')[0];
+            const paymentId = `auto_${currentSO.id}_${dateStr}`;
+
+            const exists = payments.some(p => p.id === paymentId);
+
+            if (!exists) {
+                payments.push({
+                    id: paymentId,
+                    amount: parseFloat(currentSO.amount),
+                    date: dateStr,
+                    description: (currentSO.note || 'Dauerauftrag') + ' (Auto)',
+                    isAuto: true
+                });
+                modified = true;
+                soModified = true;
+            }
+
+            // Move pointer forward
+            lastAuto = new Date(nextDueDate);
+
+            nextDueDate.setDate(1);
+            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+            const maxDays = new Date(nextDueDate.getFullYear(), nextDueDate.getMonth() + 1, 0).getDate();
+            nextDueDate.setDate(Math.min(dayOfMonth, maxDays));
+            safety++;
+        }
+
+        if (soModified && lastAuto) {
+            currentSO.lastAutoPayment = lastAuto.toISOString().split('T')[0];
+        }
+
+        if (isExpired) {
+            // Remove from list if expired
+            modified = true;
+        } else {
+            updatedStandingOrders.push(currentSO);
+            if (soModified) modified = true;
+        }
+    }
+
+    if (modified) {
+        return { ...person, payments, standingOrders: updatedStandingOrders };
+    }
+    return null;
+}
 
 let requests = [];
 
@@ -628,6 +788,26 @@ async function loadData() {
         // Cache memberSince date object
         person.memberSinceObj = new Date(person.originalMemberSince || person.memberSince);
     });
+
+    // Check standing orders (Admin only to prevent conflicts)
+    if (currentUser && currentUser.admin) {
+        const updates = [];
+        people.forEach(person => {
+            const result = checkAndExecuteStandingOrders(person);
+            if (result) {
+                const newTotal = safeList(result.payments).reduce((acc, p) => acc + parseFloat(p.amount), 0);
+                // Update in DB
+                updates.push(update(ref(db, 'people/' + person.id), {
+                    payments: result.payments,
+                    standingOrders: result.standingOrders,
+                    totalPaid: newTotal
+                }));
+                // Update in memory
+                Object.assign(person, result, { totalPaid: newTotal });
+            }
+        });
+        if (updates.length > 0) await Promise.all(updates);
+    }
 
     renderAll();
     } catch (err) {
@@ -1108,6 +1288,38 @@ function generatePersonHTML(p) {
     }
 
     const paymentsList = safeList(p.payments);
+    const standingOrders = safeList(p.standingOrders);
+    const hasStandingOrder = standingOrders.length > 0;
+    const soIcon = hasStandingOrder ? '<span style="font-size:0.9rem; margin-left:6px;" title="Dauerauftrag aktiv">🔄</span>' : '';
+
+    const soListHtml = hasStandingOrder ? `
+        <div class="card" style="margin-top:15px; margin-bottom:15px; background:var(--surface-alt);">
+            <div class="card-header" style="font-size:0.9rem; padding:10px 15px;">🔄 Aktive Daueraufträge</div>
+            <div class="card-body" style="padding:10px 15px;">
+                ${standingOrders.map(so => {
+                    const isEnded = so.endDate && new Date(so.endDate) < new Date();
+                    const style = isEnded ? 'opacity:0.6;' : '';
+                    return `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px; ${style}">
+                        <div>
+                            <div style="font-size:0.9rem; font-weight:600;">${formatCurrency(so.amount)} € / Monat</div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">${escapeHtml(so.note || 'Ohne Notiz')}</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
+                                Start: ${new Date(so.startDate).toLocaleDateString('de-DE')}
+                                ${so.endDate ? `<br>Ende: ${new Date(so.endDate).toLocaleDateString('de-DE')}` : ''}
+                            </div>
+                        </div>
+                        ${(true) ? `
+                        <button class="btn-icon text-danger" onclick="openEndStandingOrderModal('${p.id}', '${so.id}')" title="Bearbeiten/Beenden" style="background:none; border:none; padding:4px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        ` : ''}
+                    </div>
+                    `;
+                }).join('<hr style="margin:8px 0; border:0; border-top:1px solid var(--border);">')}
+            </div>
+        </div>
+    ` : '';
 
     return `
         <div class="person-wrapper">
@@ -1115,7 +1327,7 @@ function generatePersonHTML(p) {
                 <div class="person-pill">
                     <div class="person-left">
                         <div class="person-name">
-                            ${escapeHtml(p.name)}
+                            ${escapeHtml(p.name)}${soIcon}
                             <span class="chevron">›</span>
                         </div>
                         <span class="person-status">${currentStatus}</span>
@@ -1145,6 +1357,8 @@ function generatePersonHTML(p) {
                         </div>
                         ` : ''}
                     </div>
+
+                    ${soListHtml}
 
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
@@ -1277,6 +1491,7 @@ window.addPayment = async () => {
     const amt = parseFloat(document.getElementById('payment-amount').value.replace(',', '.'));
     const date = document.getElementById('payment-date').value;
     const desc = document.getElementById('payment-desc').value;
+    const isStandingOrder = document.getElementById('payment-is-standing-order').checked;
 
     if(!currentPersonId || isNaN(amt)) {
         setButtonLoading('btn-add-payment', false);
@@ -1285,10 +1500,31 @@ window.addPayment = async () => {
 
     try {
         const updated = await mutatePerson(currentPersonId, (person) => {
-            const payments = safeList(person.payments);
-            payments.push({ amount: amt, date, description: desc, id: Date.now() });
-            const totalPaid = (person.totalPaid || 0) + amt;
-            return { ...person, payments, totalPaid };
+            if (isStandingOrder) {
+                const standingOrders = safeList(person.standingOrders);
+                const newSO = {
+                    id: Date.now().toString(),
+                    amount: amt,
+                    startDate: date,
+                    note: desc,
+                    lastAutoPayment: null
+                };
+                standingOrders.push(newSO);
+                // Also trigger execution logic immediately
+                const draftPerson = { ...person, standingOrders };
+                const execResult = checkAndExecuteStandingOrders(draftPerson);
+                // Calculate totalPaid from payments if updated
+                if (execResult) {
+                    const newTotal = safeList(execResult.payments).reduce((acc, p) => acc + parseFloat(p.amount), 0);
+                    return { ...execResult, totalPaid: newTotal };
+                }
+                return draftPerson;
+            } else {
+                const payments = safeList(person.payments);
+                payments.push({ amount: amt, date, description: desc, id: Date.now() });
+                const totalPaid = (person.totalPaid || 0) + amt;
+                return { ...person, payments, totalPaid };
+            }
         });
 
         if (!updated) {
@@ -1298,6 +1534,9 @@ window.addPayment = async () => {
 
         renderAll();
         closeModal('add-payment-modal');
+        document.getElementById('payment-is-standing-order').checked = false;
+        const lbl = document.getElementById('payment-date-label');
+        if(lbl) lbl.innerText = 'Datum';
     } catch (err) {
         console.error('Fehler beim Speichern der Zahlung:', err);
         alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');
@@ -1367,6 +1606,96 @@ window.deletePerson = async (id) => {
             alert('Löschen fehlgeschlagen. Bitte erneut versuchen.');
         }
     }
+};
+
+let editingSoId = null;
+let editingPersonId = null;
+
+window.openEndStandingOrderModal = (personId, soId) => {
+    editingPersonId = personId;
+    editingSoId = soId;
+
+    // Find SO to set default date?
+    const person = people.find(p => String(p.id) === String(personId));
+    if (person) {
+        const so = safeList(person.standingOrders).find(s => String(s.id) === String(soId));
+        if (so && so.endDate) {
+            document.getElementById('end-so-date').value = so.endDate;
+        } else {
+            document.getElementById('end-so-date').value = new Date().toISOString().split('T')[0];
+        }
+    }
+
+    openModal('end-standing-order-modal');
+};
+
+window.saveStandingOrderEnd = async () => {
+    if (!editingPersonId || !editingSoId) return;
+
+    const endDate = document.getElementById('end-so-date').value;
+    if (!endDate) { alert("Bitte Datum wählen"); return; }
+
+    try {
+        const updated = await mutatePerson(editingPersonId, (person) => {
+            const endDateObj = new Date(endDate);
+            endDateObj.setHours(23, 59, 59, 999);
+            const today = new Date();
+
+            // 1. Update SO end date
+            let standingOrders = safeList(person.standingOrders).map(so => {
+                if (String(so.id) === String(editingSoId)) {
+                    return { ...so, endDate };
+                }
+                return so;
+            });
+
+            // 2. Remove future auto-payments related to this SO
+            const payments = safeList(person.payments).filter(p => {
+                if (p.isAuto && p.id.startsWith(`auto_${editingSoId}_`)) {
+                    const pDate = new Date(p.date);
+                    if (pDate > endDateObj) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // 3. Remove SO if expired (delete itself after end date)
+            if (endDateObj < today) {
+                 standingOrders = standingOrders.filter(so => String(so.id) !== String(editingSoId));
+            }
+
+            const totalPaid = payments.reduce((acc, p) => acc + parseFloat(p.amount), 0);
+            return { ...person, standingOrders, payments, totalPaid };
+        });
+
+        renderAll();
+        closeModal('end-standing-order-modal');
+    } catch (err) {
+        console.error('Fehler beim Beenden:', err);
+        alert('Fehler beim Speichern.');
+    }
+};
+
+window.deleteStandingOrderCompletely = async () => {
+    if (!confirm("Dauerauftrag wirklich komplett entfernen? Historie geht verloren.")) return;
+
+    try {
+        await mutatePerson(editingPersonId, (person) => {
+            const standingOrders = safeList(person.standingOrders).filter(so => String(so.id) !== String(editingSoId));
+            return { ...person, standingOrders };
+        });
+        renderAll();
+        closeModal('end-standing-order-modal');
+    } catch (err) {
+        console.error('Fehler beim Löschen:', err);
+        alert('Fehler beim Löschen.');
+    }
+};
+
+window.deleteStandingOrder = async (personId, soId) => {
+    // Legacy mapping or just redirect
+    openEndStandingOrderModal(personId, soId);
 };
 
 // --- STATUS CHANGE HANDLERS ---
