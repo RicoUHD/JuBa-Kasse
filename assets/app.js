@@ -745,15 +745,6 @@ async function loadData() {
             }
         });
 
-        const tVal = tSnap.val() || {};
-        topics = Object.entries(tVal).map(([k, v]) => ({ ...v, id: k }));
-
-        topics.forEach(t => {
-            if (t.files && !Array.isArray(t.files)) {
-                t.files = Object.entries(t.files).map(([fk, fv]) => ({ ...fv, fileId: fk }));
-            }
-        });
-
         // Sort topics by date desc
         topics.sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
 
@@ -789,7 +780,15 @@ async function loadData() {
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
-        topics = safeList(tSnap.val());
+        const tVal = tSnap.val() || {};
+        topics = Object.entries(tVal).map(([k, v]) => ({ ...v, id: k }));
+
+        topics.forEach(t => {
+            if (t.files && !Array.isArray(t.files)) {
+                t.files = Object.entries(t.files).map(([fk, fv]) => ({ ...fv, fileId: fk }));
+            }
+        });
+
         // Sort topics by date desc
         topics.sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
 
