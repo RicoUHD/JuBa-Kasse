@@ -1,4 +1,4 @@
-const CACHE_NAME = 'juba-kasse-v1.12';
+const CACHE_NAME = 'juba-kasse-v1.13';
 const URLS_TO_CACHE = [
     './',
     './index.html',
