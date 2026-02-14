@@ -653,8 +653,12 @@ async function loadData() {
         // Non-admin: fetch only what is needed for their view (people + settings + their requests)
     if (currentUser && !currentUser.admin) {
         // 1. Fetch Settings
-        const sSnap = await get(child(dbRef, 'settings'));
-        if (sSnap.exists()) settings = sSnap.val();
+        try {
+            const sSnap = await get(child(dbRef, 'settings'));
+            if (sSnap.exists()) settings = sSnap.val();
+        } catch (e) {
+            console.warn("Settings fetch failed (likely permission denied). Using defaults.", e);
+        }
 
         // 2. Fetch User's Person Entry (Securely with Fallback)
         const peopleRef = child(dbRef, 'people');
