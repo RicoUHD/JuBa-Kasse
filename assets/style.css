@@ -262,8 +262,9 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .details-label { color: var(--text-secondary); font-weight: 500; }
 .details-value { font-weight: 700; color: var(--text); }
 
-.details-actions { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-bottom: 25px; }
+.details-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
 .details-actions .btn { font-size: 0.9rem; padding: 10px; }
+.details-actions .btn-primary { box-shadow: none; }
 
 .history-header {
     font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);
