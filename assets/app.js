@@ -557,13 +557,6 @@ function calculateTotalCostUntil(person, untilDate) {
 function calculatePaidUntil(person) {
     const totalPaid = person.totalPaid || 0;
 
-    // Fall 1: Keine Zahlungen
-    if (totalPaid === 0) {
-        const start = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
-        // Letzter Tag des Vormonats
-        return new Date(start.getFullYear(), start.getMonth(), 0);
-    }
-
     const memberSince = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
     let remainingCredit = totalPaid;
 
@@ -577,7 +570,7 @@ function calculatePaidUntil(person) {
     const maxIterations = 120;
     let iterations = 0;
 
-    while (remainingCredit > 0 && iterations < maxIterations) {
+    while (iterations < maxIterations) {
         const status = getStatusForMonth(person, year, month, sortedHistory);
         const monthlyRate = status ? (settings[status] || 0) : 0;
 
@@ -682,7 +675,8 @@ function generateStatusHistoryHTML(person) {
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
         'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
+        'keinverdiener': '🎓 Keinverdiener',
+        'paused': '⏸️ Pausiert'
     };
 
     let html = `
@@ -1172,7 +1166,8 @@ function renderUserView() {
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
         'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
+        'keinverdiener': '🎓 Keinverdiener',
+        'paused': '⏸️ Pausiert'
     };
 
     let statusClass = 'user-status-ok';
@@ -1344,7 +1339,8 @@ function generateTimelineHTML(person) {
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
         'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
+        'keinverdiener': '🎓 Keinverdiener',
+        'paused': '⏸️ Pausiert'
     };
 
     const timelineItems = allEvents.map(event => {
@@ -2136,6 +2132,7 @@ window.openUserRequestModal = (type) => {
                     <option value="vollverdiener">💼 Vollverdiener</option>
                     <option value="geringverdiener">📉 Geringverdiener</option>
                     <option value="keinverdiener">🎓 Keinverdiener</option>
+                    <option value="paused">⏸️ Pausiert</option>
                 </select>
             </div>
             <div class="form-group">
