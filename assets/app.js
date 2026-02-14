@@ -1233,6 +1233,31 @@ function generatePersonHTML(p) {
     }
 
     const paymentsList = safeList(p.payments);
+    const standingOrders = safeList(p.standingOrders);
+    const hasStandingOrder = standingOrders.length > 0;
+    const soIcon = hasStandingOrder ? '<span style="font-size:0.9rem; margin-left:6px;" title="Dauerauftrag aktiv">🔄</span>' : '';
+
+    const soListHtml = hasStandingOrder ? `
+        <div class="card" style="margin-top:15px; margin-bottom:15px; background:var(--surface-alt);">
+            <div class="card-header" style="font-size:0.9rem; padding:10px 15px;">🔄 Aktive Daueraufträge</div>
+            <div class="card-body" style="padding:10px 15px;">
+                ${standingOrders.map(so => `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
+                        <div>
+                            <div style="font-size:0.9rem; font-weight:600;">${formatCurrency(so.amount)} € / Monat</div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">${so.note || 'Ohne Notiz'}</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">Start: ${new Date(so.startDate).toLocaleDateString('de-DE')}</div>
+                        </div>
+                        ${(currentUser && currentUser.admin) ? `
+                        <button class="btn-icon text-danger" onclick="deleteStandingOrder('${p.id}', '${so.id}')" title="Löschen" style="background:none; border:none; padding:4px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                        ` : ''}
+                    </div>
+                `).join('<hr style="margin:8px 0; border:0; border-top:1px solid var(--border);">')}
+            </div>
+        </div>
+    ` : '';
 
     return `
         <div class="person-wrapper">
@@ -1240,7 +1265,7 @@ function generatePersonHTML(p) {
                 <div class="person-pill">
                     <div class="person-left">
                         <div class="person-name">
-                            ${escapeHtml(p.name)}
+                            ${escapeHtml(p.name)}${soIcon}
                             <span class="chevron">›</span>
                         </div>
                         <span class="person-status">${currentStatus}</span>
@@ -1270,6 +1295,8 @@ function generatePersonHTML(p) {
                         </div>
                         ` : ''}
                     </div>
+
+                    ${soListHtml}
 
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
@@ -1516,6 +1543,21 @@ window.deletePerson = async (id) => {
             console.error('Fehler beim Löschen der Person:', err);
             alert('Löschen fehlgeschlagen. Bitte erneut versuchen.');
         }
+    }
+};
+
+window.deleteStandingOrder = async (personId, soId) => {
+    if (!confirm("Dauerauftrag löschen? Bereits gebuchte Zahlungen bleiben erhalten.")) return;
+
+    try {
+        await mutatePerson(personId, (person) => {
+            const standingOrders = safeList(person.standingOrders).filter(so => String(so.id) !== String(soId));
+            return { ...person, standingOrders };
+        });
+        renderAll();
+    } catch (err) {
+        console.error('Fehler beim Löschen des Dauerauftrags:', err);
+        alert('Fehler beim Löschen.');
     }
 };
 
