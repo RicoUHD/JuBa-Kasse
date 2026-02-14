@@ -2267,6 +2267,7 @@ window.showTransactionDetails = async function(id, type) {
     const item = window.findTransaction(id, type);
     if (!item) return;
 
+    closeModal('transaction-modal'); // Hide the list
     openModal('transaction-details-modal');
     const content = document.getElementById('transaction-details-content');
     content.innerHTML = '<div class="spinner" style="margin:20px auto;"></div><div style="text-align:center">Lade Details...</div>';
