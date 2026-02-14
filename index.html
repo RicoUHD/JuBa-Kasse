@@ -341,7 +341,16 @@
         <input id="expense-desc" class="form-input" placeholder="Wofür?" style="margin-bottom:10px">
         <label for="expense-date" class="sr-only">Datum</label>
         <input type="date" id="expense-date" class="form-input" style="margin-bottom:10px">
+        <label for="expense-receipt" class="sr-only">Beleg</label>
+        <input type="file" id="expense-receipt" accept="image/*" class="form-input" style="margin-bottom:10px">
         <button id="btn-add-expense" class="btn btn-primary" onclick="addExpense()">Speichern</button>
+    </div>
+</div>
+
+<div id="transaction-details-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-transaction-details">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-transaction-details">Details</span> <button class="close-btn" onclick="closeModal('transaction-details-modal')" aria-label="Schließen">&times;</button></div>
+        <div id="transaction-details-content"></div>
     </div>
 </div>
 

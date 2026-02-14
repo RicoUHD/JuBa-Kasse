@@ -1030,7 +1030,8 @@ window.approveRequest = async (reqId) => {
                 id: Date.now().toString(),
                 amount: parseFloat(req.data.amount),
                 description: req.data.description + ` (Von: ${req.personName})`,
-                date: req.data.date
+                date: req.data.date,
+                receipt: req.data.receipt
             };
             const nextExpenses = [...expenses, newExpense];
             await set(ref(db, 'expenses'), nextExpenses);
@@ -1459,11 +1460,12 @@ window.showTransactionModal = function() {
             const color = isExp ? 'text-danger' : 'text-success';
             const sign = isExp ? '-' : '+';
             const icon = t.type === 'pay' ? '👤' : (t.type === 'don' ? '💝' : '💸');
+            const hasReceipt = t.receipt ? '<span style="margin-left:5px" title="Beleg vorhanden">📷</span>' : '';
             return `
-                <div class="trans-item">
+                <div class="trans-item" role="button" tabindex="0" onclick="showTransactionDetails('${t.id}', '${t.type}')" onkeydown="if(event.key==='Enter'||event.key===' '){showTransactionDetails('${t.id}', '${t.type}')}" style="cursor:pointer;">
                     <div class="trans-left">
                         <span style="font-weight:600;">${icon} ${t.who}</span>
-                        <div class="trans-meta">${t.description || '-'} • ${t.date ? new Date(t.date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                        <div class="trans-meta">${t.description || '-'} ${hasReceipt} • ${t.date ? new Date(t.date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
                     </div>
                     <div class="trans-amount ${color}">${sign}${formatCurrency(t.amount)}€</div>
                 </div>
@@ -1602,13 +1604,39 @@ window.addExpense = async () => {
         setButtonLoading('btn-add-expense', false);
         return;
     }
-    const newExpense = { amount: amt, issuer: document.getElementById('expense-issuer').value, description: document.getElementById('expense-desc').value, date: document.getElementById('expense-date').value, id: Date.now() };
+
+    let receiptFilename = null;
+    const fileInput = document.getElementById('expense-receipt');
+    if (fileInput && fileInput.files.length > 0) {
+        try {
+            setButtonLoading('btn-add-expense', true, "Lade hoch...");
+            receiptFilename = await uploadReceipt(fileInput.files[0]);
+        } catch (err) {
+            console.error(err);
+            alert("Fehler beim Hochladen des Belegs: " + err.message);
+            setButtonLoading('btn-add-expense', false);
+            return;
+        }
+    }
+
+    const newExpense = {
+        amount: amt,
+        issuer: document.getElementById('expense-issuer').value,
+        description: document.getElementById('expense-desc').value,
+        date: document.getElementById('expense-date').value,
+        id: Date.now(),
+        receipt: receiptFilename
+    };
     const nextExpenses = [...expenses, newExpense];
     try {
         await set(ref(db, 'expenses'), { ...nextExpenses });
         expenses = nextExpenses;
         renderAll();
         closeModal('add-expense-modal');
+        document.getElementById('expense-amount').value = '';
+        document.getElementById('expense-issuer').value = '';
+        document.getElementById('expense-desc').value = '';
+        if(fileInput) fileInput.value = '';
     } catch (err) {
         console.error('Fehler beim Speichern der Ausgabe:', err);
         alert('Ausgabe konnte nicht gespeichert werden. Bitte erneut versuchen.');
@@ -2071,6 +2099,10 @@ window.openUserRequestModal = (type) => {
                 <label class="form-label">Datum</label>
                 <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
             </div>
+            <div class="form-group">
+                <label class="form-label">Beleg (Optional)</label>
+                <input type="file" id="req-receipt" accept="image/*" class="form-input">
+            </div>
         `;
     }
 
@@ -2106,6 +2138,18 @@ window.submitUserRequest = async () => {
         reqData.amount = amount;
         reqData.description = desc;
         reqData.date = date;
+
+        const fileInput = document.getElementById('req-receipt');
+        if (fileInput && fileInput.files.length > 0) {
+             setButtonLoading('btn-submit-request', true, "Lade hoch...");
+             try {
+                reqData.receipt = await uploadReceipt(fileInput.files[0]);
+             } catch(err) {
+                 alert("Fehler beim Hochladen: " + err.message);
+                 setButtonLoading('btn-submit-request', false);
+                 return;
+             }
+        }
     }
 
     const newReq = {
@@ -2143,4 +2187,133 @@ window.generateNewCode = async () => {
         console.error('Fehler beim Generieren des Codes:', err);
         alert('Neuer Code konnte nicht gespeichert werden.');
     }
+};
+
+// --- WebDAV Receipt Handling ---
+
+window.uploadReceipt = async function(file) {
+    const username = 'juba-bot';
+    const password = 'JuBa-!Bot+#21';
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filename = `${timestamp}_${safeName}`;
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Kassenbongs/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+    headers.set('Content-Type', file.type);
+
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: headers,
+            body: file
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed: ' + response.statusText);
+        }
+
+        return filename;
+    } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+    }
+};
+
+window.fetchReceiptImage = async function(filename) {
+    const username = 'juba-bot';
+    const password = 'JuBa-!Bot+#21';
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Kassenbongs/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Fetch failed: ' + response.statusText);
+        }
+
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch (error) {
+        console.error('Fetch image error:', error);
+        throw error;
+    }
+};
+
+window.findTransaction = function(id, type) {
+    if (type === 'exp') {
+        const e = expenses.find(x => String(x.id) === String(id));
+        return e ? { ...e, typeName: 'Ausgabe' } : null;
+    } else if (type === 'don') {
+        const d = donations.find(x => String(x.id) === String(id));
+        return d ? { ...d, typeName: 'Spende', who: d.name } : null;
+    } else if (type === 'pay') {
+        for (const p of people) {
+            const pay = safeList(p.payments).find(x => String(x.id) === String(id));
+            if (pay) return { ...pay, typeName: 'Zahlung', who: p.name };
+        }
+    }
+    return null;
+};
+
+window.showTransactionDetails = async function(id, type) {
+    const item = window.findTransaction(id, type);
+    if (!item) return;
+
+    closeModal('transaction-modal'); // Hide the list
+    openModal('transaction-details-modal');
+    const content = document.getElementById('transaction-details-content');
+    content.innerHTML = '<div class="spinner" style="margin:20px auto;"></div><div style="text-align:center">Lade Details...</div>';
+
+    let html = `
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="font-size:2rem; font-weight:800;">${formatCurrency(item.amount)} €</div>
+            <div style="color:var(--text-secondary);">${item.typeName}</div>
+        </div>
+        <div class="details-status-card" style="background:var(--surface-alt); border:1px solid var(--border);">
+            <div class="details-row">
+                <span class="details-label">Datum</span>
+                <span class="details-value">${item.date ? new Date(item.date).toLocaleDateString('de-DE') : '-'}</span>
+            </div>
+            ${item.who ? `
+            <div class="details-row">
+                <span class="details-label">Person</span>
+                <span class="details-value">${escapeHtml(item.who)}</span>
+            </div>` : ''}
+             ${item.issuer ? `
+            <div class="details-row">
+                <span class="details-label">Ausgestellt von</span>
+                <span class="details-value">${escapeHtml(item.issuer)}</span>
+            </div>` : ''}
+            <div class="details-row">
+                <span class="details-label">Beschreibung</span>
+                <span class="details-value">${escapeHtml(item.description || item.note || '-')}</span>
+            </div>
+        </div>
+    `;
+
+    if (item.receipt) {
+        try {
+            const imgUrl = await fetchReceiptImage(item.receipt);
+            html += `
+                <div style="margin-top:20px;">
+                    <div style="font-weight:600; margin-bottom:10px;">Beleg</div>
+                    <img src="${imgUrl}" style="width:100%; border-radius:12px; border:1px solid var(--border);" alt="Beleg">
+                </div>
+            `;
+        } catch (err) {
+            html += `<div style="color:var(--danger); margin-top:20px; text-align:center;">Beleg konnte nicht geladen werden.</div>`;
+        }
+    } else {
+        html += `<div style="margin-top:20px; color:var(--text-secondary); text-align:center; font-size:0.9rem;">Kein Beleg vorhanden.</div>`;
+    }
+
+    content.innerHTML = html;
 };
