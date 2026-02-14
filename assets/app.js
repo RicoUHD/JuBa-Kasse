@@ -19,7 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
-let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, reportStartDate: null };
+let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
 let currentPersonId = null;
 let isAuthenticated = false;
 let currentUser = null;
@@ -314,7 +314,7 @@ function calculatePaidUntil(person) {
     const maxIterations = 120;
     let iterations = 0;
 
-    while (remainingCredit > 0 && iterations < maxIterations) {
+    while (remainingCredit >= 0 && iterations < maxIterations) {
         const status = getStatusForMonth(person, year, month, sortedHistory);
         const monthlyRate = status ? (settings[status] || 0) : 0;
 
@@ -419,7 +419,8 @@ function generateStatusHistoryHTML(person) {
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
         'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
+        'keinverdiener': '🎓 Keinverdiener',
+        'pausiert': '⏸️ Pausiert'
     };
 
     let html = `
@@ -883,7 +884,8 @@ function renderUserView() {
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
         'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
+        'keinverdiener': '🎓 Keinverdiener',
+        'pausiert': '⏸️ Pausiert'
     };
 
     let statusClass = 'user-status-ok';
@@ -1053,7 +1055,8 @@ function generateTimelineHTML(person) {
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
         'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener'
+        'keinverdiener': '🎓 Keinverdiener',
+        'pausiert': '⏸️ Pausiert'
     };
 
     const timelineItems = allEvents.map(event => {
@@ -1694,6 +1697,7 @@ window.openUserRequestModal = (type) => {
                     <option value="vollverdiener">💼 Vollverdiener</option>
                     <option value="geringverdiener">📉 Geringverdiener</option>
                     <option value="keinverdiener">🎓 Keinverdiener</option>
+                    <option value="pausiert">⏸️ Pausiert</option>
                 </select>
             </div>
             <div class="form-group">
