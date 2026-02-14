@@ -25,14 +25,14 @@ def run(playwright):
         }
     """)
 
-    # Click the specific button
-    page.locator("button.user-action-btn:has-text('Dauerauftrag')").click()
+    # Click the "Zahlung" button (class logic)
+    page.locator("button.user-action-btn:has-text('Zahlung')").click()
 
     # Wait for modal animation
     page.wait_for_timeout(500)
 
     # Take screenshot
-    page.screenshot(path="verification/standing_order_modal.png")
+    page.screenshot(path="verification/standing_order_checkbox.png")
 
     browser.close()
 

@@ -2079,12 +2079,16 @@ window.openUserRequestModal = (type) => {
     if(type === 'payment') {
         title.innerText = "Zahlung melden";
         container.innerHTML = `
+            <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="req-is-standing-order" style="width:20px; height:20px;" onchange="document.getElementById('req-date-label').innerText = this.checked ? 'Startdatum' : 'Datum'">
+                <label for="req-is-standing-order" style="margin:0; font-weight:600; cursor:pointer">Dauerauftrag</label>
+            </div>
             <div class="form-group">
                 <label class="form-label">Betrag (€)</label>
                 <input type="text" inputmode="decimal" id="req-amount" class="form-input">
             </div>
             <div class="form-group">
-                <label class="form-label">Datum</label>
+                <label class="form-label" id="req-date-label">Datum</label>
                 <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
             </div>
             <div class="form-group">
@@ -2129,22 +2133,6 @@ window.openUserRequestModal = (type) => {
                 <input type="file" id="req-receipt" accept="image/*" class="form-input">
             </div>
         `;
-    } else if(type === 'standing_order') {
-        title.innerText = "Dauerauftrag einrichten";
-        container.innerHTML = `
-            <div class="form-group">
-                <label class="form-label">Betrag (€)</label>
-                <input type="text" inputmode="decimal" id="req-amount" class="form-input">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Startdatum</label>
-                <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Notiz (Optional)</label>
-                <input type="text" id="req-note" class="form-input">
-            </div>
-        `;
     }
 
     openModal('user-request-modal');
@@ -2163,18 +2151,18 @@ window.submitUserRequest = async () => {
     if(currentRequestType === 'payment') {
         const amount = document.getElementById('req-amount').value.replace(',', '.');
         const note = document.getElementById('req-note').value;
+        const isStandingOrder = document.getElementById('req-is-standing-order') && document.getElementById('req-is-standing-order').checked;
+
         if(!amount || !date) { alert("Bitte alle Felder ausfüllen"); return; }
         if(isNaN(parseFloat(amount))) { alert("Ungültiger Betrag"); return; }
+
         reqData.amount = amount;
         reqData.date = date;
         reqData.note = note;
-    } else if(currentRequestType === 'standing_order') {
-        const amount = document.getElementById('req-amount').value.replace(',', '.');
-        const note = document.getElementById('req-note').value;
-        if(!amount || !date) { alert("Bitte alle Felder ausfüllen"); return; }
-        reqData.amount = amount;
-        reqData.date = date;
-        reqData.note = note;
+
+        if (isStandingOrder) {
+            currentRequestType = 'standing_order';
+        }
     } else if(currentRequestType === 'status') {
         const status = document.getElementById('req-status').value;
         if(!status || !date) { alert("Bitte alle Felder ausfüllen"); return; }
