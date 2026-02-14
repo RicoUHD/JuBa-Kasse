@@ -368,6 +368,41 @@ function calculateTimeRemaining(person) {
 
     if (monthsDiff < 0) {
         const overdueMonths = Math.abs(monthsDiff);
+
+        // Check if standing order covers the current missing month
+        if (overdueMonths === 1) {
+            const standingOrders = safeList(person.standingOrders);
+            const hasCoverage = standingOrders.some(so => {
+                // If we have a standing order, check if it targets this month
+                // Simplified: If last payment was last month, or start date is this month
+                const targetMonth = currentMonth.getMonth();
+                const targetYear = currentMonth.getFullYear();
+
+                if (so.lastAutoPayment) {
+                    const last = new Date(so.lastAutoPayment);
+                    // Next payment is last + 1 month
+                    last.setMonth(last.getMonth() + 1);
+                    return last.getMonth() === targetMonth && last.getFullYear() === targetYear;
+                } else {
+                    const start = new Date(so.startDate);
+                    // If start is this month or earlier (and not paid yet means it's due/pending)
+                    // If start is earlier, and no payment exists, it means we are overdue, but
+                    // if the SO exists, we might treat it as "will be paid".
+                    // But here strict check: start date falls in this month
+                    return start.getMonth() === targetMonth && start.getFullYear() === targetYear;
+                }
+            });
+
+            if (hasCoverage) {
+                return {
+                    text: 'Dauerauftrag geplant',
+                    isOverdue: false,
+                    isSoonDue: false,
+                    isPlanned: true
+                };
+            }
+        }
+
         return {
             text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`,
             isOverdue: true,
@@ -457,6 +492,76 @@ function generateStatusHistoryHTML(person) {
 }
 
 // --- ENDE MATHEMATIK & LOGIK ---
+
+function checkAndExecuteStandingOrders(person) {
+    if (!person.standingOrders || !Array.isArray(person.standingOrders) || person.standingOrders.length === 0) return null;
+
+    let modified = false;
+    const payments = safeList(person.payments);
+    const standingOrders = safeList(person.standingOrders);
+    const today = new Date();
+    today.setHours(23,59,59,999); // Use end of day to avoid timezone lag (UTC vs Local)
+
+    const updatedStandingOrders = standingOrders.map(so => {
+        let soModified = false;
+        const startDate = new Date(so.startDate);
+        const dayOfMonth = startDate.getDate();
+        let lastAuto = so.lastAutoPayment ? new Date(so.lastAutoPayment) : null;
+
+        // Determine where to start checking
+        let nextDueDate;
+        if (!lastAuto) {
+            nextDueDate = new Date(startDate);
+        } else {
+            nextDueDate = new Date(lastAuto);
+            nextDueDate.setDate(1);
+            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+            const maxDays = new Date(nextDueDate.getFullYear(), nextDueDate.getMonth() + 1, 0).getDate();
+            nextDueDate.setDate(Math.min(dayOfMonth, maxDays));
+        }
+
+        // Loop until today
+        // Safety break to prevent infinite loops if dates are messed up
+        let safety = 0;
+        while (nextDueDate <= today && safety < 120) {
+            const dateStr = nextDueDate.toISOString().split('T')[0];
+            const paymentId = `auto_${so.id}_${dateStr}`;
+
+            const exists = payments.some(p => p.id === paymentId);
+
+            if (!exists) {
+                payments.push({
+                    id: paymentId,
+                    amount: parseFloat(so.amount),
+                    date: dateStr,
+                    description: (so.note || 'Dauerauftrag') + ' (Auto)',
+                    isAuto: true
+                });
+                modified = true;
+                soModified = true;
+            }
+
+            // Move pointer forward
+            lastAuto = new Date(nextDueDate);
+
+            nextDueDate.setDate(1);
+            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+            const maxDays = new Date(nextDueDate.getFullYear(), nextDueDate.getMonth() + 1, 0).getDate();
+            nextDueDate.setDate(Math.min(dayOfMonth, maxDays));
+            safety++;
+        }
+
+        if (soModified && lastAuto) {
+            return { ...so, lastAutoPayment: lastAuto.toISOString().split('T')[0] };
+        }
+        return so;
+    });
+
+    if (modified) {
+        return { ...person, payments, standingOrders: updatedStandingOrders };
+    }
+    return null;
+}
 
 let requests = [];
 
@@ -628,6 +733,26 @@ async function loadData() {
         // Cache memberSince date object
         person.memberSinceObj = new Date(person.originalMemberSince || person.memberSince);
     });
+
+    // Check standing orders (Admin only to prevent conflicts)
+    if (currentUser && currentUser.admin) {
+        const updates = [];
+        people.forEach(person => {
+            const result = checkAndExecuteStandingOrders(person);
+            if (result) {
+                const newTotal = safeList(result.payments).reduce((acc, p) => acc + parseFloat(p.amount), 0);
+                // Update in DB
+                updates.push(update(ref(db, 'people/' + person.id), {
+                    payments: result.payments,
+                    standingOrders: result.standingOrders,
+                    totalPaid: newTotal
+                }));
+                // Update in memory
+                Object.assign(person, result, { totalPaid: newTotal });
+            }
+        });
+        if (updates.length > 0) await Promise.all(updates);
+    }
 
     renderAll();
     } catch (err) {
@@ -1277,6 +1402,7 @@ window.addPayment = async () => {
     const amt = parseFloat(document.getElementById('payment-amount').value.replace(',', '.'));
     const date = document.getElementById('payment-date').value;
     const desc = document.getElementById('payment-desc').value;
+    const isStandingOrder = document.getElementById('payment-is-standing-order').checked;
 
     if(!currentPersonId || isNaN(amt)) {
         setButtonLoading('btn-add-payment', false);
@@ -1285,10 +1411,31 @@ window.addPayment = async () => {
 
     try {
         const updated = await mutatePerson(currentPersonId, (person) => {
-            const payments = safeList(person.payments);
-            payments.push({ amount: amt, date, description: desc, id: Date.now() });
-            const totalPaid = (person.totalPaid || 0) + amt;
-            return { ...person, payments, totalPaid };
+            if (isStandingOrder) {
+                const standingOrders = safeList(person.standingOrders);
+                const newSO = {
+                    id: Date.now().toString(),
+                    amount: amt,
+                    startDate: date,
+                    note: desc,
+                    lastAutoPayment: null
+                };
+                standingOrders.push(newSO);
+                // Also trigger execution logic immediately
+                const draftPerson = { ...person, standingOrders };
+                const execResult = checkAndExecuteStandingOrders(draftPerson);
+                // Calculate totalPaid from payments if updated
+                if (execResult) {
+                    const newTotal = safeList(execResult.payments).reduce((acc, p) => acc + parseFloat(p.amount), 0);
+                    return { ...execResult, totalPaid: newTotal };
+                }
+                return draftPerson;
+            } else {
+                const payments = safeList(person.payments);
+                payments.push({ amount: amt, date, description: desc, id: Date.now() });
+                const totalPaid = (person.totalPaid || 0) + amt;
+                return { ...person, payments, totalPaid };
+            }
         });
 
         if (!updated) {
@@ -1298,6 +1445,9 @@ window.addPayment = async () => {
 
         renderAll();
         closeModal('add-payment-modal');
+        document.getElementById('payment-is-standing-order').checked = false;
+        const lbl = document.getElementById('payment-date-label');
+        if(lbl) lbl.innerText = 'Datum';
     } catch (err) {
         console.error('Fehler beim Speichern der Zahlung:', err);
         alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');
