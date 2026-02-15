@@ -322,16 +322,14 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 }
 
 #admin-bottom-nav {
-    background-color: transparent;
-    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAwIDYwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCBWIDYwIEggMCBaIiBmaWxsPSJ3aGl0ZSIgLz4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiIC8+Cjwvc3ZnPgo=");
-    background-position: center top;
-    background-repeat: no-repeat;
-    background-size: 2000px 100%;
-    border-top: none;
+    background-color: var(--surface);
+    background-image: none;
+    border-top: 1px solid var(--border-light);
 }
 
 [data-theme="dark"] #admin-bottom-nav {
-    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAwIDYwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj4KPHBhdGggZD0iTSAwIDAgSCA5NTAuMDQgQSAxMCAxMCAwIDAgMSA5NjAuMDMgMTAuNDAgQSA0MCA0MCAwIDAgMCAxMDM5Ljk3IDEwLjQwIEEgMTAgMTAgMCAwIDEgMTA0OS45NiAwIEggMjAwMCBWIDYwIEggMCBaIiBmaWxsPSIjMWUyOTNiIiAvPgo8cGF0aCBkPSJNIDAgMCBIIDk1MC4wNCBBIDEwIDEwIDAgMCAxIDk2MC4wMyAxMC40MCBBIDQwIDQwIDAgMCAwIDEwMzkuOTcgMTAuNDAgQSAxMCAxMCAwIDAgMSAxMDQ5Ljk2IDAgSCAyMDAwIiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzQxNTUiIHN0cm9rZS13aWR0aD0iMSIgLz4KPC9zdmc+Cg==");
+    background-image: none;
+    border-top: 1px solid var(--border);
 }
 
 .nav-item {
@@ -344,14 +342,6 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .nav-item.active { color: var(--primary); }
 .nav-item.active svg { opacity: 1; stroke: var(--primary); transform: translateY(-2px); }
 
-.nav-center {
-    position: absolute; width: 64px; height: 64px;
-    top: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex; align-items: center; justify-content: center;
-}
-
 .nav-fab {
     width: 64px; height: 64px; border-radius: 50%;
     background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
@@ -359,23 +349,30 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     cursor: pointer; transition: 0.3s;
-    position: relative; z-index: 1001;
+    position: fixed;
+    bottom: 85px;
+    right: 20px;
+    z-index: 1001;
 }
 .nav-fab:active { transform: scale(0.9); }
 .nav-fab.active { transform: rotate(45deg); }
 
 /* FAB Menu */
 .fab-menu {
-    position: fixed; bottom: 85px; left: 50%; right: auto;
+    position: fixed;
+    bottom: 160px; /* Above FAB (85 + 64 + 10 approx) */
+    right: 20px;
+    left: auto;
     display: flex; flex-direction: column; gap: 12px;
     z-index: 99; opacity: 0; pointer-events: none;
-    transform: translateX(-50%) translateY(20px);
+    transform: translateY(20px);
     visibility: hidden;
     transition: opacity 0.3s, transform 0.3s, visibility 0s 0.3s;
+    align-items: flex-end; /* Align items to the right */
 }
 .fab-menu.show {
     opacity: 1; pointer-events: all;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     visibility: visible;
     transition: opacity 0.3s, transform 0.3s, visibility 0s;
 }
