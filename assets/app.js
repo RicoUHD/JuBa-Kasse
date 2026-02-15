@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
+let posts = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
 let currentPersonId = null;
 let isAuthenticated = false;
@@ -773,6 +774,10 @@ async function loadData() {
         // If we fell back to all requests, filter them now
         requests = allRequests.filter(r => r.userId === currentUser.uid);
 
+        // 4. Fetch Posts
+        const poSnap = await get(child(dbRef, 'posts'));
+        posts = safeList(poSnap.val());
+
         // UI toggles
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('user-view').style.display = 'block';
@@ -790,20 +795,22 @@ async function loadData() {
 
     } else {
         // Admin: fetch full dataset
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap, poSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
             get(child(dbRef, 'system/inviteCode')),
             get(child(dbRef, 'requests')),
-            get(child(dbRef, 'users'))
+            get(child(dbRef, 'users')),
+            get(child(dbRef, 'posts'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
+        posts = safeList(poSnap.val());
         if (sSnap.exists()) settings = sSnap.val();
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
@@ -894,7 +901,77 @@ function renderAll() {
         document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
         document.getElementById('report-start-date').value = settings.reportStartDate || '';
     }
+    renderCommunityPosts();
 }
+
+function renderCommunityPosts() {
+    const sortedPosts = [...posts].sort((a, b) => b.timestamp - a.timestamp);
+
+    const generateHtml = (post) => {
+        const dateStr = new Date(post.timestamp).toLocaleDateString('de-DE');
+        const isOwner = currentUser && post.authorUid === currentUser.uid;
+
+        let fileHtml = '';
+        if (post.fileName && post.originalFileName) {
+            fileHtml = `
+                <div style="margin-top:10px; padding:10px; background:var(--surface-alt); border-radius:8px; display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:1.5rem;">📄</div>
+                    <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <div style="font-weight:600; font-size:0.9rem;">${escapeHtml(post.originalFileName)}</div>
+                        <div style="font-size:0.75rem; color:var(--text-secondary);">Anhang</div>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="downloadFile('${escapeHtml(post.fileName)}', '${escapeHtml(post.originalFileName)}')">⬇️</button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="card" style="margin-bottom:15px;">
+                <div class="card-body">
+                    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                        <div>
+                            <div style="font-weight:700; font-size:1.1rem;">${escapeHtml(post.title)}</div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);">
+                                Von ${escapeHtml(post.authorName)} • ${dateStr}
+                                ${post.topic ? `• <span style="background:var(--primary); color:white; padding:2px 6px; border-radius:4px; font-size:0.7rem;">${escapeHtml(post.topic)}</span>` : ''}
+                            </div>
+                        </div>
+                        ${isOwner ? `<button class="btn-icon" onclick="openPostModal('${post.id}')">✏️</button>` : ''}
+                    </div>
+                    <div style="white-space:pre-wrap; color:var(--text); line-height:1.5;">${escapeHtml(post.description)}</div>
+                    ${fileHtml}
+                </div>
+            </div>
+        `;
+    };
+
+    const html = sortedPosts.length > 0
+        ? sortedPosts.map(generateHtml).join('')
+        : '<div style="text-align:center; padding:30px; color:var(--text-secondary);">Noch keine Beiträge.</div>';
+
+    ['community-posts-list', 'user-community-posts-list'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    });
+}
+
+window.downloadFile = async function(serverName, originalName) {
+    try {
+        const url = await fetchReceiptImage(serverName);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = originalName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+        console.error("Download failed:", err);
+        alert("Download fehlgeschlagen.");
+    }
+};
 
 function renderAdminRequests() {
     const pending = requests.filter(r => r.status === 'pending');
@@ -1584,6 +1661,145 @@ window.addPerson = async () => {
     }
 };
 
+window.savePost = async function(postData) {
+    if (!currentUser) return;
+
+    // Create a deep copy or new object to avoid reference issues
+    let postToSave = { ...postData };
+
+    if (!postToSave.id) {
+        // Create new
+        postToSave.id = Date.now().toString();
+        postToSave.authorUid = currentUser.uid;
+        postToSave.authorName = (currentUser.firstName || '') + ' ' + (currentUser.lastName || '');
+        postToSave.timestamp = Date.now();
+    } else {
+        // Edit existing
+        const existing = posts.find(p => String(p.id) === String(postToSave.id));
+        if (existing) {
+            if (existing.authorUid !== currentUser.uid) {
+                alert("Du darfst nur deine eigenen Beiträge bearbeiten.");
+                return false;
+            }
+            // Preserve fields that shouldn't change or merge
+            postToSave = { ...existing, ...postToSave };
+        }
+    }
+
+    try {
+        await set(ref(db, 'posts/' + postToSave.id), postToSave);
+        // Update local state
+        const idx = posts.findIndex(p => String(p.id) === String(postToSave.id));
+        if (idx >= 0) {
+            posts[idx] = postToSave;
+        } else {
+            posts.push(postToSave);
+        }
+
+        renderAll();
+        return true;
+    } catch (err) {
+        console.error("Error saving post:", err);
+        alert("Fehler beim Speichern des Beitrags.");
+        return false;
+    }
+};
+
+window.openPostModal = function(postId = null) {
+    const modal = document.getElementById('post-modal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('post-title');
+    const topicEl = document.getElementById('post-topic');
+    const descEl = document.getElementById('post-desc');
+    const fileEl = document.getElementById('post-file');
+    const idEl = document.getElementById('post-id');
+    const currentFileEl = document.getElementById('post-current-file');
+
+    // Reset validation styles
+    [titleEl, topicEl, descEl].forEach(el => el && el.classList.remove('input-error'));
+
+    if (postId) {
+        // Edit mode
+        const post = posts.find(p => String(p.id) === String(postId));
+        if (!post) return;
+
+        // Check permission (redundant with savePost but good for UI)
+        if (post.authorUid !== currentUser.uid) {
+            alert("Du kannst nur deine eigenen Beiträge bearbeiten.");
+            return;
+        }
+
+        idEl.value = post.id;
+        titleEl.value = post.title || '';
+        topicEl.value = post.topic || '';
+        descEl.value = post.description || '';
+        fileEl.value = ''; // Reset file input
+
+        if (post.originalFileName) {
+            currentFileEl.innerText = 'Aktuelle Datei: ' + post.originalFileName;
+            currentFileEl.style.display = 'block';
+        } else {
+            currentFileEl.style.display = 'none';
+        }
+        document.getElementById('title-post-modal').innerText = "Beitrag bearbeiten";
+    } else {
+        // Create mode
+        idEl.value = '';
+        titleEl.value = '';
+        topicEl.value = '';
+        descEl.value = '';
+        fileEl.value = '';
+        currentFileEl.style.display = 'none';
+        document.getElementById('title-post-modal').innerText = "Neuer Beitrag";
+    }
+
+    openModal('post-modal');
+};
+
+window.submitPost = async function() {
+    if (!validateRequired(['post-title', 'post-desc', 'post-topic'])) return;
+
+    setButtonLoading('btn-submit-post', true, "Speichert...");
+
+    const id = document.getElementById('post-id').value;
+    const title = document.getElementById('post-title').value;
+    const topic = document.getElementById('post-topic').value;
+    const description = document.getElementById('post-desc').value;
+    const fileInput = document.getElementById('post-file');
+
+    const postData = {
+        title,
+        topic,
+        description
+    };
+
+    if (id) {
+        postData.id = id;
+    }
+
+    if (fileInput.files.length > 0) {
+        try {
+            setButtonLoading('btn-submit-post', true, "Lade Datei...");
+            const uploadResult = await uploadFile(fileInput.files[0]);
+            postData.fileName = uploadResult.serverFileName;
+            postData.originalFileName = uploadResult.originalFileName;
+            postData.fileType = uploadResult.fileType;
+        } catch (err) {
+            console.error(err);
+            alert("Fehler beim Hochladen der Datei: " + err.message);
+            setButtonLoading('btn-submit-post', false);
+            return;
+        }
+    }
+
+    const success = await savePost(postData);
+    if (success) {
+        closeModal('post-modal');
+    }
+    setButtonLoading('btn-submit-post', false);
+};
+
 window.addPayment = async () => {
     if (!validateRequired(['payment-amount', 'payment-date'])) return;
 
@@ -1687,7 +1903,8 @@ window.addExpense = async () => {
     if (fileInput && fileInput.files.length > 0) {
         try {
             setButtonLoading('btn-add-expense', true, "Lade hoch...");
-            receiptFilename = await uploadReceipt(fileInput.files[0]);
+            const uploadResult = await uploadFile(fileInput.files[0]);
+            receiptFilename = uploadResult.serverFileName;
         } catch (err) {
             console.error(err);
             alert("Fehler beim Hochladen des Belegs: " + err.message);
@@ -2232,7 +2449,8 @@ window.submitUserRequest = async () => {
         if (fileInput && fileInput.files.length > 0) {
              setButtonLoading('btn-submit-request', true, "Lade hoch...");
              try {
-                reqData.receipt = await uploadReceipt(fileInput.files[0]);
+                const uploadResult = await uploadFile(fileInput.files[0]);
+                reqData.receipt = uploadResult.serverFileName;
              } catch(err) {
                  alert("Fehler beim Hochladen: " + err.message);
                  setButtonLoading('btn-submit-request', false);
@@ -2280,7 +2498,7 @@ window.generateNewCode = async () => {
 
 // --- WebDAV Receipt Handling ---
 
-window.uploadReceipt = async function(file) {
+window.uploadFile = async function(file) {
     const username = 'juba-bot';
     const password = 'JuBa-!Bot+#21';
     const timestamp = Date.now();
@@ -2303,7 +2521,7 @@ window.uploadReceipt = async function(file) {
             throw new Error('Upload failed: ' + response.statusText);
         }
 
-        return filename;
+        return { serverFileName: filename, originalFileName: safeName, fileType: file.type };
     } catch (error) {
         console.error('Upload error:', error);
         throw error;
