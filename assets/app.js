@@ -151,8 +151,49 @@ window.toggleFab = function() {
     fab.setAttribute('aria-expanded', isExpanded);
 };
 
-window.openModal = (id) => { document.getElementById(id).classList.add('show'); };
-window.closeModal = (id) => { document.getElementById(id).classList.remove('show'); };
+window.openModal = (id) => {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+
+    // Store current focus on the modal instance itself to handle nesting
+    modal._returnFocusTo = document.activeElement;
+    modal.classList.add('show');
+
+    // Focus management
+    const focusable = modal.querySelector('input:not([type="hidden"]), select, textarea') ||
+                      modal.querySelector('button, [href], [tabindex]:not([tabindex="-1"])');
+    if (focusable) {
+        // Small timeout to allow transition/visibility paint
+        setTimeout(() => focusable.focus(), 50);
+    }
+
+    // Escape to close
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            closeModal(id);
+        }
+    };
+    document.addEventListener('keydown', handleEsc);
+    modal._escHandler = handleEsc;
+};
+
+window.closeModal = (id) => {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+
+    modal.classList.remove('show');
+
+    if (modal._escHandler) {
+        document.removeEventListener('keydown', modal._escHandler);
+        delete modal._escHandler;
+    }
+
+    const returnFocus = modal._returnFocusTo;
+    if (returnFocus && document.body.contains(returnFocus)) {
+        try { returnFocus.focus(); } catch(e){}
+    }
+    delete modal._returnFocusTo;
+};
 
 // Improved Toggle Details
 window.toggleDetails = function(id) {
