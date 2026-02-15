@@ -352,7 +352,7 @@ function calculatePaidUntil(person) {
  * @param {Object} person - Die Person
  * @returns {Object} - { text, isOverdue, isSoonDue }
  */
-function calculateTimeRemaining(person) {
+function calculateTimeRemaining(person, preCalculatedPaidUntil) {
     // START CHECK
     const standingOrders = safeList(person.standingOrders);
     const now = new Date();
@@ -374,7 +374,7 @@ function calculateTimeRemaining(person) {
     }
     // END CHECK
 
-    const paidUntil = calculatePaidUntil(person);
+    const paidUntil = preCalculatedPaidUntil !== undefined ? preCalculatedPaidUntil : calculatePaidUntil(person);
     if (!paidUntil) {
         return { text: 'Keine Zahlungen', isOverdue: true, isSoonDue: false };
     }
@@ -1106,8 +1106,8 @@ function renderUserView() {
 
     const p = people[0]; // User has only one person (themselves)
     const paidUntil = calculatePaidUntil(p);
-    const statusMeta = calculateTimeRemaining(p);
-    const overdueAmount = calculateOverdueAmount(p);
+    const statusMeta = calculateTimeRemaining(p, paidUntil);
+    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p) : 0;
 
     // Get current status (not future status)
     const currentStatus = getCurrentStatus(p);
@@ -1221,27 +1221,30 @@ function renderPeople() {
     }
     empty.style.display = 'none';
 
-    const overduePeople = [];
-    const currentPeople = [];
-
-    people.forEach(person => {
-        const status = calculateTimeRemaining(person);
-        if(status.isOverdue) overduePeople.push(person);
-        else currentPeople.push(person);
+    // ⚡ Bolt: Calculate costly status/dates ONCE per person here
+    const processed = people.map(p => {
+        const paidUntil = calculatePaidUntil(p);
+        const statusMeta = calculateTimeRemaining(p, paidUntil);
+        // Only calculate overdue amount if actually overdue
+        const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p) : 0;
+        return { p, paidUntil, statusMeta, overdueAmount };
     });
 
-    overduePeople.sort((a,b) => a.name.localeCompare(b.name));
-    currentPeople.sort((a,b) => a.name.localeCompare(b.name));
+    const overdueItems = processed.filter(x => x.statusMeta.isOverdue);
+    const currentItems = processed.filter(x => !x.statusMeta.isOverdue);
+
+    overdueItems.sort((a,b) => a.p.name.localeCompare(b.p.name));
+    currentItems.sort((a,b) => a.p.name.localeCompare(b.p.name));
 
     let html = '';
 
-    if(overduePeople.length > 0) {
-        html += overduePeople.map(p => generatePersonHTML(p)).join('');
+    if(overdueItems.length > 0) {
+        html += overdueItems.map(item => generatePersonHTML(item.p, item)).join('');
     }
 
-    if(currentPeople.length > 0) {
-        html += `<div class="list-section-title" style="color:var(--success)">✅ Aktuelle Mitglieder (${currentPeople.length})</div>`;
-        html += currentPeople.map(p => generatePersonHTML(p)).join('');
+    if(currentItems.length > 0) {
+        html += `<div class="list-section-title" style="color:var(--success)">✅ Aktuelle Mitglieder (${currentItems.length})</div>`;
+        html += currentItems.map(item => generatePersonHTML(item.p, item)).join('');
     }
 
     list.innerHTML = html;
@@ -1322,10 +1325,11 @@ function generateTimelineHTML(person) {
     return `<div class="timeline">${timelineItems}</div>`;
 }
 
-function generatePersonHTML(p) {
-    const paidUntil = calculatePaidUntil(p);
-    const statusMeta = calculateTimeRemaining(p);
-    const overdueAmount = calculateOverdueAmount(p);
+function generatePersonHTML(p, preCalcData = null) {
+    const paidUntil = preCalcData ? preCalcData.paidUntil : calculatePaidUntil(p);
+    // Note: statusMeta in preCalcData already utilized paidUntil internally
+    const statusMeta = preCalcData ? preCalcData.statusMeta : calculateTimeRemaining(p, paidUntil);
+    const overdueAmount = preCalcData ? preCalcData.overdueAmount : calculateOverdueAmount(p);
 
     // Get current status (not future status)
     const currentStatus = getCurrentStatus(p);
