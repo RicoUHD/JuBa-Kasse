@@ -620,3 +620,9 @@ input:checked + .slider:before { transform: translateX(22px); }
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
 }
+
+@media all and (display-mode: standalone) {
+    #install-pwa-btn {
+        display: none !important;
+    }
+}
