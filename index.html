@@ -67,10 +67,15 @@
         </div>
 
         <div id="community-view" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-community">
-            <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0;">Community</h3>
+                <button class="btn btn-primary btn-small" onclick="openPostModal()">+ Beitrag</button>
+            </div>
+            <div id="community-posts-list"></div>
+            <div id="community-empty-state" class="card" style="display:none; margin-top:20px;">
                 <div class="card-body" style="text-align: center; color: var(--text-secondary); padding: 40px;">
                     <div style="font-size: 3rem; margin-bottom: 10px;">👥</div>
-                    <p>Hier entstehen Beiträge</p>
+                    <p>Noch keine Beiträge.</p>
                 </div>
             </div>
         </div>
@@ -212,10 +217,15 @@
         </div>
 
         <div id="user-community-view" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-community">
-            <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0;">Community</h3>
+                <button class="btn btn-primary btn-small" onclick="openPostModal()">+ Beitrag</button>
+            </div>
+            <div id="user-community-posts-list"></div>
+            <div id="user-community-empty-state" class="card" style="display:none; margin-top:20px;">
                 <div class="card-body" style="text-align: center; color: var(--text-secondary); padding: 40px;">
                     <div style="font-size: 3rem; margin-bottom: 10px;">👥</div>
-                    <p>Hier entstehen Beiträge</p>
+                    <p>Noch keine Beiträge.</p>
                 </div>
             </div>
         </div>
@@ -423,6 +433,31 @@
             <button class="btn btn-primary" onclick="saveStandingOrderEnd()" style="flex:1;">Beenden / Speichern</button>
         </div>
         <button class="btn btn-danger" onclick="deleteStandingOrderCompletely()" style="width:100%; margin-top:15px; background:none; border:1px solid var(--danger); color:var(--danger);">🗑️ Eintrag ganz löschen</button>
+    </div>
+</div>
+
+<div id="post-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-post">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-post">Beitrag erstellen</span> <button class="close-btn" onclick="closeModal('post-modal')" aria-label="Schließen">&times;</button></div>
+        <input type="hidden" id="post-id">
+        <div class="form-group">
+            <label class="form-label">Titel</label>
+            <input type="text" id="post-title" class="form-input" placeholder="Titel">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Thema</label>
+            <input type="text" id="post-topic" class="form-input" placeholder="Thema (z.B. Ankündigung)">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Beschreibung</label>
+            <textarea id="post-desc" class="form-input" rows="4" placeholder="Beschreibung..." style="resize:vertical;"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Datei (Optional)</label>
+            <input type="file" id="post-file" class="form-input">
+            <div id="post-current-file" style="font-size:0.8rem; color:var(--text-secondary); margin-top:5px; display:none;"></div>
+        </div>
+        <button id="btn-save-post" class="btn btn-primary" onclick="savePost()">Speichern</button>
     </div>
 </div>
 

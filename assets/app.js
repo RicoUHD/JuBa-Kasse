@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
+let posts = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
 let currentPersonId = null;
 let isAuthenticated = false;
@@ -773,6 +774,10 @@ async function loadData() {
         // If we fell back to all requests, filter them now
         requests = allRequests.filter(r => r.userId === currentUser.uid);
 
+        // Fetch Posts
+        const postsSnap = await get(child(dbRef, 'posts'));
+        posts = safeList(postsSnap.val());
+
         // UI toggles
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('user-view').style.display = 'block';
@@ -790,20 +795,22 @@ async function loadData() {
 
     } else {
         // Admin: fetch full dataset
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap, postsSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
             get(child(dbRef, 'system/inviteCode')),
             get(child(dbRef, 'requests')),
-            get(child(dbRef, 'users'))
+            get(child(dbRef, 'users')),
+            get(child(dbRef, 'posts'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
+        posts = safeList(postsSnap.val());
         if (sSnap.exists()) settings = sSnap.val();
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
@@ -894,6 +901,7 @@ function renderAll() {
         document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
         document.getElementById('report-start-date').value = settings.reportStartDate || '';
     }
+    renderCommunity();
 }
 
 function renderAdminRequests() {
@@ -1687,7 +1695,8 @@ window.addExpense = async () => {
     if (fileInput && fileInput.files.length > 0) {
         try {
             setButtonLoading('btn-add-expense', true, "Lade hoch...");
-            receiptFilename = await uploadReceipt(fileInput.files[0]);
+            const uploadResult = await uploadFile(fileInput.files[0]);
+            receiptFilename = uploadResult.serverFileName;
         } catch (err) {
             console.error(err);
             alert("Fehler beim Hochladen des Belegs: " + err.message);
@@ -2232,7 +2241,8 @@ window.submitUserRequest = async () => {
         if (fileInput && fileInput.files.length > 0) {
              setButtonLoading('btn-submit-request', true, "Lade hoch...");
              try {
-                reqData.receipt = await uploadReceipt(fileInput.files[0]);
+                const uploadResult = await uploadFile(fileInput.files[0]);
+                reqData.receipt = uploadResult.serverFileName;
              } catch(err) {
                  alert("Fehler beim Hochladen: " + err.message);
                  setButtonLoading('btn-submit-request', false);
@@ -2280,13 +2290,13 @@ window.generateNewCode = async () => {
 
 // --- WebDAV Receipt Handling ---
 
-window.uploadReceipt = async function(file) {
+window.uploadFile = async function(file) {
     const username = 'juba-bot';
     const password = 'JuBa-!Bot+#21';
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}_${safeName}`;
-    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Kassenbongs/${filename}`;
+    const serverFileName = `${timestamp}_${safeName}`;
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Kassenbongs/${serverFileName}`;
 
     const headers = new Headers();
     headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
@@ -2303,7 +2313,11 @@ window.uploadReceipt = async function(file) {
             throw new Error('Upload failed: ' + response.statusText);
         }
 
-        return filename;
+        return {
+            serverFileName: serverFileName,
+            originalFileName: file.name,
+            fileType: file.type
+        };
     } catch (error) {
         console.error('Upload error:', error);
         throw error;
@@ -2462,3 +2476,208 @@ window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     console.log('PWA was installed');
 });
+
+window.savePost = async () => {
+    const title = document.getElementById('post-title').value;
+    const desc = document.getElementById('post-desc').value;
+    const topic = document.getElementById('post-topic').value;
+    const fileInput = document.getElementById('post-file');
+    const postId = document.getElementById('post-id').value;
+
+    if (!title || !desc || !topic) {
+        alert("Bitte Titel, Beschreibung und Thema ausfüllen.");
+        return;
+    }
+
+    setButtonLoading('btn-save-post', true, "Speichert...");
+
+    try {
+        let postData = {
+            title,
+            description: desc,
+            topic,
+            timestamp: Date.now(),
+            authorUid: currentUser.uid,
+            authorName: `${currentUser.firstName} ${currentUser.lastName}`
+        };
+
+        if (postId) {
+            // Update existing
+            const existingPost = posts.find(p => String(p.id) === String(postId));
+            if (!existingPost) throw new Error("Post nicht gefunden.");
+            if (existingPost.authorUid !== currentUser.uid && !currentUser.admin) {
+                 throw new Error("Keine Berechtigung.");
+            }
+            // Merge: Keep ID, keep file info if not overwritten
+            postData = { ...existingPost, ...postData, id: existingPost.id };
+        } else {
+            // New Post
+            postData.id = Date.now().toString();
+        }
+
+        if (fileInput && fileInput.files.length > 0) {
+            const uploadResult = await uploadFile(fileInput.files[0]);
+            postData.serverFileName = uploadResult.serverFileName;
+            postData.originalFileName = uploadResult.originalFileName;
+            postData.fileType = uploadResult.fileType;
+        }
+
+        await set(ref(db, 'posts/' + postData.id), postData);
+
+        // Update local state
+        const idx = posts.findIndex(p => String(p.id) === String(postData.id));
+        if (idx >= 0) {
+            posts[idx] = postData;
+        } else {
+            posts.push(postData);
+        }
+
+        closeModal('post-modal');
+        if(typeof renderCommunity === 'function') renderCommunity();
+    } catch (err) {
+        console.error("Fehler beim Speichern des Posts:", err);
+        alert("Fehler: " + err.message);
+    } finally {
+        setButtonLoading('btn-save-post', false);
+    }
+};
+
+window.deletePost = async (postId) => {
+    if (!confirm("Beitrag wirklich löschen?")) return;
+
+    const post = posts.find(p => String(p.id) === String(postId));
+    if (!post) return;
+
+    if (post.authorUid !== currentUser.uid && !currentUser.admin) {
+        alert("Keine Berechtigung.");
+        return;
+    }
+
+    try {
+        await remove(ref(db, 'posts/' + postId));
+        posts = posts.filter(p => String(p.id) !== String(postId));
+        if(typeof renderCommunity === 'function') renderCommunity();
+    } catch (err) {
+        console.error("Fehler beim Löschen:", err);
+        alert("Löschen fehlgeschlagen.");
+    }
+};
+
+window.openPostModal = (postId) => {
+    const modalTitle = document.getElementById('title-post');
+    const idInput = document.getElementById('post-id');
+    const titleInput = document.getElementById('post-title');
+    const topicInput = document.getElementById('post-topic');
+    const descInput = document.getElementById('post-desc');
+    const fileInput = document.getElementById('post-file');
+    const currentFileDiv = document.getElementById('post-current-file');
+
+    if (postId) {
+        const post = posts.find(p => String(p.id) === String(postId));
+        if (!post) return;
+
+        modalTitle.innerText = "Beitrag bearbeiten";
+        idInput.value = post.id;
+        titleInput.value = post.title;
+        topicInput.value = post.topic || '';
+        descInput.value = post.description;
+
+        if (post.originalFileName) {
+            currentFileDiv.style.display = 'block';
+            currentFileDiv.innerText = "Aktuelle Datei: " + post.originalFileName;
+        } else {
+            currentFileDiv.style.display = 'none';
+        }
+    } else {
+        modalTitle.innerText = "Beitrag erstellen";
+        idInput.value = '';
+        titleInput.value = '';
+        topicInput.value = '';
+        descInput.value = '';
+        currentFileDiv.style.display = 'none';
+    }
+    fileInput.value = '';
+    openModal('post-modal');
+};
+
+window.renderCommunity = () => {
+    const containers = [
+        document.getElementById('community-posts-list'),
+        document.getElementById('user-community-posts-list')
+    ];
+    const emptyStates = [
+        document.getElementById('community-empty-state'),
+        document.getElementById('user-community-empty-state')
+    ];
+
+    if (posts.length === 0) {
+        containers.forEach(c => { if(c) c.innerHTML = ''; });
+        emptyStates.forEach(e => { if(e) e.style.display = 'block'; });
+        return;
+    }
+
+    emptyStates.forEach(e => { if(e) e.style.display = 'none'; });
+
+    const sortedPosts = [...posts].sort((a, b) => b.timestamp - a.timestamp);
+
+    const html = sortedPosts.map(post => {
+        // Note: Prompt said "Ensure users can only edit their own posts."
+        const canEdit = currentUser && (post.authorUid === currentUser.uid || currentUser.admin);
+
+        const dateStr = new Date(post.timestamp).toLocaleDateString('de-DE');
+
+        let fileHtml = '';
+        if (post.serverFileName) {
+            const sName = escapeHtml(post.serverFileName).replace(/'/g, "\\'");
+            const oName = escapeHtml(post.originalFileName || 'Datei').replace(/'/g, "\\'");
+            fileHtml = `
+                <div style="margin-top:10px;">
+                    <button class="btn btn-secondary btn-small" onclick="downloadFile('${sName}', '${oName}')" style="display:flex; align-items:center; gap:5px;">
+                        <span>📎</span> ${escapeHtml(post.originalFileName)}
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="card" style="margin-bottom: 15px;">
+                <div class="card-body" style="padding: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <div>
+                            <span style="font-size:0.75rem; text-transform:uppercase; color:var(--primary); font-weight:700; letter-spacing:0.5px;">${escapeHtml(post.topic)}</span>
+                            <h3 style="margin: 5px 0; font-size: 1.1rem;">${escapeHtml(post.title)}</h3>
+                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom: 10px;">
+                                Von ${escapeHtml(post.authorName)} • ${dateStr}
+                            </div>
+                        </div>
+                        ${canEdit ? `
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-icon" onclick="openPostModal('${post.id}')">✏️</button>
+                            <button class="btn-icon text-danger" onclick="deletePost('${post.id}')">🗑️</button>
+                        </div>` : ''}
+                    </div>
+                    <div style="white-space: pre-wrap; color:var(--text); font-size:0.95rem; line-height:1.5;">${escapeHtml(post.description)}</div>
+                    ${fileHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    containers.forEach(c => { if(c) c.innerHTML = html; });
+};
+
+window.downloadFile = async (serverFileName, originalFileName) => {
+    try {
+        const url = await fetchReceiptImage(serverFileName);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = originalFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+        console.error("Download error:", err);
+        alert("Fehler beim Herunterladen der Datei.");
+    }
+};
