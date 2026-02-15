@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
+let requests = [];
 let posts = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
 let currentPersonId = null;
@@ -680,8 +681,6 @@ function checkAndExecuteStandingOrders(person) {
     }
     return null;
 }
-
-let requests = [];
 
 async function loadData() {
     // Ladebildschirm anzeigen
