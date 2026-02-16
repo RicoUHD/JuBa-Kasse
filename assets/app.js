@@ -2594,32 +2594,44 @@ window.uploadPostMedia = async function(file) {
     }
 };
 
+const postMediaCache = new Map();
+
 window.fetchPostMedia = async function(filename) {
-    // SECURITY WARNING: Credentials exposed in client-side code. Use a backend proxy in production.
-    const username = 'juba-bot';
-    const password = 'JuBa-!Bot+#21';
-    const folder = 'Beitrag';
-    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
-
-    const headers = new Headers();
-    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
-
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers
-        });
-
-        if (!response.ok) {
-            throw new Error('Fetch failed: ' + response.statusText);
-        }
-
-        const blob = await response.blob();
-        return URL.createObjectURL(blob);
-    } catch (error) {
-        console.error('Fetch media error:', error);
-        throw error;
+    if (postMediaCache.has(filename)) {
+        return postMediaCache.get(filename);
     }
+
+    const promise = (async () => {
+        // SECURITY WARNING: Credentials exposed in client-side code. Use a backend proxy in production.
+        const username = 'juba-bot';
+        const password = 'JuBa-!Bot+#21';
+        const folder = 'Beitrag';
+        const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
+
+        const headers = new Headers();
+        headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                throw new Error('Fetch failed: ' + response.statusText);
+            }
+
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        } catch (error) {
+            console.error('Fetch media error:', error);
+            postMediaCache.delete(filename); // Remove from cache on error so we can retry later
+            throw error;
+        }
+    })();
+
+    postMediaCache.set(filename, promise);
+    return promise;
 };
 
 // --- Community Posts Logic ---
@@ -2759,7 +2771,8 @@ window.renderPosts = (targetPosts = null, targetContainerId = null) => {
             const firstAudio = mediaList.find(m => m.type && m.type.startsWith('audio/'));
 
             if (firstImage) {
-                const elementId = `post-preview-${post.id}`;
+                const uniqueSuffix = Math.random().toString(36).substr(2, 9);
+                const elementId = `post-preview-${post.id}-${uniqueSuffix}`;
                 // Fetch image for preview
                 fetchPostMedia(firstImage.filename).then(url => {
                     const el = document.getElementById(elementId);
@@ -2821,16 +2834,16 @@ window.renderPosts = (targetPosts = null, targetContainerId = null) => {
         `;
     };
 
-    const html = sortedPosts.length ? sortedPosts.map(renderPostItem).join('') : '<div style="text-align:center; padding:40px; color:var(--text-secondary);">Keine Beiträge.</div>';
+    const getHtml = () => sortedPosts.length ? sortedPosts.map(renderPostItem).join('') : '<div style="text-align:center; padding:40px; color:var(--text-secondary);">Keine Beiträge.</div>';
 
     if (targetContainerId) {
         const c = document.getElementById(targetContainerId);
-        if(c) c.innerHTML = html;
+        if(c) c.innerHTML = getHtml();
     } else {
         const adminContainer = document.getElementById('admin-posts-container');
         const userContainer = document.getElementById('user-posts-container');
-        if (adminContainer) adminContainer.innerHTML = html;
-        if (userContainer) userContainer.innerHTML = html;
+        if (adminContainer) adminContainer.innerHTML = getHtml();
+        if (userContainer) userContainer.innerHTML = getHtml();
     }
 };
 
