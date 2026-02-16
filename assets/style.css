@@ -784,7 +784,9 @@ input:checked + .slider:before { transform: translateX(22px); }
     position: relative;
     background: var(--surface-alt);
     border: 1px solid var(--border-light);
-    height: 200px; /* Fixed height for preview */
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -820,12 +822,12 @@ input:checked + .slider:before { transform: translateX(22px); }
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 12px;
+    align-items: start;
 }
 
 .detail-media-img, .detail-media-video {
     width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
+    height: auto;
     border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--surface-alt);

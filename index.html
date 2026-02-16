@@ -491,6 +491,17 @@
             </div>
         </div>
         <div id="post-files-preview" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px;"></div>
+
+        <div id="upload-progress-container" style="display:none; margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:5px;">
+                <span>Upload...</span>
+                <span id="upload-progress-text">0%</span>
+            </div>
+            <div style="width:100%; background:var(--surface-alt); border-radius:10px; height:8px; overflow:hidden;">
+                <div id="upload-progress-bar" style="width:0%; background:var(--primary); height:100%; transition:width 0.2s;"></div>
+            </div>
+        </div>
+
         <button id="btn-submit-post" class="btn btn-primary" onclick="submitPost()">Veröffentlichen</button>
     </div>
 </div>
