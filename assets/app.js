@@ -888,7 +888,91 @@ async function loadData() {
     }
 }
 
+function renderHome() {
+    // Admin View
+    if (currentUser && currentUser.admin) {
+        const adminStatusContainer = document.getElementById('admin-home-status');
+        const adminPostContainer = document.getElementById('admin-home-latest-post-container');
+
+        if (adminStatusContainer) {
+            // Find person linked to admin
+            const adminPerson = people.find(p => p.uid === currentUser.uid);
+            if (adminPerson) {
+                adminStatusContainer.innerHTML = generateStatusCardHTML(adminPerson);
+            } else {
+                // Show Club Stats if no personal profile
+                let periodInc = 0, periodExp = 0;
+                let totalInc = 0, totalExp = 0;
+                const startDate = settings.reportStartDate ? new Date(settings.reportStartDate) : null;
+
+                people.forEach(p => {
+                    safeList(p.payments).forEach(pay => {
+                        const amount = parseFloat(pay.amount);
+                        totalInc += amount;
+                        if(!startDate || new Date(pay.date) >= startDate) periodInc += amount;
+                    });
+                });
+                donations.forEach(d => {
+                    const amount = parseFloat(d.amount);
+                    totalInc += amount;
+                    if(!startDate || new Date(d.date) >= startDate) periodInc += amount;
+                });
+                expenses.forEach(e => {
+                    const amount = parseFloat(e.amount);
+                    totalExp += amount;
+                    if(!startDate || new Date(e.date) >= startDate) periodExp += amount;
+                });
+                const totalBalance = totalInc - totalExp;
+
+                adminStatusContainer.innerHTML = `
+                    <div class="hero-card" style="cursor:default;">
+                        <span class="hero-label">Aktueller Kassenstand</span>
+                        <div class="hero-amount">${totalBalance.toLocaleString('de-DE', {style:'currency', currency:'EUR'})}</div>
+                        <div class="hero-subtitle">Einnahmen: ${periodInc.toLocaleString('de-DE', {style:'currency', currency:'EUR'})} • Ausgaben: ${periodExp.toLocaleString('de-DE', {style:'currency', currency:'EUR'})}</div>
+                    </div>
+                `;
+            }
+        }
+
+        if (adminPostContainer) {
+            // Sort to find latest
+            const sortedPosts = [...posts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const latestPost = sortedPosts[0];
+
+            if (latestPost) {
+                adminPostContainer.innerHTML = '<div class="list-section-title">📢 Neuigkeiten</div><div id="admin-home-latest-post"></div>';
+                // renderPosts expects an array
+                renderPosts([latestPost], 'admin-home-latest-post');
+            } else {
+                adminPostContainer.innerHTML = '';
+            }
+        }
+    }
+    // User View
+    else if (currentUser && !currentUser.admin) {
+        const userStatusContainer = document.getElementById('user-home-status');
+        const userPostContainer = document.getElementById('user-home-latest-post-container');
+
+        if (userStatusContainer && people.length > 0) {
+            userStatusContainer.innerHTML = generateStatusCardHTML(people[0]);
+        }
+
+        if (userPostContainer) {
+            const sortedPosts = [...posts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const latestPost = sortedPosts[0];
+
+            if (latestPost) {
+                userPostContainer.innerHTML = '<div class="list-section-title">📢 Neuigkeiten</div><div id="user-home-latest-post"></div>';
+                renderPosts([latestPost], 'user-home-latest-post');
+            } else {
+                userPostContainer.innerHTML = '';
+            }
+        }
+    }
+}
+
 function renderAll() {
+    renderHome();
     renderPosts();
     renderTopics();
     if (currentUser && !currentUser.admin) {
@@ -1144,33 +1228,13 @@ window.rejectRequest = async (reqId) => {
     }
 };
 
-function renderUserView() {
-    if (people.length === 0) {
-        document.getElementById('user-status-card').innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.
-            </div>
-        `;
-        return;
-    }
-
-    const p = people[0]; // User has only one person (themselves)
-    const paidUntil = calculatePaidUntil(p);
-    const statusMeta = calculateTimeRemaining(p, paidUntil);
-    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p) : 0;
-
-    // Get current status (not future status)
-    const currentStatus = getCurrentStatus(p);
+function generateStatusCardHTML(person) {
+    const paidUntil = calculatePaidUntil(person);
+    const statusMeta = calculateTimeRemaining(person, paidUntil);
+    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(person) : 0;
 
     // Format date to show only month and year
     let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
-
-    const statusLabels = {
-        'vollverdiener': '💼 Vollverdiener',
-        'geringverdiener': '📉 Geringverdiener',
-        'keinverdiener': '🎓 Keinverdiener',
-        'pausiert': '⏸️ Pausiert'
-    };
 
     let statusClass = 'user-status-ok';
     let statusColor = 'var(--success)';
@@ -1186,7 +1250,7 @@ function renderUserView() {
         statusIcon = '⏳';
     }
 
-    document.getElementById('user-status-card').innerHTML = `
+    return `
         <!-- Status Hero Card -->
         <div class="user-hero-status ${statusClass}">
             <div style="font-size: 4rem; margin-bottom: 15px; line-height: 1;">${statusIcon}</div>
@@ -1203,6 +1267,21 @@ function renderUserView() {
             ` : ''}
         </div>
     `;
+}
+
+function renderUserView() {
+    if (people.length === 0) {
+        document.getElementById('user-status-card').innerHTML = `
+            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+                Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.
+            </div>
+        `;
+        return;
+    }
+
+    const p = people[0]; // User has only one person (themselves)
+
+    document.getElementById('user-status-card').innerHTML = generateStatusCardHTML(p);
 
     // Combined History (Timeline)
     const timeline = generateTimelineHTML(p);
@@ -2475,6 +2554,7 @@ window.addEventListener('appinstalled', () => {
 // Expose functions for testing/debugging
 window.renderAll = renderAll;
 window.loadData = loadData;
+window.renderHome = renderHome;
 
 // --- WebDAV Post Media Handling ---
 

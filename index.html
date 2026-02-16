@@ -25,12 +25,8 @@
     <!-- ADMIN VIEW -->
     <div id="admin-view">
         <div id="overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
-            <div class="card">
-                <div class="card-body" style="text-align: center; color: var(--text-secondary); padding: 40px;">
-                    <h3>Willkommen</h3>
-                    <p>Neuigkeiten und Updates erscheinen hier.</p>
-                </div>
-            </div>
+            <div id="admin-home-status"></div>
+            <div id="admin-home-latest-post-container" style="margin-top: 25px;"></div>
         </div>
 
         <div id="finance-view" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-finance">
@@ -179,6 +175,8 @@
                 <div class="hero-subtitle" id="user-email-display">—</div>
             </div>
 
+            <div id="user-home-status" style="margin-top: 25px;"></div>
+
             <!-- Quick Actions -->
             <div style="margin-top: 25px;">
                 <h3 class="list-section-title">⚡ Schnellaktionen</h3>
@@ -203,6 +201,8 @@
                     </button>
                 </div>
             </div>
+
+            <div id="user-home-latest-post-container" style="margin-top: 25px;"></div>
         </div>
 
         <div id="user-finance-view" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-finance">
