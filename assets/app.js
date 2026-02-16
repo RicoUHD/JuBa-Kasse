@@ -2574,40 +2574,47 @@ window.renderHome = renderHome;
 
 // --- WebDAV Post Media Handling ---
 
-window.uploadPostMedia = async function(file) {
-    // SECURITY WARNING: Credentials exposed in client-side code. Use a backend proxy in production.
-    const username = 'juba-bot';
-    const password = 'JuBa-!Bot+#21';
-    const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}_${safeName}`;
-    const folder = 'Beitrag';
-    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
+window.uploadPostMedia = function(file, onProgress) {
+    return new Promise((resolve, reject) => {
+        // SECURITY WARNING: Credentials exposed in client-side code. Use a backend proxy in production.
+        const username = 'juba-bot';
+        const password = 'JuBa-!Bot+#21';
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const filename = `${timestamp}_${safeName}`;
+        const folder = 'Beitrag';
+        const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
 
-    const headers = new Headers();
-    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
-    headers.set('Content-Type', file.type);
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', url, true);
+        xhr.setRequestHeader('Authorization', 'Basic ' + btoa(username + ':' + password));
+        xhr.setRequestHeader('Content-Type', file.type);
 
-    try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: headers,
-            body: file
-        });
-
-        if (!response.ok) {
-            throw new Error('Upload failed: ' + response.statusText);
+        if (xhr.upload && onProgress) {
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = (e.loaded / e.total) * 100;
+                    onProgress(percent);
+                }
+            };
         }
 
-        return {
-            filename: filename,
-            type: file.type,
-            originalName: file.name
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve({
+                    filename: filename,
+                    type: file.type,
+                    originalName: file.name
+                });
+            } else {
+                reject(new Error('Upload failed: ' + xhr.statusText));
+            }
         };
-    } catch (error) {
-        console.error('Upload error:', error);
-        throw error;
-    }
+
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+
+        xhr.send(file);
+    });
 };
 
 const postMediaCache = new Map();
@@ -2723,15 +2730,41 @@ window.submitPost = async () => {
 
     setButtonLoading('btn-submit-post', true, "Veröffentliche...");
 
+    const progressContainer = document.getElementById('upload-progress-container');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const progressText = document.getElementById('upload-progress-text');
+
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = '0%';
+    }
+
     try {
         const mediaList = [];
+        const filesToUpload = currentPostFiles.filter(f => f instanceof File);
+        let completedUploads = 0;
+        const totalFiles = filesToUpload.length;
 
         // Upload new files and keep existing ones
         for (const file of currentPostFiles) {
             if (file instanceof File) {
                 // Upload new file
-                const uploaded = await uploadPostMedia(file);
+                const uploaded = await uploadPostMedia(file, (percent) => {
+                     if (totalFiles > 0) {
+                         // Calculate global progress
+                         // Each file contributes (100 / totalFiles)
+                         const perFileShare = 100 / totalFiles;
+                         const currentBase = completedUploads * perFileShare;
+                         const currentContribution = (percent / 100) * perFileShare;
+                         const totalPercent = Math.min(Math.round(currentBase + currentContribution), 100);
+
+                         if(progressBar) progressBar.style.width = totalPercent + '%';
+                         if(progressText) progressText.innerText = totalPercent + '%';
+                     }
+                });
                 mediaList.push(uploaded);
+                completedUploads++;
             } else {
                 // Existing file
                 mediaList.push(file);
@@ -2776,6 +2809,9 @@ window.submitPost = async () => {
         alert("Fehler beim Speichern: " + err.message);
     } finally {
         setButtonLoading('btn-submit-post', false);
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+        }
     }
 };
 
