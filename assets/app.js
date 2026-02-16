@@ -1205,7 +1205,13 @@ window.approveRequest = async (reqId) => {
         }
 
         await update(ref(db, 'requests/' + reqId), { status: 'approved' });
-        loadData();
+
+        // Optimistic UI Update
+        const reqIndex = requests.findIndex(r => r.id === reqId);
+        if (reqIndex !== -1) {
+            requests[reqIndex].status = 'approved';
+        }
+        renderAll();
     } catch (err) {
         console.error('Fehler beim Genehmigen der Anfrage:', err);
         alert('Anfrage konnte nicht genehmigt werden. Bitte erneut versuchen.');
@@ -1221,7 +1227,14 @@ window.rejectRequest = async (reqId) => {
             status: 'rejected',
             rejectionReason: reason || 'Kein Grund angegeben'
         });
-        loadData();
+
+        // Optimistic UI Update
+        const reqIndex = requests.findIndex(r => r.id === reqId);
+        if (reqIndex !== -1) {
+            requests[reqIndex].status = 'rejected';
+            requests[reqIndex].rejectionReason = reason || 'Kein Grund angegeben';
+        }
+        renderAll();
     } catch (err) {
         console.error('Fehler beim Ablehnen der Anfrage:', err);
         alert('Anfrage konnte nicht abgelehnt werden. Bitte erneut versuchen.');
@@ -2346,7 +2359,10 @@ window.submitUserRequest = async () => {
         await set(ref(db, 'requests/' + newReq.id), newReq);
         closeModal('user-request-modal');
         alert("Anfrage gesendet! Ein Administrator wird sie prüfen.");
-        loadData();
+
+        // Optimistic UI Update
+        requests.push(newReq);
+        renderAll();
     } catch (err) {
         console.error('Fehler beim Senden der Anfrage:', err);
         alert('Anfrage konnte nicht gesendet werden. Bitte erneut versuchen.');
@@ -2737,14 +2753,24 @@ window.submitPost = async () => {
             const oldPost = posts.find(p => p.id === currentEditingPostId);
             if(oldPost) postData.timestamp = oldPost.timestamp;
             await update(ref(db, 'posts/' + currentEditingPostId), postData);
+
+            // Optimistic UI Update
+            const idx = posts.findIndex(p => p.id === currentEditingPostId);
+            if (idx !== -1) {
+                posts[idx] = { ...posts[idx], ...postData };
+            }
         } else {
             // Create new
             const newId = Date.now().toString() + '_' + Math.floor(Math.random()*1000);
-            await set(ref(db, 'posts/' + newId), { ...postData, id: newId });
+            const newPost = { ...postData, id: newId };
+            await set(ref(db, 'posts/' + newId), newPost);
+
+            // Optimistic UI Update
+            posts.push(newPost);
         }
 
         closeModal('create-post-modal');
-        loadData(); // Reloads posts and re-renders
+        renderAll();
     } catch (err) {
         console.error("Fehler beim Speichern des Beitrags:", err);
         alert("Fehler beim Speichern: " + err.message);
@@ -2869,7 +2895,10 @@ window.deletePost = async (postId) => {
 
     try {
         await remove(ref(db, 'posts/' + postId));
-        loadData();
+
+        // Optimistic UI Update
+        posts = posts.filter(p => p.id !== postId);
+        renderAll();
     } catch(err) {
         console.error(err);
         alert("Löschen fehlgeschlagen.");
