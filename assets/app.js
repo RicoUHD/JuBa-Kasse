@@ -2672,59 +2672,48 @@ function renderPosts() {
         const isOwner = currentUser && (currentUser.uid === post.authorId || currentUser.admin);
         const dateStr = new Date(post.timestamp).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit' });
 
-        let mediaHtml = '';
-        if (post.media && post.media.length > 0) {
-            const items = safeList(post.media).map(m => {
-                const type = m.type || '';
-                const isImage = type.startsWith('image/');
-                const isVideo = type.startsWith('video/');
+        const mediaList = safeList(post.media);
+        let previewHtml = '';
 
-                // We need to fetch the blob URL for images/videos to display them
-                // This is async, so we'll use a placeholder and load it after insertion
-                const elementId = `media-${post.id}-${m.filename.replace(/[^a-zA-Z0-9]/g,'')}`;
+        if (mediaList.length > 0) {
+            const firstImage = mediaList.find(m => m.type && m.type.startsWith('image/'));
 
-                // Start loading the media
-                fetchPostMedia(m.filename).then(url => {
+            if (firstImage) {
+                const elementId = `post-preview-${post.id}`;
+                // Fetch image for preview
+                fetchPostMedia(firstImage.filename).then(url => {
                     const el = document.getElementById(elementId);
-                    if(el) {
-                        if (isImage) {
-                            el.innerHTML = `<img src="${url}" alt="Medien" onclick="window.open('${url}', '_blank')">`;
-                        } else if (isVideo) {
-                            el.innerHTML = `<video src="${url}" controls playsinline></video>`;
-                        } else {
-                            // Download link
-                            el.href = url;
-                        }
-                    }
+                    if(el) el.src = url;
                 }).catch(err => {
-                    console.error("Failed to load media", m.filename, err);
+                    console.error("Failed to load preview", firstImage.filename, err);
                 });
 
-                if (isImage || isVideo) {
-                    return `<div id="${elementId}" class="post-media-item"><div class="spinner" style="margin: 20px auto;"></div></div>`;
-                } else {
-                    return `
-                        <div class="post-media-item">
-                            <a id="${elementId}" href="#" download="${escapeHtml(m.originalName)}" class="post-file-download" target="_blank">
-                                <div class="post-file-icon">📄</div>
-                                <div class="post-file-name">${escapeHtml(m.originalName)}</div>
-                            </a>
-                        </div>
-                    `;
-                }
-            }).join('');
-            mediaHtml = `<div class="post-media-grid">${items}</div>`;
+                previewHtml = `
+                    <div class="post-preview-media">
+                         <img id="${elementId}" src="assets/bgb-logo.svg" alt="Vorschau" class="post-preview-img">
+                         ${mediaList.length > 1 ? `<div class="post-more-files-badge">+${mediaList.length - 1} weitere</div>` : ''}
+                    </div>
+                `;
+            } else {
+                 // No image, but has files
+                 previewHtml = `
+                    <div class="post-preview-media no-image">
+                        <div style="font-size:2rem;">📄</div>
+                        <div>${mediaList.length} Datei${mediaList.length !== 1 ? 'en' : ''}</div>
+                    </div>
+                 `;
+            }
         }
 
         return `
-            <div class="post-card">
+            <div class="post-card clickable" onclick="openPostDetails('${post.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openPostDetails('${post.id}');}">
                 <div class="post-header">
                     <div class="post-author">
                         <span>${escapeHtml(post.authorName)}</span>
                         <span class="post-date">${dateStr}</span>
                     </div>
                     ${isOwner ? `
-                    <div style="display:flex; gap: 5px;">
+                    <div style="display:flex; gap: 5px;" onclick="event.stopPropagation();">
                         <button class="btn-icon" onclick="editPost('${post.id}')" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
@@ -2738,8 +2727,8 @@ function renderPosts() {
                     ${escapeHtml(post.title)}
                     ${post.topic ? `<span class="badge" style="background:var(--primary); color:white; font-size:0.75rem; padding:2px 8px; border-radius:12px; vertical-align:middle; margin-left:8px;">${escapeHtml(post.topic)}</span>` : ''}
                 </div>
-                <div class="post-desc">${escapeHtml(post.description)}</div>
-                ${mediaHtml}
+                <div class="post-desc" style="max-height: 100px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">${escapeHtml(post.description)}</div>
+                ${previewHtml}
             </div>
         `;
     };
@@ -2777,4 +2766,110 @@ window.deletePost = async (postId) => {
         console.error(err);
         alert("Löschen fehlgeschlagen.");
     }
+};
+
+window.openPostDetails = (postId) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const container = document.getElementById('view-post-content');
+    const dateStr = new Date(post.timestamp).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+
+    // Render media list
+    const mediaList = safeList(post.media);
+    let mediaHtml = '';
+
+    if (mediaList.length > 0) {
+        const items = mediaList.map(m => {
+            const type = m.type || '';
+            const isImage = type.startsWith('image/');
+            const isVideo = type.startsWith('video/');
+            const elementId = `detail-media-${post.id}-${m.filename.replace(/[^a-zA-Z0-9]/g,'')}`;
+
+            // Load media
+            fetchPostMedia(m.filename).then(url => {
+                const el = document.getElementById(elementId);
+                if(el) {
+                     if (isImage) {
+                        el.src = url;
+                        el.onclick = () => window.open(url, '_blank');
+                    } else if (isVideo) {
+                        el.src = url;
+                    } else {
+                        el.href = url;
+                    }
+                }
+            }).catch(console.error);
+
+            if (isImage) {
+                return `<img id="${elementId}" class="detail-media-img" src="assets/bgb-logo.svg" alt="Bild">`;
+            } else if (isVideo) {
+                return `<video id="${elementId}" class="detail-media-video" controls playsinline></video>`;
+            } else {
+                 return `
+                    <a id="${elementId}" href="#" download="${escapeHtml(m.originalName)}" class="detail-file-download" target="_blank">
+                        <div style="font-size:1.5rem;">📄</div>
+                        <div style="font-weight:600; word-break:break-all;">${escapeHtml(m.originalName)}</div>
+                    </a>
+                `;
+            }
+        }).join('');
+        mediaHtml = `<div class="detail-media-grid">${items}</div>`;
+    } else {
+        mediaHtml = '<div style="color:var(--text-secondary); font-style:italic;">Keine Anhänge.</div>';
+    }
+
+    container.innerHTML = `
+        <div style="margin-bottom:15px;">
+            <h2 style="font-size:1.4rem; font-weight:800; margin-bottom:5px;">${escapeHtml(post.title)}</h2>
+            ${post.topic ? `<span class="badge" style="background:var(--primary); color:white; font-size:0.8rem; padding:3px 10px; border-radius:12px;">${escapeHtml(post.topic)}</span>` : ''}
+        </div>
+
+        <div style="display:flex; justify-content:space-between; color:var(--text-secondary); font-size:0.9rem; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:15px;">
+            <span>Von <strong>${escapeHtml(post.authorName)}</strong></span>
+            <span>${dateStr}</span>
+        </div>
+
+        <div style="font-size:1rem; line-height:1.6; white-space:pre-wrap; margin-bottom:25px;">${escapeHtml(post.description)}</div>
+
+        <h3 style="font-size:1rem; font-weight:700; margin-bottom:15px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Anhänge (${mediaList.length})</h3>
+        ${mediaHtml}
+    `;
+
+    // Setup Download All
+    const btn = document.getElementById('btn-download-all');
+    if (mediaList.length > 0) {
+        btn.style.display = 'inline-flex';
+        btn.onclick = () => downloadAllMedia(mediaList);
+    } else {
+        btn.style.display = 'none';
+    }
+
+    openModal('view-post-modal');
+};
+
+window.downloadAllMedia = async (mediaList) => {
+    if (!mediaList || mediaList.length === 0) return;
+
+    setButtonLoading('btn-download-all', true, "Lade...");
+
+    for (let i = 0; i < mediaList.length; i++) {
+        const m = mediaList[i];
+        try {
+            const url = await fetchPostMedia(m.filename);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = m.originalName || m.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Small delay to prevent browser blocking
+            await new Promise(r => setTimeout(r, 500));
+        } catch (err) {
+            console.error("Download failed for", m.originalName, err);
+        }
+    }
+
+    setButtonLoading('btn-download-all', false, "📥 Alle herunterladen");
 };
