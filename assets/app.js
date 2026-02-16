@@ -2574,6 +2574,32 @@ window.renderHome = renderHome;
 
 // --- WebDAV Post Media Handling ---
 
+window.deletePostMedia = async function(filename) {
+    const username = 'juba-bot';
+    const password = 'JuBa-!Bot+#21';
+    const folder = 'Beitrag';
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+
+    try {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            // 404 means it's already gone, which is fine
+            if (response.status === 404) return;
+            throw new Error('Delete failed: ' + response.statusText);
+        }
+    } catch (error) {
+        console.error('Delete media error:', error);
+        throw error;
+    }
+};
+
 window.uploadPostMedia = function(file, onProgress) {
     return new Promise((resolve, reject) => {
         // SECURITY WARNING: Credentials exposed in client-side code. Use a backend proxy in production.
@@ -2784,6 +2810,20 @@ window.submitPost = async () => {
         if (currentEditingPostId) {
             // Update existing (preserve timestamp)
             const oldPost = posts.find(p => p.id === currentEditingPostId);
+
+            // Check for removed media and delete from WebDAV
+            if (oldPost && oldPost.media) {
+                 const oldMedia = safeList(oldPost.media);
+                 const newFilenames = new Set(mediaList.map(m => m.filename));
+
+                 const removedMedia = oldMedia.filter(m => !newFilenames.has(m.filename));
+                 if (removedMedia.length > 0) {
+                     const deletePromises = removedMedia.map(m => window.deletePostMedia(m.filename));
+                     // Best effort deletion
+                     await Promise.allSettled(deletePromises);
+                 }
+            }
+
             if(oldPost) postData.timestamp = oldPost.timestamp;
             await update(ref(db, 'posts/' + currentEditingPostId), postData);
 
@@ -2930,6 +2970,17 @@ window.deletePost = async (postId) => {
     if(!confirm("Beitrag wirklich löschen?")) return;
 
     try {
+        // Find the post to get media list
+        const post = posts.find(p => p.id === postId);
+        if (post && post.media) {
+             const mediaList = safeList(post.media);
+             // Delete all media files
+             const deletePromises = mediaList.map(m => window.deletePostMedia(m.filename));
+             // We wait for all deletions, but we shouldn't block the post deletion if one fails?
+             // "Best effort" seems appropriate here.
+             await Promise.allSettled(deletePromises);
+        }
+
         await remove(ref(db, 'posts/' + postId));
 
         // Optimistic UI Update
