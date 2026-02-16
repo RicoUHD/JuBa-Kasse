@@ -1,8 +1,0 @@
-127.0.0.1 - - [16/Feb/2026 16:36:40] "GET /index.html HTTP/1.1" 200 -
-127.0.0.1 - - [16/Feb/2026 16:36:40] "GET /assets/bgb-logo.svg HTTP/1.1" 200 -
-127.0.0.1 - - [16/Feb/2026 16:36:40] "GET /assets/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [16/Feb/2026 16:36:40] "GET /assets/app.js HTTP/1.1" 200 -
-127.0.0.1 - - [16/Feb/2026 16:36:41] "GET /sw.js HTTP/1.1" 200 -
-127.0.0.1 - - [16/Feb/2026 16:36:41] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [16/Feb/2026 16:36:41] "GET /assets/icon.png HTTP/1.1" 200 -
-127.0.0.1 - - [16/Feb/2026 16:36:41] "GET /manifest.json HTTP/1.1" 200 -
