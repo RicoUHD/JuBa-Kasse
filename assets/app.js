@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let people = [];
 let donations = [];
 let expenses = [];
+let posts = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
 let currentPersonId = null;
 let isAuthenticated = false;
@@ -773,6 +774,10 @@ async function loadData() {
         // If we fell back to all requests, filter them now
         requests = allRequests.filter(r => r.userId === currentUser.uid);
 
+        // 4. Fetch Posts
+        const postsSnap = await get(child(dbRef, 'posts'));
+        posts = safeList(postsSnap.val());
+
         // UI toggles
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('user-view').style.display = 'block';
@@ -790,20 +795,22 @@ async function loadData() {
 
     } else {
         // Admin: fetch full dataset
-        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
+        const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap, postsSnap] = await Promise.all([
             get(child(dbRef, 'people')),
             get(child(dbRef, 'donations')),
             get(child(dbRef, 'expenses')),
             get(child(dbRef, 'settings')),
             get(child(dbRef, 'system/inviteCode')),
             get(child(dbRef, 'requests')),
-            get(child(dbRef, 'users'))
+            get(child(dbRef, 'users')),
+            get(child(dbRef, 'posts'))
         ]);
 
         people = safeList(pSnap.val());
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
+        posts = safeList(postsSnap.val());
         if (sSnap.exists()) settings = sSnap.val();
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
@@ -882,6 +889,7 @@ async function loadData() {
 }
 
 function renderAll() {
+    renderPosts();
     if (currentUser && !currentUser.admin) {
         renderUserView();
     } else {
@@ -2462,3 +2470,297 @@ window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     console.log('PWA was installed');
 });
+
+// Expose functions for testing/debugging
+window.renderAll = renderAll;
+window.loadData = loadData;
+
+// --- WebDAV Post Media Handling ---
+
+window.uploadPostMedia = async function(file) {
+    const username = 'juba-bot';
+    const password = 'JuBa-!Bot+#21';
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filename = `${timestamp}_${safeName}`;
+    const folder = 'Beitr%C3%A4ge';
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+    headers.set('Content-Type', file.type);
+
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: headers,
+            body: file
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed: ' + response.statusText);
+        }
+
+        return {
+            filename: filename,
+            type: file.type,
+            originalName: file.name
+        };
+    } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+    }
+};
+
+window.fetchPostMedia = async function(filename) {
+    const username = 'juba-bot';
+    const password = 'JuBa-!Bot+#21';
+    const folder = 'Beitr%C3%A4ge';
+    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
+
+    const headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Fetch failed: ' + response.statusText);
+        }
+
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch (error) {
+        console.error('Fetch media error:', error);
+        throw error;
+    }
+};
+
+// --- Community Posts Logic ---
+
+let currentEditingPostId = null;
+let currentPostFiles = []; // To store file objects or existing file metadata
+
+window.openCreatePostModal = () => {
+    currentEditingPostId = null;
+    currentPostFiles = [];
+    document.getElementById('title-create-post').innerText = 'Beitrag erstellen';
+    document.getElementById('post-title').value = '';
+    document.getElementById('post-desc').value = '';
+    document.getElementById('post-files').value = '';
+    renderPostFilePreview();
+    openModal('create-post-modal');
+};
+
+window.renderPostFilePreview = () => {
+    const container = document.getElementById('post-files-preview');
+    container.innerHTML = '';
+
+    currentPostFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'file-preview-item';
+        // Check if it's a File object or existing metadata
+        const name = file.name || file.originalName || file.filename;
+
+        item.innerHTML = `
+            <span class="file-preview-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+            <button class="file-remove-btn" onclick="removePostFile(${index})">&times;</button>
+        `;
+        container.appendChild(item);
+    });
+};
+
+window.removePostFile = (index) => {
+    currentPostFiles.splice(index, 1);
+    renderPostFilePreview();
+};
+
+// Listen for file selection
+const postFilesInput = document.getElementById('post-files');
+if (postFilesInput) {
+    postFilesInput.addEventListener('change', (e) => {
+        if(e.target.files) {
+            Array.from(e.target.files).forEach(file => {
+                currentPostFiles.push(file);
+            });
+            renderPostFilePreview();
+            e.target.value = ''; // Reset input to allow selecting same files again
+        }
+    });
+}
+
+window.submitPost = async () => {
+    if(!currentUser) return;
+
+    const title = document.getElementById('post-title').value;
+    const desc = document.getElementById('post-desc').value;
+
+    if(!title) {
+        alert("Bitte einen Titel eingeben.");
+        return;
+    }
+
+    setButtonLoading('btn-submit-post', true, "Veröffentliche...");
+
+    try {
+        const mediaList = [];
+
+        // Upload new files and keep existing ones
+        for (const file of currentPostFiles) {
+            if (file instanceof File) {
+                // Upload new file
+                const uploaded = await uploadPostMedia(file);
+                mediaList.push(uploaded);
+            } else {
+                // Existing file
+                mediaList.push(file);
+            }
+        }
+
+        const postData = {
+            title,
+            description: desc,
+            media: mediaList,
+            timestamp: currentEditingPostId ? undefined : Date.now(), // Don't change timestamp on edit
+            authorId: currentUser.uid,
+            authorName: (currentUser.firstName || 'User') + ' ' + (currentUser.lastName || '')
+        };
+
+        if (currentEditingPostId) {
+            // Update existing (preserve timestamp)
+            const oldPost = posts.find(p => p.id === currentEditingPostId);
+            if(oldPost) postData.timestamp = oldPost.timestamp;
+            await update(ref(db, 'posts/' + currentEditingPostId), postData);
+        } else {
+            // Create new
+            const newId = Date.now().toString() + '_' + Math.floor(Math.random()*1000);
+            await set(ref(db, 'posts/' + newId), { ...postData, id: newId });
+        }
+
+        closeModal('create-post-modal');
+        loadData(); // Reloads posts and re-renders
+    } catch (err) {
+        console.error("Fehler beim Speichern des Beitrags:", err);
+        alert("Fehler beim Speichern: " + err.message);
+    } finally {
+        setButtonLoading('btn-submit-post', false);
+    }
+};
+
+function renderPosts() {
+    // Determine container based on view
+    const adminContainer = document.getElementById('admin-posts-container');
+    const userContainer = document.getElementById('user-posts-container');
+
+    // Sort posts: Newest first
+    const sortedPosts = [...posts].sort((a, b) => b.timestamp - a.timestamp);
+
+    const renderPostItem = (post) => {
+        const isOwner = currentUser && (currentUser.uid === post.authorId || currentUser.admin);
+        const dateStr = new Date(post.timestamp).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+
+        let mediaHtml = '';
+        if (post.media && post.media.length > 0) {
+            const items = safeList(post.media).map(m => {
+                const type = m.type || '';
+                const isImage = type.startsWith('image/');
+                const isVideo = type.startsWith('video/');
+
+                // We need to fetch the blob URL for images/videos to display them
+                // This is async, so we'll use a placeholder and load it after insertion
+                const elementId = `media-${post.id}-${m.filename.replace(/[^a-zA-Z0-9]/g,'')}`;
+
+                // Start loading the media
+                fetchPostMedia(m.filename).then(url => {
+                    const el = document.getElementById(elementId);
+                    if(el) {
+                        if (isImage) {
+                            el.innerHTML = `<img src="${url}" alt="Medien" onclick="window.open('${url}', '_blank')">`;
+                        } else if (isVideo) {
+                            el.innerHTML = `<video src="${url}" controls playsinline></video>`;
+                        } else {
+                            // Download link
+                            el.href = url;
+                        }
+                    }
+                }).catch(err => {
+                    console.error("Failed to load media", m.filename, err);
+                });
+
+                if (isImage || isVideo) {
+                    return `<div id="${elementId}" class="post-media-item"><div class="spinner" style="margin: 20px auto;"></div></div>`;
+                } else {
+                    return `
+                        <div class="post-media-item">
+                            <a id="${elementId}" href="#" download="${escapeHtml(m.originalName)}" class="post-file-download" target="_blank">
+                                <div class="post-file-icon">📄</div>
+                                <div class="post-file-name">${escapeHtml(m.originalName)}</div>
+                            </a>
+                        </div>
+                    `;
+                }
+            }).join('');
+            mediaHtml = `<div class="post-media-grid">${items}</div>`;
+        }
+
+        return `
+            <div class="post-card">
+                <div class="post-header">
+                    <div class="post-author">
+                        <span>${escapeHtml(post.authorName)}</span>
+                        <span class="post-date">${dateStr}</span>
+                    </div>
+                    ${isOwner ? `
+                    <div style="display:flex; gap: 5px;">
+                        <button class="btn-icon" onclick="editPost('${post.id}')" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="btn-icon" onclick="deletePost('${post.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="post-title">${escapeHtml(post.title)}</div>
+                <div class="post-desc">${escapeHtml(post.description)}</div>
+                ${mediaHtml}
+            </div>
+        `;
+    };
+
+    const html = sortedPosts.length ? sortedPosts.map(renderPostItem).join('') : '<div style="text-align:center; padding:40px; color:var(--text-secondary);">Noch keine Beiträge. Sei der Erste!</div>';
+
+    if (adminContainer) adminContainer.innerHTML = html;
+    if (userContainer) userContainer.innerHTML = html;
+};
+
+window.editPost = (postId) => {
+    const post = posts.find(p => p.id === postId);
+    if(!post) return;
+
+    currentEditingPostId = postId;
+    currentPostFiles = post.media ? safeList(post.media) : [];
+
+    document.getElementById('title-create-post').innerText = 'Beitrag bearbeiten';
+    document.getElementById('post-title').value = post.title;
+    document.getElementById('post-desc').value = post.description;
+    document.getElementById('post-files').value = '';
+
+    renderPostFilePreview();
+    openModal('create-post-modal');
+};
+
+window.deletePost = async (postId) => {
+    if(!confirm("Beitrag wirklich löschen?")) return;
+
+    try {
+        await remove(ref(db, 'posts/' + postId));
+        loadData();
+    } catch(err) {
+        console.error(err);
+        alert("Löschen fehlgeschlagen.");
+    }
+};
