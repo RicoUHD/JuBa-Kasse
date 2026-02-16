@@ -2478,12 +2478,13 @@ window.loadData = loadData;
 // --- WebDAV Post Media Handling ---
 
 window.uploadPostMedia = async function(file) {
+    // SECURITY WARNING: Credentials exposed in client-side code. Use a backend proxy in production.
     const username = 'juba-bot';
     const password = 'JuBa-!Bot+#21';
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${timestamp}_${safeName}`;
-    const folder = 'Beitr%C3%A4ge';
+    const folder = 'Beitrag';
     const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
 
     const headers = new Headers();
@@ -2513,9 +2514,10 @@ window.uploadPostMedia = async function(file) {
 };
 
 window.fetchPostMedia = async function(filename) {
+    // SECURITY WARNING: Credentials exposed in client-side code. Use a backend proxy in production.
     const username = 'juba-bot';
     const password = 'JuBa-!Bot+#21';
-    const folder = 'Beitr%C3%A4ge';
+    const folder = 'Beitrag';
     const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/${folder}/${filename}`;
 
     const headers = new Headers();
@@ -2549,6 +2551,7 @@ window.openCreatePostModal = () => {
     currentPostFiles = [];
     document.getElementById('title-create-post').innerText = 'Beitrag erstellen';
     document.getElementById('post-title').value = '';
+    document.getElementById('post-topic').value = '';
     document.getElementById('post-desc').value = '';
     document.getElementById('post-files').value = '';
     renderPostFilePreview();
@@ -2596,10 +2599,16 @@ window.submitPost = async () => {
     if(!currentUser) return;
 
     const title = document.getElementById('post-title').value;
+    const topic = document.getElementById('post-topic').value;
     const desc = document.getElementById('post-desc').value;
 
     if(!title) {
         alert("Bitte einen Titel eingeben.");
+        return;
+    }
+
+    if (topic && topic.trim().split(/\s+/).length > 1) {
+        alert("Bitte für das Thema nur ein Wort verwenden.");
         return;
     }
 
@@ -2622,6 +2631,7 @@ window.submitPost = async () => {
 
         const postData = {
             title,
+            topic: topic ? topic.trim() : '',
             description: desc,
             media: mediaList,
             timestamp: currentEditingPostId ? undefined : Date.now(), // Don't change timestamp on edit
@@ -2656,7 +2666,7 @@ function renderPosts() {
     const userContainer = document.getElementById('user-posts-container');
 
     // Sort posts: Newest first
-    const sortedPosts = [...posts].sort((a, b) => b.timestamp - a.timestamp);
+    const sortedPosts = [...posts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     const renderPostItem = (post) => {
         const isOwner = currentUser && (currentUser.uid === post.authorId || currentUser.admin);
@@ -2724,7 +2734,10 @@ function renderPosts() {
                     </div>
                     ` : ''}
                 </div>
-                <div class="post-title">${escapeHtml(post.title)}</div>
+                <div class="post-title">
+                    ${escapeHtml(post.title)}
+                    ${post.topic ? `<span class="badge" style="background:var(--primary); color:white; font-size:0.75rem; padding:2px 8px; border-radius:12px; vertical-align:middle; margin-left:8px;">${escapeHtml(post.topic)}</span>` : ''}
+                </div>
                 <div class="post-desc">${escapeHtml(post.description)}</div>
                 ${mediaHtml}
             </div>
@@ -2746,6 +2759,7 @@ window.editPost = (postId) => {
 
     document.getElementById('title-create-post').innerText = 'Beitrag bearbeiten';
     document.getElementById('post-title').value = post.title;
+    document.getElementById('post-topic').value = post.topic || '';
     document.getElementById('post-desc').value = post.description;
     document.getElementById('post-files').value = '';
 
