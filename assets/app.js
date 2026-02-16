@@ -890,6 +890,7 @@ async function loadData() {
 
 function renderAll() {
     renderPosts();
+    renderTopics();
     if (currentUser && !currentUser.admin) {
         renderUserView();
     } else {
@@ -2660,13 +2661,11 @@ window.submitPost = async () => {
     }
 };
 
-function renderPosts() {
-    // Determine container based on view
-    const adminContainer = document.getElementById('admin-posts-container');
-    const userContainer = document.getElementById('user-posts-container');
+window.renderPosts = (targetPosts = null, targetContainerId = null) => {
+    const postsToRender = targetPosts || posts;
 
     // Sort posts: Newest first
-    const sortedPosts = [...posts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const sortedPosts = [...postsToRender].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     const renderPostItem = (post) => {
         const isOwner = currentUser && (currentUser.uid === post.authorId || currentUser.admin);
@@ -2677,6 +2676,7 @@ function renderPosts() {
 
         if (mediaList.length > 0) {
             const firstImage = mediaList.find(m => m.type && m.type.startsWith('image/'));
+            const firstAudio = mediaList.find(m => m.type && m.type.startsWith('audio/'));
 
             if (firstImage) {
                 const elementId = `post-preview-${post.id}`;
@@ -2694,8 +2694,16 @@ function renderPosts() {
                          ${mediaList.length > 1 ? `<div class="post-more-files-badge">+${mediaList.length - 1} weitere</div>` : ''}
                     </div>
                 `;
+            } else if (firstAudio) {
+                 previewHtml = `
+                    <div class="post-preview-media no-image">
+                        <div style="font-size:3rem;">🎵</div>
+                        <div style="font-size:0.9rem; margin-top:5px;">Audio</div>
+                        ${mediaList.length > 1 ? `<div style="font-size:0.8rem; color:var(--text-secondary);">+${mediaList.length - 1} weitere</div>` : ''}
+                    </div>
+                 `;
             } else {
-                 // No image, but has files
+                 // No image or audio, but has files
                  previewHtml = `
                     <div class="post-preview-media no-image">
                         <div style="font-size:2rem;">📄</div>
@@ -2733,10 +2741,17 @@ function renderPosts() {
         `;
     };
 
-    const html = sortedPosts.length ? sortedPosts.map(renderPostItem).join('') : '<div style="text-align:center; padding:40px; color:var(--text-secondary);">Noch keine Beiträge. Sei der Erste!</div>';
+    const html = sortedPosts.length ? sortedPosts.map(renderPostItem).join('') : '<div style="text-align:center; padding:40px; color:var(--text-secondary);">Keine Beiträge.</div>';
 
-    if (adminContainer) adminContainer.innerHTML = html;
-    if (userContainer) userContainer.innerHTML = html;
+    if (targetContainerId) {
+        const c = document.getElementById(targetContainerId);
+        if(c) c.innerHTML = html;
+    } else {
+        const adminContainer = document.getElementById('admin-posts-container');
+        const userContainer = document.getElementById('user-posts-container');
+        if (adminContainer) adminContainer.innerHTML = html;
+        if (userContainer) userContainer.innerHTML = html;
+    }
 };
 
 window.editPost = (postId) => {
@@ -2795,6 +2810,8 @@ window.openPostDetails = (postId) => {
                         el.onclick = () => window.open(url, '_blank');
                     } else if (isVideo) {
                         el.src = url;
+                    } else if (type.startsWith('audio/')) {
+                        el.src = url;
                     } else {
                         el.href = url;
                     }
@@ -2805,6 +2822,13 @@ window.openPostDetails = (postId) => {
                 return `<img id="${elementId}" class="detail-media-img" src="assets/bgb-logo.svg" alt="Bild">`;
             } else if (isVideo) {
                 return `<video id="${elementId}" class="detail-media-video" controls playsinline></video>`;
+            } else if (type.startsWith('audio/')) {
+                 return `
+                    <div style="width:100%; margin-top:10px; padding:10px; background:var(--surface-alt); border-radius:12px; border:1px solid var(--border);">
+                        <div style="font-size:0.8rem; font-weight:600; margin-bottom:5px;">🎵 ${escapeHtml(m.originalName)}</div>
+                        <audio id="${elementId}" controls style="width:100%;"></audio>
+                    </div>
+                 `;
             } else {
                  return `
                     <a id="${elementId}" href="#" download="${escapeHtml(m.originalName)}" class="detail-file-download" target="_blank">
@@ -2872,4 +2896,108 @@ window.downloadAllMedia = async (mediaList) => {
     }
 
     setButtonLoading('btn-download-all', false, "📥 Alle herunterladen");
+};
+
+window.switchCommunitySubTab = (tabName) => {
+    const scope = (currentUser && !currentUser.admin) ? 'user' : 'admin';
+    const postsView = document.getElementById(`${scope}-posts-view`);
+    const topicsView = document.getElementById(`${scope}-topics-view`);
+    const detailView = document.getElementById(`${scope}-topic-detail-view`);
+    const fab = document.getElementById(`${scope}-post-fab`);
+
+    const btnPosts = document.getElementById(`${scope}-tab-posts`);
+    const btnTopics = document.getElementById(`${scope}-tab-topics`);
+
+    if (tabName === 'posts') {
+        postsView.style.display = 'block';
+        topicsView.style.display = 'none';
+        detailView.style.display = 'none';
+        if(fab) fab.style.display = 'flex';
+
+        btnPosts.classList.remove('btn-secondary');
+        btnPosts.classList.add('btn-primary');
+        btnTopics.classList.remove('btn-primary');
+        btnTopics.classList.add('btn-secondary');
+    } else {
+        postsView.style.display = 'none';
+        topicsView.style.display = 'block';
+        detailView.style.display = 'none';
+        if(fab) fab.style.display = 'none';
+
+        btnPosts.classList.remove('btn-primary');
+        btnPosts.classList.add('btn-secondary');
+        btnTopics.classList.remove('btn-secondary');
+        btnTopics.classList.add('btn-primary');
+        renderTopics();
+    }
+};
+
+window.renderTopics = (searchTerm = '') => {
+    const scope = (currentUser && !currentUser.admin) ? 'user' : 'admin';
+    const grid = document.getElementById(`${scope}-topics-grid`);
+    if(!grid) return;
+
+    const topicCounts = {};
+    posts.forEach(p => {
+        if(p.topic && p.topic.trim()) {
+            const t = p.topic.trim();
+            const key = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+            if(!topicCounts[key]) topicCounts[key] = 0;
+            topicCounts[key]++;
+        } else {
+             const key = 'Allgemein';
+             if(!topicCounts[key]) topicCounts[key] = 0;
+             topicCounts[key]++;
+        }
+    });
+
+    const topics = Object.keys(topicCounts).sort();
+    const filtered = topics.filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-secondary);">Keine Themen gefunden.</div>';
+        return;
+    }
+
+    grid.innerHTML = filtered.map(t => `
+        <div class="topic-card" data-topic="${escapeHtml(t)}" onclick="openTopicDetail(this.dataset.topic)" style="background:var(--surface); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); border:1px solid var(--border); text-align:center; cursor:pointer; transition:transform 0.2s;">
+            <div style="font-size:1.1rem; font-weight:800; margin-bottom:5px; color:var(--primary-dark);">${escapeHtml(t)}</div>
+            <div style="color:var(--text-secondary); font-size:0.9rem;">${topicCounts[t]} Beitrag${topicCounts[t] !== 1 ? 'e' : ''}</div>
+        </div>
+    `).join('');
+};
+
+window.filterTopics = (term) => {
+    renderTopics(term);
+};
+
+window.openTopicDetail = (topicName) => {
+    const scope = (currentUser && !currentUser.admin) ? 'user' : 'admin';
+    const topicsView = document.getElementById(`${scope}-topics-view`);
+    const detailView = document.getElementById(`${scope}-topic-detail-view`);
+    const title = document.getElementById(`${scope}-topic-title`);
+    const containerId = `${scope}-topic-posts-container`;
+
+    topicsView.style.display = 'none';
+    detailView.style.display = 'block';
+
+    title.innerText = topicName;
+
+    let filteredPosts = [];
+    if (topicName === 'Allgemein') {
+        filteredPosts = posts.filter(p => !p.topic || p.topic.trim() === '' || p.topic.trim().toLowerCase() === 'allgemein');
+    } else {
+        filteredPosts = posts.filter(p => p.topic && (p.topic.trim().charAt(0).toUpperCase() + p.topic.trim().slice(1).toLowerCase()) === topicName);
+    }
+
+    renderPosts(filteredPosts, containerId);
+};
+
+window.closeTopicDetail = () => {
+    const scope = (currentUser && !currentUser.admin) ? 'user' : 'admin';
+    const topicsView = document.getElementById(`${scope}-topics-view`);
+    const detailView = document.getElementById(`${scope}-topic-detail-view`);
+
+    topicsView.style.display = 'block';
+    detailView.style.display = 'none';
 };

@@ -67,10 +67,29 @@
         </div>
 
         <div id="community-view" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-community">
+            <div class="community-tabs" style="display:flex; gap:10px; margin-bottom:20px; padding:0 5px;">
+                <button id="admin-tab-posts" class="btn btn-primary btn-small" onclick="switchCommunitySubTab('posts')" style="flex:1;">Beiträge</button>
+                <button id="admin-tab-topics" class="btn btn-secondary btn-small" onclick="switchCommunitySubTab('topics')" style="flex:1;">Themen</button>
+            </div>
+
             <button class="nav-fab" id="admin-post-fab" onclick="openCreatePostModal()" aria-label="Beitrag erstellen" style="bottom: 90px; right: 20px; z-index: 100; display: flex;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <div id="admin-posts-container" style="padding-bottom: 80px;"></div>
+
+            <div id="admin-posts-view">
+                <div id="admin-posts-container" style="padding-bottom: 80px;"></div>
+            </div>
+
+            <div id="admin-topics-view" style="display:none; padding-bottom: 80px;">
+                <input type="text" id="admin-topics-search" class="form-input" placeholder="Themen suchen..." style="margin-bottom:20px;" oninput="filterTopics(this.value)">
+                <div id="admin-topics-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:15px;"></div>
+            </div>
+
+            <div id="admin-topic-detail-view" style="display:none; padding-bottom: 80px;">
+                <button class="btn btn-secondary btn-small" onclick="closeTopicDetail()" style="margin-bottom:15px; width:auto;">← Zurück zu Themen</button>
+                <div id="admin-topic-title" style="font-size:1.2rem; font-weight:800; margin-bottom:15px;"></div>
+                <div id="admin-topic-posts-container"></div>
+            </div>
         </div>
 
         <div id="settings" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-settings">
@@ -210,10 +229,29 @@
         </div>
 
         <div id="user-community-view" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-community">
+            <div class="community-tabs" style="display:flex; gap:10px; margin-bottom:20px; padding:0 5px;">
+                <button id="user-tab-posts" class="btn btn-primary btn-small" onclick="switchCommunitySubTab('posts')" style="flex:1;">Beiträge</button>
+                <button id="user-tab-topics" class="btn btn-secondary btn-small" onclick="switchCommunitySubTab('topics')" style="flex:1;">Themen</button>
+            </div>
+
             <button class="nav-fab" id="user-post-fab" onclick="openCreatePostModal()" aria-label="Beitrag erstellen" style="bottom: 90px; right: 20px; z-index: 100; display:flex;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <div id="user-posts-container" style="padding-bottom: 80px;"></div>
+
+            <div id="user-posts-view">
+                <div id="user-posts-container" style="padding-bottom: 80px;"></div>
+            </div>
+
+            <div id="user-topics-view" style="display:none; padding-bottom: 80px;">
+                <input type="text" id="user-topics-search" class="form-input" placeholder="Themen suchen..." style="margin-bottom:20px;" oninput="filterTopics(this.value)">
+                <div id="user-topics-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:15px;"></div>
+            </div>
+
+            <div id="user-topic-detail-view" style="display:none; padding-bottom: 80px;">
+                <button class="btn btn-secondary btn-small" onclick="closeTopicDetail()" style="margin-bottom:15px; width:auto;">← Zurück zu Themen</button>
+                <div id="user-topic-title" style="font-size:1.2rem; font-weight:800; margin-bottom:15px;"></div>
+                <div id="user-topic-posts-container"></div>
+            </div>
         </div>
 
         <div id="user-settings" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-user-settings">
@@ -447,9 +485,9 @@
         </div>
         <div class="form-group">
             <label class="form-label">Medien</label>
-            <input type="file" id="post-files" class="form-input" multiple accept="image/*,video/*,application/pdf,.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+            <input type="file" id="post-files" class="form-input" multiple accept="image/*,video/*,audio/*,application/pdf,.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation">
             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
-                Fotos, Videos oder andere Dateien.
+                Fotos, Videos, Audios oder andere Dateien.
             </div>
         </div>
         <div id="post-files-preview" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px;"></div>
