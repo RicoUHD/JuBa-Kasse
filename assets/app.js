@@ -2759,7 +2759,8 @@ window.renderPosts = (targetPosts = null, targetContainerId = null) => {
             const firstAudio = mediaList.find(m => m.type && m.type.startsWith('audio/'));
 
             if (firstImage) {
-                const elementId = `post-preview-${post.id}`;
+                const uniqueSuffix = Math.random().toString(36).substr(2, 9);
+                const elementId = `post-preview-${post.id}-${uniqueSuffix}`;
                 // Fetch image for preview
                 fetchPostMedia(firstImage.filename).then(url => {
                     const el = document.getElementById(elementId);
