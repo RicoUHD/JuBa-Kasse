@@ -449,14 +449,89 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Desktop Nav (hidden by default) */
+.desktop-nav {
+    display: none;
+    gap: 15px;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.nav-btn:hover {
+    color: var(--primary);
+    background: var(--surface-alt);
+}
+
+.nav-btn.active {
+    color: var(--primary);
+    background: rgba(6, 182, 212, 0.1);
+}
+
+.people-grid-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 @media (min-width: 769px) {
-    .container { max-width: 1200px; display: grid; grid-template-columns: 350px 1fr; gap: 30px; align-items: start; }
-    .hero-card, .stats-grid { grid-column: 1; }
-    .overview-right { grid-column: 2; grid-row: 1 / 4; }
-    .header { grid-column: 1 / -1; justify-content: flex-start; }
-    .bottom-nav { display: none !important; }
-    .tab-content { display: block !important; animation: none; }
-    #settings { grid-column: 1; grid-row: 3; }
+    .container {
+        max-width: 1200px;
+        display: block; /* Reset grid */
+    }
+
+    .header {
+        justify-content: flex-start;
+    }
+
+    .desktop-nav {
+        display: flex;
+    }
+
+    .bottom-nav {
+        display: none !important;
+    }
+
+    /* Grid for People List: Left Overdue, Right Valid */
+    .people-grid-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        align-items: start;
+    }
+
+    /* User View: Solid Desktop Version */
+    #user-view {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Admin View: Centered content for tabs */
+    #overview, #settings {
+        max-width: 100%;
+    }
+
+    /* Ensure Hero and Stats are not too wide on full width */
+    #overview .hero-card,
+    #overview .stats-grid {
+        max-width: 800px; /* Optional: limit width */
+    }
+
+    #card-design, #card-rates, #card-report, #card-invite, #card-security {
+         max-width: 800px;
+    }
 }
 
 /* --- Accessibility Improvements --- */
