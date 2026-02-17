@@ -333,20 +333,30 @@ function calculateTotalCostUntil(person, untilDate) {
  * @returns {Date|null} - Das Datum bis zu dem bezahlt wurde
  */
 function calculatePaidUntil(person) {
+    return calculatePaymentStatus(person).paidUntil;
+}
+
+/**
+ * ⚡ Bolt: New function returning detailed payment status including remaining credit.
+ * Used to optimize overdue calculation.
+ */
+function calculatePaymentStatus(person) {
     const totalPaid = person.totalPaid || 0;
+    const start = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
 
     // Fall 1: Keine Zahlungen
     if (totalPaid === 0) {
-        const start = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
         // Letzter Tag des Vormonats
-        return new Date(start.getFullYear(), start.getMonth(), 0);
+        return {
+            paidUntil: new Date(start.getFullYear(), start.getMonth(), 0),
+            remainingCredit: 0
+        };
     }
 
-    const memberSince = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
     let remainingCredit = totalPaid;
 
-    let year = memberSince.getFullYear();
-    let month = memberSince.getMonth();
+    let year = start.getFullYear();
+    let month = start.getMonth();
 
     // History is already sorted in loadData
     const sortedHistory = person.statusHistory;
@@ -385,7 +395,33 @@ function calculatePaidUntil(person) {
     }
 
     // Letzter Tag dieses Monats
-    return new Date(year, month + 1, 0);
+    return {
+        paidUntil: new Date(year, month + 1, 0),
+        remainingCredit: remainingCredit
+    };
+}
+
+/**
+ * ⚡ Bolt: Helper to calculate cost for a range. Used by optimized overdue calculation.
+ */
+function calculateCostRange(person, startDate, endDate) {
+    let totalCost = 0;
+    let year = startDate.getFullYear();
+    let month = startDate.getMonth();
+    const sortedHistory = person.statusHistory;
+
+    // Safety break
+    let limit = 0;
+    while (new Date(year, month, 1) <= endDate && limit < 120) {
+        const status = getStatusForMonth(person, year, month, sortedHistory);
+        if (status && settings[status]) {
+            totalCost += settings[status];
+        }
+        month++;
+        if (month > 11) { month = 0; year++; }
+        limit++;
+    }
+    return totalCost;
 }
 
 /**
@@ -516,12 +552,31 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
 /**
  * Berechnet den fehlenden Betrag in Euro bis zum Ende des aktuellen Monats.
  * @param {Object} person - Die Person
+ * @param {Date} [preCalcPaidUntil] - Optional: Vorberechnetes "Bezahlt bis" Datum
+ * @param {number} [preCalcCredit] - Optional: Vorberechnetes Restguthaben
  * @returns {number} - Fehlender Betrag (0 wenn ausgeglichen oder Guthaben)
  */
-function calculateOverdueAmount(person) {
+function calculateOverdueAmount(person, preCalcPaidUntil, preCalcCredit) {
     const today = new Date();
     // Ziel: Ende des aktuellen Monats
     const targetDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    // ⚡ Bolt: Optimized path avoiding full history iteration
+    if (preCalcPaidUntil) {
+        // Start calculation from the month AFTER paidUntil
+        const startCalc = new Date(preCalcPaidUntil);
+        startCalc.setDate(1);
+        startCalc.setMonth(startCalc.getMonth() + 1);
+
+        // If startCalc > targetDate, we are ahead of payment (not overdue), return 0
+        if (startCalc > targetDate) return 0;
+
+        const missingCost = calculateCostRange(person, startCalc, targetDate);
+        const credit = preCalcCredit || 0;
+        const finalMissing = missingCost - credit;
+
+        return finalMissing > 0 ? finalMissing : 0;
+    }
 
     const totalCost = calculateTotalCostUntil(person, targetDate);
     const totalPaid = person.totalPaid || 0;
@@ -1146,9 +1201,9 @@ function renderUserView() {
     }
 
     const p = people[0]; // User has only one person (themselves)
-    const paidUntil = calculatePaidUntil(p);
+    const { paidUntil, remainingCredit } = calculatePaymentStatus(p);
     const statusMeta = calculateTimeRemaining(p, paidUntil);
-    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p) : 0;
+    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, paidUntil, remainingCredit) : 0;
 
     // Get current status (not future status)
     const currentStatus = getCurrentStatus(p);
@@ -1264,10 +1319,10 @@ function renderPeople() {
 
     // ⚡ Bolt: Calculate costly status/dates ONCE per person here
     const processed = people.map(p => {
-        const paidUntil = calculatePaidUntil(p);
+        const { paidUntil, remainingCredit } = calculatePaymentStatus(p);
         const statusMeta = calculateTimeRemaining(p, paidUntil);
         // Only calculate overdue amount if actually overdue
-        const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p) : 0;
+        const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, paidUntil, remainingCredit) : 0;
         return { p, paidUntil, statusMeta, overdueAmount };
     });
 
