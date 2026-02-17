@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.switchTab = function(tabName, btn) {
-    const isUserNav = !!btn.closest('#user-bottom-nav');
+    const isUserNav = !!btn.closest('#user-bottom-nav') || !!btn.closest('#user-desktop-nav');
     const scope = isUserNav ? document.getElementById('user-view') : document.getElementById('admin-view');
     if (!scope) return;
 
@@ -128,9 +128,9 @@ window.switchTab = function(tabName, btn) {
     }
 
     // Update buttons in the same nav container
-    const container = btn.closest('.bottom-nav');
+    const container = btn.closest('.bottom-nav') || btn.closest('.desktop-nav');
     if (container) {
-        container.querySelectorAll('.nav-item').forEach(el => {
+        container.querySelectorAll('.nav-item, .nav-btn').forEach(el => {
             el.classList.remove('active');
             el.setAttribute('aria-selected', 'false');
         });
@@ -1277,18 +1277,24 @@ function renderPeople() {
     overdueItems.sort((a,b) => a.p.name.localeCompare(b.p.name));
     currentItems.sort((a,b) => a.p.name.localeCompare(b.p.name));
 
-    let html = '';
-
+    let overdueHtml = '';
     if(overdueItems.length > 0) {
-        html += overdueItems.map(item => generatePersonHTML(item.p, item)).join('');
+        overdueHtml += `<h3 class="list-section-title" style="color:var(--danger)">⚠️ Überfällig (${overdueItems.length})</h3>`;
+        overdueHtml += overdueItems.map(item => generatePersonHTML(item.p, item)).join('');
     }
 
+    let validHtml = '';
     if(currentItems.length > 0) {
-        html += `<div class="list-section-title" style="color:var(--success)">✅ Aktuelle Mitglieder (${currentItems.length})</div>`;
-        html += currentItems.map(item => generatePersonHTML(item.p, item)).join('');
+        validHtml += `<h3 class="list-section-title" style="color:var(--success)">✅ Aktuelle Mitglieder (${currentItems.length})</h3>`;
+        validHtml += currentItems.map(item => generatePersonHTML(item.p, item)).join('');
     }
 
-    list.innerHTML = html;
+    list.innerHTML = `
+        <div class="people-grid-container">
+            <div class="people-column overdue-column">${overdueHtml}</div>
+            <div class="people-column valid-column">${validHtml}</div>
+        </div>
+    `;
 }
 
 function generateTimelineHTML(person) {
