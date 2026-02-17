@@ -2,7 +2,7 @@
   "name": "JuBa-Kasse",
   "short_name": "JuBa-Kasse",
   "description": "Kassenverwaltung für die Jugendarbeit",
-  "start_url": "/JuBa-Kasse/index.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#06b6d4",
   "theme_color": "#06b6d4",
