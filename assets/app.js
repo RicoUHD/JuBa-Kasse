@@ -71,6 +71,35 @@ function safeList(val) {
     return Object.values(val);
 }
 
+// Helper: Normalize person object with cached date calculations
+function normalizePerson(person) {
+    if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
+    if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
+    person.payments = safeList(person.payments);
+
+    // Cache memberSince date object
+    person.memberSinceObj = new Date(person.originalMemberSince || person.memberSince);
+    // Bolt Optimization: Cache memberStartTotal for faster comparisons
+    person.memberStartTotal = person.memberSinceObj.getFullYear() * 12 + person.memberSinceObj.getMonth();
+
+    // ⚡ Bolt: Pre-process history for faster lookup (avoid Date creation in loops)
+    person.statusHistory = safeList(person.statusHistory).sort(
+        (a, b) => new Date(a.startDate) - new Date(b.startDate)
+    );
+    person.statusHistory.forEach(entry => {
+        const s = new Date(entry.startDate);
+        entry.startTotal = s.getFullYear() * 12 + s.getMonth();
+        if (entry.endDate) {
+            const e = new Date(entry.endDate);
+            entry.endTotal = e.getFullYear() * 12 + e.getMonth();
+        } else {
+            entry.endTotal = null;
+        }
+    });
+
+    return person;
+}
+
 function escapeHtml(text) {
     if (!text) return '';
     return String(text)
@@ -249,8 +278,13 @@ function getStatusForMonth(person, year, month, sortedHistory = null) {
     const currentTotal = year * 12 + month;
 
     // Check if before membership
-    const memberSince = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
-    const memberStartTotal = memberSince.getFullYear() * 12 + memberSince.getMonth();
+    // Bolt Optimization: Use cached memberStartTotal if available
+    const memberStartTotal = person.memberStartTotal !== undefined
+        ? person.memberStartTotal
+        : (function() {
+            const d = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
+            return d.getFullYear() * 12 + d.getMonth();
+        })();
 
     if (currentTotal < memberStartTotal) {
         return null;
@@ -308,7 +342,11 @@ function calculateTotalCostUntil(person, untilDate) {
     // History is already sorted in loadData
     const sortedHistory = person.statusHistory;
 
-    while (new Date(year, month, 1) <= untilDate) {
+    // Bolt Optimization: Use integer comparison for loop
+    const untilTotal = untilDate.getFullYear() * 12 + untilDate.getMonth();
+    let currentTotal = year * 12 + month;
+
+    while (currentTotal <= untilTotal) {
         const status = getStatusForMonth(person, year, month, sortedHistory);
         if (status && settings[status]) {
             totalCost += settings[status];
@@ -320,6 +358,7 @@ function calculateTotalCostUntil(person, untilDate) {
             month = 0;
             year++;
         }
+        currentTotal++;
     }
 
     return totalCost;
@@ -393,11 +432,10 @@ function calculatePaidUntil(person) {
  * @param {Object} person - Die Person
  * @returns {Object} - { text, isOverdue, isSoonDue }
  */
-function calculateTimeRemaining(person, preCalculatedPaidUntil) {
+function calculateTimeRemaining(person, preCalculatedPaidUntil, optTodayStr) {
     // START CHECK
     const standingOrders = safeList(person.standingOrders);
-    const now = new Date();
-    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const todayStr = optTodayStr || new Date(Date.now() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     const hasActiveSO = standingOrders.some(so => {
          if (so.startDate > todayStr) return false;
@@ -518,10 +556,8 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
  * @param {Object} person - Die Person
  * @returns {number} - Fehlender Betrag (0 wenn ausgeglichen oder Guthaben)
  */
-function calculateOverdueAmount(person) {
-    const today = new Date();
-    // Ziel: Ende des aktuellen Monats
-    const targetDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+function calculateOverdueAmount(person, optTargetDate) {
+    const targetDate = optTargetDate || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
 
     const totalCost = calculateTotalCostUntil(person, targetDate);
     const totalPaid = person.totalPaid || 0;
@@ -827,29 +863,7 @@ async function loadData() {
     }
 
     // Normalize people data
-    people.forEach(person => {
-        if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
-        if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
-        person.payments = safeList(person.payments);
-
-        // ⚡ Bolt: Pre-process history for faster lookup (avoid Date creation in loops)
-        person.statusHistory = safeList(person.statusHistory).sort(
-            (a, b) => new Date(a.startDate) - new Date(b.startDate)
-        );
-        person.statusHistory.forEach(entry => {
-            const s = new Date(entry.startDate);
-            entry.startTotal = s.getFullYear() * 12 + s.getMonth();
-            if (entry.endDate) {
-                const e = new Date(entry.endDate);
-                entry.endTotal = e.getFullYear() * 12 + e.getMonth();
-            } else {
-                entry.endTotal = null;
-            }
-        });
-
-        // Cache memberSince date object
-        person.memberSinceObj = new Date(person.originalMemberSince || person.memberSince);
-    });
+    people.forEach(person => normalizePerson(person));
 
     // Check standing orders (Admin only to prevent conflicts)
     if (currentUser && currentUser.admin) {
@@ -1146,9 +1160,15 @@ function renderUserView() {
     }
 
     const p = people[0]; // User has only one person (themselves)
+
+    // Bolt: date optimization
+    const now = new Date();
+    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
     const paidUntil = calculatePaidUntil(p);
-    const statusMeta = calculateTimeRemaining(p, paidUntil);
-    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p) : 0;
+    const statusMeta = calculateTimeRemaining(p, paidUntil, todayStr);
+    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, endOfCurrentMonth) : 0;
 
     // Get current status (not future status)
     const currentStatus = getCurrentStatus(p);
@@ -1262,12 +1282,17 @@ function renderPeople() {
     }
     empty.style.display = 'none';
 
+    // Bolt: Calculate reusable dates once
+    const now = new Date();
+    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
     // ⚡ Bolt: Calculate costly status/dates ONCE per person here
     const processed = people.map(p => {
         const paidUntil = calculatePaidUntil(p);
-        const statusMeta = calculateTimeRemaining(p, paidUntil);
+        const statusMeta = calculateTimeRemaining(p, paidUntil, todayStr);
         // Only calculate overdue amount if actually overdue
-        const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p) : 0;
+        const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, endOfCurrentMonth) : 0;
         return { p, paidUntil, statusMeta, overdueAmount };
     });
 
@@ -1940,6 +1965,7 @@ window.changePassword = async (isUser = false) => {
 };
 
 function replacePersonInMemory(person) {
+    normalizePerson(person);
     const idx = people.findIndex(p => String(p.id) === String(person.id));
     if (idx >= 0) {
         people[idx] = person;
