@@ -1334,13 +1334,13 @@ function renderPeople() {
 
     let overdueHtml = '';
     if(overdueItems.length > 0) {
-        overdueHtml += `<h3 class="list-section-title" style="color:var(--danger)">⚠️ Überfällig (${overdueItems.length})</h3>`;
+        overdueHtml += `<h3 class="list-section-title" style="color:var(--danger)">Überfällig (${overdueItems.length})</h3>`;
         overdueHtml += overdueItems.map(item => generatePersonHTML(item.p, item)).join('');
     }
 
     let validHtml = '';
     if(currentItems.length > 0) {
-        validHtml += `<h3 class="list-section-title" style="color:var(--success)">✅ Aktuelle Mitglieder (${currentItems.length})</h3>`;
+        validHtml += `<h3 class="list-section-title" style="color:var(--success)">Aktuelle Mitglieder (${currentItems.length})</h3>`;
         validHtml += currentItems.map(item => generatePersonHTML(item.p, item)).join('');
     }
 
@@ -1450,8 +1450,6 @@ function generatePersonHTML(p, preCalcData = null) {
     const paymentsList = safeList(p.payments);
     const standingOrders = safeList(p.standingOrders);
     const hasStandingOrder = standingOrders.length > 0;
-    const soIcon = hasStandingOrder ? '<span style="font-size:0.9rem; margin-left:6px;" title="Dauerauftrag aktiv">🔄</span>' : '';
-
     const soListHtml = hasStandingOrder ? `
         <div class="card" style="margin-top:15px; margin-bottom:15px; background:var(--surface-alt);">
             <div class="card-header" style="font-size:0.9rem; padding:10px 15px;">🔄 Aktive Daueraufträge</div>
@@ -1487,7 +1485,7 @@ function generatePersonHTML(p, preCalcData = null) {
                 <div class="person-pill">
                     <div class="person-left">
                         <div class="person-name">
-                            ${escapeHtml(p.name)}${soIcon}
+                            ${escapeHtml(p.name)}
                             <span class="chevron">›</span>
                         </div>
                         <span class="person-status">${currentStatus}</span>
