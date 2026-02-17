@@ -1,11 +1,11 @@
 const CACHE_NAME = 'juba-kasse-v2.0.1';
 const URLS_TO_CACHE = [
-    './',
-    './index.html',
-    './assets/style.css',
-    './assets/app.js',
-    './manifest.json',
-    './assets/icon.png',
+    'https://ricouhd.github.io/JuBa-Kasse/',
+    'https://ricouhd.github.io/JuBa-Kasse/index.html',
+    'https://ricouhd.github.io/JuBa-Kasse/assets/style.css',
+    'https://ricouhd.github.io/JuBa-Kasse/assets/app.js',
+    'https://ricouhd.github.io/JuBa-Kasse/manifest.json',
+    'https://ricouhd.github.io/JuBa-Kasse/assets/icon.png',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js',
     'https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js'

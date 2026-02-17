@@ -2,14 +2,14 @@
   "name": "JuBa-Kasse",
   "short_name": "JuBa-Kasse",
   "description": "Kassenverwaltung für die Jugendarbeit",
-  "start_url": "/JuBa-Kasse/index.html",
+  "start_url": "https://ricouhd.github.io/JuBa-Kasse/index.html",
   "display": "standalone",
   "background_color": "#06b6d4",
   "theme_color": "#06b6d4",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "assets/icon.png",
+      "src": "https://ricouhd.github.io/JuBa-Kasse/assets/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

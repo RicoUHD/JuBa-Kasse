@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#06b6d4">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="https://ricouhd.github.io/JuBa-Kasse/manifest.json">
     <title>JuBa-Kasse</title>
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-    <link rel="modulepreload" href="assets/app.js">
+    <link rel="modulepreload" href="https://ricouhd.github.io/JuBa-Kasse/assets/app.js">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js">
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="https://ricouhd.github.io/JuBa-Kasse/assets/style.css">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
 <div class="container">
     <button id="install-pwa-btn" class="btn btn-primary" style="display:none; margin-bottom: 20px;">📲 App installieren</button>
     <header class="header">
-        <img src="assets/bgb-logo.svg" alt="JuBa-Kasse Logo">
+        <img src="https://ricouhd.github.io/JuBa-Kasse/assets/bgb-logo.svg" alt="JuBa-Kasse Logo">
         <h1>JuBa-Kasse</h1>
     </header>
 
@@ -461,7 +461,7 @@
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('https://ricouhd.github.io/JuBa-Kasse/sw.js')
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                 }, err => {
@@ -471,6 +471,6 @@
     }
 </script>
 
-<script type="module" src="assets/app.js"></script>
+<script type="module" src="https://ricouhd.github.io/JuBa-Kasse/assets/app.js"></script>
 </body>
 </html>
