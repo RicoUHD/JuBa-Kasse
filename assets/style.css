@@ -74,7 +74,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     transition: transform 0.2s;
 }
 .hero-card:active { transform: scale(0.98); }
-.hero-card:focus { outline: none; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), var(--shadow-lg); }
+.hero-card:focus { outline: none; }
 .hero-card::before { content: ''; position: absolute; top: -50px; left: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; }
 .hero-card::after { content: ''; position: absolute; bottom: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.15); border-radius: 50%; }
 
