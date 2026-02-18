@@ -315,8 +315,8 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     background-color: var(--surface);
     border-top: 1px solid var(--border-light);
     display: flex; justify-content: space-around; align-items: center;
-    padding: 0 0 5px; /* Extra padding for safe area */
-    min-height: 50px;
+    padding: 2px 0 8px; /* Extra padding for safe area */
+    min-height: 55px;
     box-shadow: none;
     z-index: 1000;
 }
@@ -342,7 +342,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 }
 .nav-item svg { width: 20px; height: 20px; opacity: 0.7; transition: 0.2s; }
 .nav-item.active { color: var(--primary); }
-.nav-item.active svg { opacity: 1; stroke: var(--primary); transform: translateY(-2px); }
+.nav-item.active svg { opacity: 1; stroke: var(--primary); }
 
 .nav-center {
     position: absolute; width: 64px; height: 64px;
