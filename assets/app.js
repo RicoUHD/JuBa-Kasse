@@ -71,6 +71,60 @@ function safeList(val) {
     return Object.values(val);
 }
 
+// ⚡ Bolt: Helper to normalize and pre-calculate person data for performance
+function preprocessPerson(person) {
+    if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
+    if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
+    person.payments = safeList(person.payments);
+
+    // Pre-process history for faster lookup (avoid Date creation in loops)
+    person.statusHistory = safeList(person.statusHistory).sort(
+        (a, b) => new Date(a.startDate) - new Date(b.startDate)
+    );
+    person.statusHistory.forEach(entry => {
+        const s = new Date(entry.startDate);
+        entry.startTotal = s.getFullYear() * 12 + s.getMonth();
+        if (entry.endDate) {
+            const e = new Date(entry.endDate);
+            entry.endTotal = e.getFullYear() * 12 + e.getMonth();
+        } else {
+            entry.endTotal = null;
+        }
+    });
+
+    // Cache memberSince date object
+    person.memberSinceObj = new Date(person.originalMemberSince || person.memberSince);
+    return person;
+}
+
+// ⚡ Bolt: Helper to find status in sorted history efficiently
+function findStatusInHistory(history, idx, currentTotal) {
+    let newIdx = idx;
+    let status = null;
+
+    // Advance to find relevant entry
+    while (newIdx < history.length) {
+        const entry = history[newIdx];
+        // If endTotal is set and we passed it, move to next
+        if (entry.endTotal !== null && currentTotal >= entry.endTotal) {
+            newIdx++;
+        } else {
+            // Found potential candidate (or gap before it)
+            break;
+        }
+    }
+
+    // Check if current candidate covers us
+    if (newIdx < history.length) {
+        const entry = history[newIdx];
+        if (currentTotal >= entry.startTotal) {
+            status = entry.status;
+        }
+    }
+
+    return { status, newIdx };
+}
+
 function escapeHtml(text) {
     if (!text) return '';
     return String(text)
@@ -308,8 +362,17 @@ function calculateTotalCostUntil(person, untilDate) {
     // History is already sorted in loadData
     const sortedHistory = person.statusHistory;
 
+    // ⚡ Bolt: Optimized linear scan
+    let historyIdx = 0;
+
     while (new Date(year, month, 1) <= untilDate) {
-        const status = getStatusForMonth(person, year, month, sortedHistory);
+        const currentTotal = year * 12 + month;
+
+        const { status: historyStatus, newIdx } = findStatusInHistory(sortedHistory, historyIdx, currentTotal);
+        historyIdx = newIdx;
+
+        const status = historyStatus || person.status;
+
         if (status && settings[status]) {
             totalCost += settings[status];
         }
@@ -365,8 +428,17 @@ function calculatePaymentStatus(person) {
     const maxIterations = 120;
     let iterations = 0;
 
+    // ⚡ Bolt: Optimized linear scan through history
+    let historyIdx = 0;
+
     while (remainingCredit >= 0 && iterations < maxIterations) {
-        const status = getStatusForMonth(person, year, month, sortedHistory);
+        // Fast status lookup using pre-calculated total months
+        const currentTotal = year * 12 + month;
+
+        const { status: historyStatus, newIdx } = findStatusInHistory(sortedHistory, historyIdx, currentTotal);
+        historyIdx = newIdx;
+
+        const status = historyStatus || person.status; // Default/Fallback
         const monthlyRate = status ? (settings[status] || 0) : 0;
 
         if (monthlyRate > 0) {
@@ -412,8 +484,18 @@ function calculateCostRange(person, startDate, endDate) {
 
     // Safety break
     let limit = 0;
+
+    // ⚡ Bolt: Optimized linear scan
+    let historyIdx = 0;
+
     while (new Date(year, month, 1) <= endDate && limit < 120) {
-        const status = getStatusForMonth(person, year, month, sortedHistory);
+        const currentTotal = year * 12 + month;
+
+        const { status: historyStatus, newIdx } = findStatusInHistory(sortedHistory, historyIdx, currentTotal);
+        historyIdx = newIdx;
+
+        const status = historyStatus || person.status;
+
         if (status && settings[status]) {
             totalCost += settings[status];
         }
@@ -882,29 +964,7 @@ async function loadData() {
     }
 
     // Normalize people data
-    people.forEach(person => {
-        if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
-        if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
-        person.payments = safeList(person.payments);
-
-        // ⚡ Bolt: Pre-process history for faster lookup (avoid Date creation in loops)
-        person.statusHistory = safeList(person.statusHistory).sort(
-            (a, b) => new Date(a.startDate) - new Date(b.startDate)
-        );
-        person.statusHistory.forEach(entry => {
-            const s = new Date(entry.startDate);
-            entry.startTotal = s.getFullYear() * 12 + s.getMonth();
-            if (entry.endDate) {
-                const e = new Date(entry.endDate);
-                entry.endTotal = e.getFullYear() * 12 + e.getMonth();
-            } else {
-                entry.endTotal = null;
-            }
-        });
-
-        // Cache memberSince date object
-        person.memberSinceObj = new Date(person.originalMemberSince || person.memberSince);
-    });
+    people.forEach(person => preprocessPerson(person));
 
     // Check standing orders (Admin only to prevent conflicts)
     if (currentUser && currentUser.admin) {
@@ -1999,6 +2059,8 @@ window.changePassword = async (isUser = false) => {
 };
 
 function replacePersonInMemory(person) {
+    // ⚡ Bolt: Ensure data is optimized before storing
+    preprocessPerson(person);
     const idx = people.findIndex(p => String(p.id) === String(person.id));
     if (idx >= 0) {
         people[idx] = person;
