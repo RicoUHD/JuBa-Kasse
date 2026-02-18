@@ -315,8 +315,8 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     background-color: var(--surface);
     border-top: 1px solid var(--border-light);
     display: flex; justify-content: space-around; align-items: center;
-    padding: 5px 0 10px; /* Extra padding for safe area */
-    min-height: 60px;
+    padding: 0 0 5px; /* Extra padding for safe area */
+    min-height: 50px;
     box-shadow: none;
     z-index: 1000;
 }
@@ -363,10 +363,11 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 }
 .nav-fab:active { transform: scale(0.9); }
 .nav-fab.active { transform: rotate(45deg); }
+.nav-fab svg { width: 32px; height: 32px; }
 
 /* FAB Menu */
 .fab-menu {
-    position: fixed; bottom: 85px; left: 50%; right: auto;
+    position: fixed; bottom: 100px; left: 50%; right: auto;
     display: flex; flex-direction: column; gap: 12px;
     z-index: 99; opacity: 0; pointer-events: none;
     transform: translateX(-50%) translateY(20px);
