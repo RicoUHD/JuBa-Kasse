@@ -1143,7 +1143,7 @@ window.assignUserToPerson = async (uid) => {
     try {
         await update(ref(db, 'people/' + personId), { uid });
         person.uid = uid;
-        alert('Zuordnung gespeichert.');
+        showToast('Zuordnung gespeichert');
         renderUnlinkedUsers();
         renderPeople();
     } catch (err) {
@@ -1228,6 +1228,7 @@ window.approveRequest = async (reqId) => {
 
         await update(ref(db, 'requests/' + reqId), { status: 'approved' });
         loadData();
+        showToast('Anfrage genehmigt');
     } catch (err) {
         console.error('Fehler beim Genehmigen der Anfrage:', err);
         alert('Anfrage konnte nicht genehmigt werden. Bitte erneut versuchen.');
@@ -1244,6 +1245,7 @@ window.rejectRequest = async (reqId) => {
             rejectionReason: reason || 'Kein Grund angegeben'
         });
         loadData();
+        showToast('Anfrage abgelehnt');
     } catch (err) {
         console.error('Fehler beim Ablehnen der Anfrage:', err);
         alert('Anfrage konnte nicht abgelehnt werden. Bitte erneut versuchen.');
@@ -1695,6 +1697,7 @@ window.addPerson = async () => {
         renderAll();
         closeModal('add-person-modal');
         document.getElementById('new-person-name').value = ''; // Clear input on success
+        showToast('Person hinzugefügt');
     } catch (err) {
         console.error('Fehler beim Anlegen der Person:', err);
         alert('Speichern fehlgeschlagen. Bitte erneut versuchen.');
@@ -1757,6 +1760,7 @@ window.addPayment = async () => {
         document.getElementById('payment-is-standing-order').checked = false;
         const lbl = document.getElementById('payment-date-label');
         if(lbl) lbl.innerText = 'Datum';
+        showToast('Zahlung gebucht');
     } catch (err) {
         console.error('Fehler beim Speichern der Zahlung:', err);
         alert('Zahlung konnte nicht gespeichert werden. Bitte erneut versuchen.');
@@ -1782,6 +1786,7 @@ window.addDonation = async () => {
         donations = nextDonations;
         renderAll();
         closeModal('add-donation-modal');
+        showToast('Spende gespeichert');
     } catch (err) {
         console.error('Fehler beim Speichern der Spende:', err);
         alert('Spende konnte nicht gespeichert werden. Bitte erneut versuchen.');
@@ -1833,6 +1838,7 @@ window.addExpense = async () => {
         document.getElementById('expense-issuer').value = '';
         document.getElementById('expense-desc').value = '';
         if(fileInput) fileInput.value = '';
+        showToast('Ausgabe gespeichert');
     } catch (err) {
         console.error('Fehler beim Speichern der Ausgabe:', err);
         alert('Ausgabe konnte nicht gespeichert werden. Bitte erneut versuchen.');
@@ -1847,6 +1853,7 @@ window.deletePerson = async (id) => {
             await remove(ref(db, 'people/' + id));
             people = people.filter(p => String(p.id) !== String(id));
             renderAll();
+            showToast('Person gelöscht');
         } catch (err) {
             console.error('Fehler beim Löschen der Person:', err);
             alert('Löschen fehlgeschlagen. Bitte erneut versuchen.');
@@ -1917,6 +1924,7 @@ window.saveStandingOrderEnd = async () => {
 
         renderAll();
         closeModal('end-standing-order-modal');
+        showToast('Dauerauftrag aktualisiert');
     } catch (err) {
         console.error('Fehler beim Beenden:', err);
         alert('Fehler beim Speichern.');
@@ -1933,6 +1941,7 @@ window.deleteStandingOrderCompletely = async () => {
         });
         renderAll();
         closeModal('end-standing-order-modal');
+        showToast('Dauerauftrag gelöscht');
     } catch (err) {
         console.error('Fehler beim Löschen:', err);
         alert('Fehler beim Löschen.');
@@ -2013,6 +2022,7 @@ window.saveStatusChange = async () => {
 
         renderAll();
         closeModal('change-status-modal');
+        showToast('Status geändert');
     } catch (err) {
         console.error('Fehler bei der Statusänderung:', err);
         alert('Statusänderung fehlgeschlagen: ' + err.message);
@@ -2027,7 +2037,7 @@ window.saveSettings = async () => {
     try {
         await set(ref(db, 'settings'), settings);
         renderAll();
-        alert("Gespeichert");
+        showToast("Einstellungen gespeichert");
     } catch (err) {
         console.error('Fehler beim Speichern der Einstellungen:', err);
         alert('Einstellungen konnten nicht gespeichert werden.');
@@ -2047,7 +2057,7 @@ window.changePassword = async (isUser = false) => {
         const user = auth.currentUser;
         if(user) {
             await updatePassword(user, pw);
-            alert("Passwort erfolgreich geändert.");
+            showToast("Passwort erfolgreich geändert");
             document.getElementById(inputId).value = '';
         } else {
             alert("Kein Benutzer angemeldet.");
@@ -2378,7 +2388,7 @@ window.submitUserRequest = async () => {
     try {
         await set(ref(db, 'requests/' + newReq.id), newReq);
         closeModal('user-request-modal');
-        alert("Anfrage gesendet! Ein Administrator wird sie prüfen.");
+        showToast("Anfrage erfolgreich gesendet");
         loadData();
     } catch (err) {
         console.error('Fehler beim Senden der Anfrage:', err);
@@ -2583,3 +2593,20 @@ window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     console.log('PWA was installed');
 });
+
+let toastTimeout;
+window.showToast = (msg, type='success') => {
+    let t = document.getElementById('toast');
+    if(!t) {
+        t = document.createElement('div');
+        t.id = 'toast';
+        t.setAttribute('role', 'status');
+        t.setAttribute('aria-live', 'polite');
+        document.body.appendChild(t);
+    }
+    t.className = `toast toast-${type} show`;
+    t.innerHTML = `${type==='success'?'✅':'⚠️'} ${msg}`;
+
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
+};
