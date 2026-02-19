@@ -35,18 +35,18 @@
         </nav>
 
         <div id="overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
-            <div class="hero-card" role="button" tabindex="0" aria-label="Transaktionsverlauf anzeigen" onclick="showTransactionModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); showTransactionModal();}">
-                <span class="hero-label">Aktueller Kassenstand</span>
-                <div class="hero-amount" id="heroAmount">0,00 €</div>
-                <div class="hero-subtitle">Tippen für Details</div>
-            </div>
+            <div class="dashboard-stats-container">
+                <div class="hero-card" role="button" tabindex="0" aria-label="Transaktionsverlauf anzeigen" onclick="showTransactionModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); showTransactionModal();}">
+                    <span class="hero-label">Aktueller Kassenstand</span>
+                    <div class="hero-amount" id="heroAmount">0,00 €</div>
+                    <div class="hero-subtitle">Tippen für Details</div>
+                </div>
 
-            <div class="stats-grid">
-                <div class="stat-box">
+                <div class="stat-box stat-income">
                     <div class="stat-label">Einnahmen</div>
                     <div class="stat-value text-success" id="totalIncome">0,00 €</div>
                 </div>
-                <div class="stat-box">
+                <div class="stat-box stat-expenses">
                     <div class="stat-label">Ausgaben</div>
                     <div class="stat-value text-danger" id="totalExpenses">0,00 €</div>
                 </div>
