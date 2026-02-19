@@ -1,3 +1,0 @@
-## 2026-02-19 - Accessible Toast Notifications vs Alerts
-**Learning:** Replacing native `alert()` with custom toasts significantly improves UX but introduces accessibility and state management challenges. Native alerts are accessible by default (blocking, read by screen readers). Custom toasts *must* have `role="status"` and `aria-live="polite"` (or `assertive`) to be announced. Additionally, a global toast instance requires careful timeout management (clearing previous timeouts) to avoid race conditions where a new toast is hidden prematurely by an old timer.
-**Action:** When implementing "delightful" non-blocking feedback, always include ARIA live regions and handle timer cleanups explicitly.
