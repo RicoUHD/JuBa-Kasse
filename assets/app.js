@@ -195,14 +195,19 @@ window.switchTab = function(tabName, btn) {
 
 window.toggleFab = function() {
     const menu = document.getElementById('fabMenu');
-    const fab = document.querySelector('.nav-fab');
-    if (!fab) return;
+    const fabs = document.querySelectorAll('.nav-fab, #desktop-fab');
 
     menu.classList.toggle('show');
-    fab.classList.toggle('active');
-
     const isExpanded = menu.classList.contains('show');
-    fab.setAttribute('aria-expanded', isExpanded);
+
+    fabs.forEach(fab => {
+        if (isExpanded) {
+            fab.classList.add('active');
+        } else {
+            fab.classList.remove('active');
+        }
+        fab.setAttribute('aria-expanded', isExpanded);
+    });
 };
 
 window.openModal = (id) => {

@@ -507,6 +507,26 @@ input:checked + .slider:before { transform: translateX(22px); }
     gap: 20px;
 }
 
+#desktop-fab {
+    display: none; /* Hidden on mobile */
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+    border: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    z-index: 1001;
+    transition: 0.3s;
+}
+#desktop-fab:active { transform: scale(0.9); }
+#desktop-fab.active { transform: rotate(45deg); }
+
 @media (min-width: 769px) {
     .container {
         max-width: 1200px;
@@ -525,12 +545,28 @@ input:checked + .slider:before { transform: translateX(22px); }
         display: none !important;
     }
 
-    /* Grid for People List: Left Overdue, Right Valid */
+    /* Grid for People List: Stacked groups, internal grid */
     .people-grid-container {
+        display: block; /* Stack Overdue and Valid vertically */
+        gap: 0;
+    }
+
+    .people-column {
+        margin-bottom: 40px;
+    }
+
+    /* Split valid list (and overdue list) into two columns */
+    .people-column.valid-column,
+    .people-column.overdue-column {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 30px;
+        gap: 20px;
         align-items: start;
+    }
+
+    /* Ensure the title spans both columns */
+    .list-section-title {
+        grid-column: 1 / -1;
     }
 
     /* User View: Solid Desktop Version */
@@ -546,22 +582,23 @@ input:checked + .slider:before { transform: translateX(22px); }
 
     /* Ensure Hero and Stats are not too wide on full width */
     #overview .hero-card {
-        max-width: 800px; /* Optional: limit width */
+        max-width: 100%; /* Let it grow with grid */
     }
 
     .dashboard-stats-container {
-        grid-template-columns: 1fr 1.5fr 1fr;
+        grid-template-columns: 1.5fr 1fr 1fr;
         align-items: center;
         gap: 25px;
     }
 
     .dashboard-stats-container .hero-card {
-        grid-column: 2;
+        grid-column: 1;
         grid-row: 1;
+        margin-bottom: 0;
     }
 
     .dashboard-stats-container .stat-income {
-        grid-column: 1;
+        grid-column: 2;
         grid-row: 1;
     }
 
@@ -572,6 +609,21 @@ input:checked + .slider:before { transform: translateX(22px); }
 
     #card-design, #card-rates, #card-report, #card-invite, #card-security {
          max-width: 800px;
+    }
+
+    #desktop-fab {
+        display: flex;
+    }
+
+    .fab-menu {
+        left: auto;
+        right: 30px;
+        transform: translateX(0) translateY(20px);
+        bottom: 110px;
+        align-items: flex-end;
+    }
+    .fab-menu.show {
+        transform: translateX(0) translateY(0);
     }
 }
 
