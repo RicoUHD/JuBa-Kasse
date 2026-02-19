@@ -131,6 +131,9 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .person-wrapper {
     margin-bottom: 12px;
     transition: all 0.3s ease;
+    /* ⚡ Bolt: Optimizes rendering performance for long lists */
+    content-visibility: auto;
+    contain-intrinsic-size: 70px;
 }
 
 .person-wrapper.active {
