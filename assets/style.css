@@ -130,6 +130,13 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     letter-spacing: 0.5px;
 }
 
+.chart-container {
+    position: relative;
+    width: 100%;
+    flex-grow: 1;
+    min-height: 160px;
+}
+
 /* --- Tabs (Content only) --- */
 .tab-content { display: none; animation: fadeIn 0.3s ease; }
 .tab-content.active { display: block; }
@@ -344,6 +351,27 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
         grid-template-columns: 1fr;
     }
 }
+
+.desktop-fab {
+    display: none;
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+    border: none;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+}
+.desktop-fab:active { transform: scale(0.9); }
+.desktop-fab.active { transform: rotate(45deg); }
+.desktop-fab svg { width: 32px; height: 32px; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
 
 /* --- Bottom Navigation --- */
 .bottom-nav {
@@ -591,12 +619,42 @@ input:checked + .slider:before { transform: translateX(22px); }
     .dashboard-top-section {
         display: grid;
         grid-template-columns: 400px 1fr;
-        gap: 25px;
+        gap: 50px;
         align-items: stretch;
+        margin-bottom: 40px;
+    }
+
+    .dashboard-left {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 25px;
+        height: 100%;
+    }
+
+    .dashboard-left .hero-card {
+        margin-bottom: 0;
+    }
+
+    .stats-grid {
+        margin-bottom: 0;
     }
 
     .dashboard-right {
         display: block;
+    }
+
+    .desktop-fab { display: flex; }
+
+    .fab-menu {
+        left: auto;
+        right: 30px;
+        bottom: 100px;
+        transform: translateY(20px);
+        align-items: flex-end;
+    }
+    .fab-menu.show {
+        transform: translateY(0);
     }
 
     /* Keep stats grid internal layout */
