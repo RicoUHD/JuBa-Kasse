@@ -856,3 +856,10 @@ input:checked + .slider:before { transform: translateX(22px); }
 .toast.show { transform: translateY(0); opacity: 1; pointer-events: all; }
 .toast-success { border-left: 5px solid var(--success); }
 .toast-error { border-left: 5px solid var(--danger); }
+
+@media (max-width: 768px) {
+    /* Increase spacing for mobile views */
+    .hero-card {
+        margin-bottom: 25px;
+    }
+}
