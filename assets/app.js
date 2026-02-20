@@ -1623,7 +1623,145 @@ function renderStats() {
     document.getElementById('heroAmount').textContent = totalBalance.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
     document.getElementById('totalIncome').textContent = periodInc.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
     document.getElementById('totalExpenses').textContent = periodExp.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+
+    renderBalanceChart();
 }
+
+function renderBalanceChart() {
+    const canvas = document.getElementById('balanceChart');
+    if (!canvas || canvas.offsetParent === null) return; // Don't render if hidden
+
+    // Responsive Canvas
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // 1. Data Collection
+    const allEvents = [];
+    people.forEach(p => {
+        safeList(p.payments).forEach(pay => {
+            allEvents.push({ date: new Date(pay.date), amount: parseFloat(pay.amount) });
+        });
+    });
+    donations.forEach(d => {
+        allEvents.push({ date: new Date(d.date), amount: parseFloat(d.amount) });
+    });
+    expenses.forEach(e => {
+        allEvents.push({ date: new Date(e.date), amount: -parseFloat(e.amount) });
+    });
+
+    // Sort by Date
+    allEvents.sort((a, b) => a.date - b.date);
+
+    // 2. Calculate Daily Balances for last 90 days
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const ninetyDaysAgo = new Date(today);
+    ninetyDaysAgo.setDate(today.getDate() - 90);
+
+    // Initial Balance before period
+    let currentBalance = allEvents
+        .filter(e => e.date < ninetyDaysAgo)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+    const dataPoints = [];
+
+    // Create map for fast lookup
+    const eventsByDay = {};
+    allEvents.filter(e => e.date >= ninetyDaysAgo).forEach(e => {
+        const dayStr = e.date.toISOString().split('T')[0];
+        if (!eventsByDay[dayStr]) eventsByDay[dayStr] = 0;
+        eventsByDay[dayStr] += e.amount;
+    });
+
+    let minVal = currentBalance;
+    let maxVal = currentBalance;
+
+    for (let i = 0; i <= 90; i++) {
+        const d = new Date(ninetyDaysAgo);
+        d.setDate(d.getDate() + i);
+        const dayStr = d.toISOString().split('T')[0];
+
+        if (eventsByDay[dayStr]) {
+            currentBalance += eventsByDay[dayStr];
+        }
+
+        dataPoints.push({ x: i, y: currentBalance, date: d });
+
+        if (currentBalance < minVal) minVal = currentBalance;
+        if (currentBalance > maxVal) maxVal = currentBalance;
+    }
+
+    // 3. Drawing
+    // Margins
+    const padTop = 20;
+    const padBottom = 20;
+    const padLeft = 10;
+    const padRight = 10;
+
+    const plotWidth = width - padLeft - padRight;
+    const plotHeight = height - padTop - padBottom;
+
+    // Scale
+    const range = maxVal - minVal;
+    // Avoid division by zero
+    const safeRange = range === 0 ? 1 : range;
+
+    const getX = (i) => padLeft + (i / 90) * plotWidth;
+    const getY = (val) => padTop + plotHeight - ((val - minVal) / safeRange) * plotHeight;
+
+    // Draw Gradient Area
+    const grad = ctx.createLinearGradient(0, padTop, 0, height - padBottom);
+    grad.addColorStop(0, "rgba(6, 182, 212, 0.2)");
+    grad.addColorStop(1, "rgba(6, 182, 212, 0.0)");
+
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(dataPoints[0].y));
+
+    for (let i = 1; i < dataPoints.length; i++) {
+        ctx.lineTo(getX(i), getY(dataPoints[i].y));
+    }
+
+    ctx.lineTo(getX(90), height - padBottom);
+    ctx.lineTo(getX(0), height - padBottom);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Draw Line
+    ctx.beginPath();
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#06b6d4';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.moveTo(getX(0), getY(dataPoints[0].y));
+    for (let i = 1; i < dataPoints.length; i++) {
+        ctx.lineTo(getX(i), getY(dataPoints[i].y));
+    }
+    ctx.stroke();
+
+    // Draw Start/End labels (Dates)
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#64748b';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(dataPoints[0].date.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}), padLeft, height - 5);
+
+    ctx.textAlign = 'right';
+    ctx.fillText(dataPoints[90].date.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}), width - padRight, height - 5);
+}
+
+// Re-render chart on resize
+window.addEventListener('resize', () => {
+    requestAnimationFrame(renderBalanceChart);
+});
 
 window.showTransactionModal = function() {
     const container = document.getElementById('full-transaction-list');
