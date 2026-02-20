@@ -2267,15 +2267,15 @@ window.openUserRequestModal = (type) => {
                 <label for="req-is-standing-order" style="margin:0; font-weight:600; cursor:pointer">Dauerauftrag</label>
             </div>
             <div class="form-group">
-                <label class="form-label">Betrag (€)</label>
+                <label class="form-label" for="req-amount">Betrag (€)</label>
                 <input type="text" inputmode="decimal" id="req-amount" class="form-input">
             </div>
             <div class="form-group">
-                <label class="form-label" id="req-date-label">Datum</label>
+                <label class="form-label" id="req-date-label" for="req-date">Datum</label>
                 <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
             </div>
             <div class="form-group">
-                <label class="form-label">Notiz (Optional)</label>
+                <label class="form-label" for="req-note">Notiz (Optional)</label>
                 <input type="text" id="req-note" class="form-input">
             </div>
         `;
@@ -2283,7 +2283,7 @@ window.openUserRequestModal = (type) => {
         title.innerText = "Statusänderung beantragen";
         container.innerHTML = `
             <div class="form-group">
-                <label class="form-label">Neuer Status</label>
+                <label class="form-label" for="req-status">Neuer Status</label>
                 <select id="req-status" class="form-select">
                     <option value="vollverdiener">💼 Vollverdiener</option>
                     <option value="geringverdiener">📉 Geringverdiener</option>
@@ -2292,7 +2292,7 @@ window.openUserRequestModal = (type) => {
                 </select>
             </div>
             <div class="form-group">
-                <label class="form-label">Gültig ab</label>
+                <label class="form-label" for="req-date">Gültig ab</label>
                 <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
             </div>
         `;
@@ -2300,19 +2300,19 @@ window.openUserRequestModal = (type) => {
         title.innerText = "Ausgabe melden";
         container.innerHTML = `
             <div class="form-group">
-                <label class="form-label">Betrag (€)</label>
+                <label class="form-label" for="req-amount">Betrag (€)</label>
                 <input type="text" inputmode="decimal" id="req-amount" class="form-input">
             </div>
             <div class="form-group">
-                <label class="form-label">Beschreibung</label>
+                <label class="form-label" for="req-desc">Beschreibung</label>
                 <input type="text" id="req-desc" class="form-input">
             </div>
             <div class="form-group">
-                <label class="form-label">Datum</label>
+                <label class="form-label" for="req-date">Datum</label>
                 <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
             </div>
             <div class="form-group">
-                <label class="form-label">Beleg (Optional)</label>
+                <label class="form-label" for="req-receipt">Beleg (Optional)</label>
                 <input type="file" id="req-receipt" accept="image/*" class="form-input">
             </div>
         `;

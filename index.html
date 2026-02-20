@@ -69,7 +69,7 @@
                 <div class="card-header">Design</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label class="form-label">Farbschema</label>
+                        <span class="form-label">Farbschema</span>
                         <div style="display:flex; gap:10px;">
                             <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
                             <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
@@ -82,15 +82,15 @@
                 <div class="card-header">Monatliche Beiträge</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label class="form-label">Vollverdiener (€)</label>
+                        <label class="form-label" for="rate-vollverdiener">Vollverdiener (€)</label>
                 <input type="text" inputmode="decimal" id="rate-vollverdiener" class="form-input" value="50">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Geringverdiener (€)</label>
+                        <label class="form-label" for="rate-geringverdiener">Geringverdiener (€)</label>
                 <input type="text" inputmode="decimal" id="rate-geringverdiener" class="form-input" value="25">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Keinverdiener (€)</label>
+                        <label class="form-label" for="rate-keinverdiener">Keinverdiener (€)</label>
                 <input type="text" inputmode="decimal" id="rate-keinverdiener" class="form-input" value="10">
                     </div>
                 </div>
@@ -100,7 +100,7 @@
                 <div class="card-header">Berichtszeitraum</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label class="form-label">Startdatum für Berechnung</label>
+                        <label class="form-label" for="report-start-date">Startdatum für Berechnung</label>
                         <input type="date" id="report-start-date" class="form-input">
                         <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
                             Einnahmen und Ausgaben werden erst ab diesem Datum in der Übersicht gezählt.
@@ -113,7 +113,7 @@
                 <div class="card-header">Registrierungscode</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label class="form-label">Aktueller Code</label>
+                        <label class="form-label" for="admin-invite-code">Aktueller Code</label>
                         <div style="display:flex; gap:10px;">
                             <input type="text" id="admin-invite-code" class="form-input" readonly>
                             <button class="btn btn-secondary" onclick="generateNewCode()">Neu</button>
@@ -129,7 +129,7 @@
                 <div class="card-header">Sicherheit</div>
                 <div class="card-body">
                     <div class="form-group" style="margin-top:20px;">
-                        <label class="form-label">Passwort ändern</label>
+                        <label class="form-label" for="new-password">Passwort ändern</label>
                         <input type="password" id="new-password" class="form-input" placeholder="Neues Passwort">
                     </div>
                     <button class="btn btn-secondary" onclick="changePassword()">Passwort ändern</button>
@@ -206,14 +206,14 @@
                 <div class="card-header">⚙️ Einstellungen</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label class="form-label">Farbschema</label>
+                        <span class="form-label">Farbschema</span>
                         <div style="display:flex; gap:10px;">
                             <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Hell</button>
                             <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dunkel</button>
                         </div>
                     </div>
                     <div class="form-group" style="margin-top:20px;">
-                        <label class="form-label">Passwort ändern</label>
+                        <label class="form-label" for="user-new-password">Passwort ändern</label>
                         <input type="password" id="user-new-password" class="form-input" placeholder="Neues Passwort">
                     </div>
                     <button class="btn btn-secondary" onclick="changePassword(true)">Passwort ändern</button>
@@ -263,18 +263,18 @@
     <div class="modal-content">
         <div class="modal-header"><span id="title-add-person">Person hinzufügen</span> <button class="close-btn" onclick="closeModal('add-person-modal')" aria-label="Schließen">&times;</button></div>
         <div class="form-group">
-            <label class="form-label">Name</label>
+            <label class="form-label" for="new-person-name">Name</label>
             <input type="text" id="new-person-name" class="form-input">
         </div>
         <div class="form-group">
-            <label class="form-label">Mitglied Seit</label>
+            <label class="form-label" for="new-person-start">Mitglied Seit</label>
             <input type="date" id="new-person-start" class="form-input">
             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
                 Ab diesem Datum werden Beiträge berechnet.
             </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Status</label>
+            <label class="form-label" for="new-person-status">Status</label>
             <select id="new-person-status" class="form-select">
                 <option value="vollverdiener">💼 Vollverdiener</option>
                 <option value="geringverdiener">📉 Geringverdiener</option>
@@ -290,7 +290,7 @@
     <div class="modal-content">
         <div class="modal-header"><span id="title-change-status">Status Ändern</span> <button class="close-btn" onclick="closeModal('change-status-modal')" aria-label="Schließen">&times;</button></div>
         <div class="form-group">
-            <label class="form-label">Neuer Status</label>
+            <label class="form-label" for="change-status-select">Neuer Status</label>
             <select id="change-status-select" class="form-select">
                 <option value="vollverdiener">💼 Vollverdiener</option>
                 <option value="geringverdiener">📉 Geringverdiener</option>
@@ -299,7 +299,7 @@
             </select>
         </div>
         <div class="form-group">
-            <label class="form-label">Gültig ab</label>
+            <label class="form-label" for="change-status-date">Gültig ab</label>
             <input type="date" id="change-status-date" class="form-input">
             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
                 <strong>Rückwirkend:</strong> Korrigiert die Berechnung ab dem angegebenen Datum.<br>
@@ -318,15 +318,15 @@
             <label for="payment-is-standing-order" style="margin:0; font-weight:600; cursor:pointer">Dauerauftrag</label>
         </div>
         <div class="form-group">
-            <label class="form-label">Betrag (€)</label>
+            <label class="form-label" for="payment-amount">Betrag (€)</label>
             <input type="text" inputmode="decimal" id="payment-amount" class="form-input">
         </div>
         <div class="form-group">
-            <label class="form-label" id="payment-date-label">Datum</label>
+            <label class="form-label" id="payment-date-label" for="payment-date">Datum</label>
             <input type="date" id="payment-date" class="form-input">
         </div>
         <div class="form-group">
-            <label class="form-label">Notiz</label>
+            <label class="form-label" for="payment-desc">Notiz</label>
             <input type="text" id="payment-desc" class="form-input" placeholder="z.B. Beitrag Mai">
         </div>
         <button id="btn-add-payment" class="btn btn-primary" onclick="addPayment()">Buchen</button>
@@ -382,7 +382,7 @@
         <p style="margin-bottom:15px; color:var(--text-secondary); font-size:0.9rem;">Wann soll dieser Dauerauftrag enden?</p>
 
         <div class="form-group">
-            <label class="form-label">Enddatum</label>
+            <label class="form-label" for="end-so-date">Enddatum</label>
             <input type="date" id="end-so-date" class="form-input">
             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
                 Zahlungen werden nur bis zu diesem Datum erstellt.
