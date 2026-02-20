@@ -619,8 +619,13 @@ input:checked + .slider:before { transform: translateX(22px); }
     .dashboard-top-section {
         display: grid;
         grid-template-columns: 400px 1fr;
-        gap: 40px;
+        gap: 50px;
         align-items: stretch;
+        margin-bottom: 40px;
+    }
+
+    .stats-grid {
+        margin-bottom: 0;
     }
 
     .dashboard-right {
