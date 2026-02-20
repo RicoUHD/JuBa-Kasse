@@ -97,6 +97,35 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }
 
+/* --- Dashboard Layout --- */
+.dashboard-top-section {
+    display: block; /* Stack on mobile */
+}
+
+.dashboard-right {
+    display: none; /* Hidden on mobile */
+}
+
+.chart-card {
+    background: var(--surface);
+    border-radius: 28px; /* Match hero-card radius or similar */
+    padding: 20px;
+    box-shadow: var(--shadow-lg);
+    border: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-header {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+}
+
 /* --- Tabs (Content only) --- */
 .tab-content { display: none; animation: fadeIn 0.3s ease; }
 .tab-content.active { display: block; }
@@ -539,11 +568,32 @@ input:checked + .slider:before { transform: translateX(22px); }
     /* Ensure Hero and Stats are not too wide on full width */
     #overview .hero-card,
     #overview .stats-grid {
-        max-width: 800px; /* Optional: limit width */
+        max-width: none;
+        width: 100%;
+        margin-bottom: 25px;
     }
 
     #card-design, #card-rates, #card-report, #card-invite, #card-security {
          max-width: 800px;
+    }
+
+    /* Dashboard Grid Layout */
+    .dashboard-top-section {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        gap: 25px;
+        align-items: stretch;
+    }
+
+    .dashboard-right {
+        display: block;
+    }
+
+    /* Keep stats grid internal layout */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
     }
 }
 
