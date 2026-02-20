@@ -1642,52 +1642,66 @@ function renderBalanceChart() {
 
     ctx.clearRect(0, 0, width, height);
 
-    // 1. Data Collection
-    const allEvents = [];
-    people.forEach(p => {
-        safeList(p.payments).forEach(pay => {
-            allEvents.push({ date: new Date(pay.date), amount: parseFloat(pay.amount) });
-        });
-    });
-    donations.forEach(d => {
-        allEvents.push({ date: new Date(d.date), amount: parseFloat(d.amount) });
-    });
-    expenses.forEach(e => {
-        allEvents.push({ date: new Date(e.date), amount: -parseFloat(e.amount) });
-    });
+    // ⚡ Bolt: Optimized Data Collection (O(N) vs O(N log N))
+    // Avoids creating Date objects for every transaction and sorting them.
 
-    // Sort by Date
-    allEvents.sort((a, b) => a.date - b.date);
-
-    // 2. Calculate Daily Balances for last 90 days
+    // 1. Determine Cutoff Date
     const today = new Date();
     today.setHours(0,0,0,0);
 
     const ninetyDaysAgo = new Date(today);
     ninetyDaysAgo.setDate(today.getDate() - 90);
 
-    // Initial Balance before period
-    let currentBalance = allEvents
-        .filter(e => e.date < ninetyDaysAgo)
-        .reduce((sum, e) => sum + e.amount, 0);
+    // Create comparable string (YYYY-MM-DD) from ninetyDaysAgo
+    // Note: We use local year/month/day to match the input date strings
+    const cutoffY = ninetyDaysAgo.getFullYear();
+    const cutoffM = String(ninetyDaysAgo.getMonth() + 1).padStart(2, '0');
+    const cutoffD = String(ninetyDaysAgo.getDate()).padStart(2, '0');
+    const cutoffStr = `${cutoffY}-${cutoffM}-${cutoffD}`;
 
-    const dataPoints = [];
-
-    // Create map for fast lookup
+    let currentBalance = 0;
     const eventsByDay = {};
-    allEvents.filter(e => e.date >= ninetyDaysAgo).forEach(e => {
-        const dayStr = e.date.toISOString().split('T')[0];
-        if (!eventsByDay[dayStr]) eventsByDay[dayStr] = 0;
-        eventsByDay[dayStr] += e.amount;
+
+    // 2. Single Pass Aggregation
+    // Helper to process amount/date pairs
+    const processEvent = (amount, dateStr) => {
+        if (!dateStr) return; // Skip if no date
+
+        // String comparison works for ISO dates (YYYY-MM-DD)
+        if (dateStr < cutoffStr) {
+            currentBalance += amount;
+        } else {
+            // Aggregate for chart
+            eventsByDay[dateStr] = (eventsByDay[dateStr] || 0) + amount;
+        }
+    };
+
+    people.forEach(p => {
+        safeList(p.payments).forEach(pay => {
+            processEvent(parseFloat(pay.amount), pay.date);
+        });
+    });
+    donations.forEach(d => {
+        processEvent(parseFloat(d.amount), d.date);
+    });
+    expenses.forEach(e => {
+        processEvent(-parseFloat(e.amount), e.date);
     });
 
+    // 3. Generate Data Points
+    const dataPoints = [];
     let minVal = currentBalance;
     let maxVal = currentBalance;
 
     for (let i = 0; i <= 90; i++) {
         const d = new Date(ninetyDaysAgo);
         d.setDate(d.getDate() + i);
-        const dayStr = d.toISOString().split('T')[0];
+
+        // Generate lookup key (Local YYYY-MM-DD)
+        const dY = d.getFullYear();
+        const dM = String(d.getMonth() + 1).padStart(2, '0');
+        const dD = String(d.getDate()).padStart(2, '0');
+        const dayStr = `${dY}-${dM}-${dD}`;
 
         if (eventsByDay[dayStr]) {
             currentBalance += eventsByDay[dayStr];
