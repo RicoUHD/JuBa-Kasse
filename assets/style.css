@@ -624,6 +624,18 @@ input:checked + .slider:before { transform: translateX(22px); }
         margin-bottom: 40px;
     }
 
+    .dashboard-left {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 25px;
+        height: 100%;
+    }
+
+    .dashboard-left .hero-card {
+        margin-bottom: 0;
+    }
+
     .stats-grid {
         margin-bottom: 0;
     }
