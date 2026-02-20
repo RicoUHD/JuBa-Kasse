@@ -67,13 +67,13 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .hero-card {
     background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
     color: white;
-    padding: 30px 24px;
+    padding: 20px 24px;
     border-radius: 28px;
     text-align: center;
     box-shadow: var(--shadow-lg);
     position: relative;
     overflow: hidden;
-    margin-bottom: 25px;
+    margin-bottom: 15px;
     cursor: pointer;
     transition: transform 0.2s;
 }
@@ -92,7 +92,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
 .stat-box {
-    background: var(--surface); padding: 16px; border-radius: 20px;
+    background: var(--surface); padding: 12px; border-radius: 20px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: none;
 }
@@ -113,7 +113,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .chart-card {
     background: var(--surface);
     border-radius: 28px; /* Match hero-card radius or similar */
-    padding: 20px;
+    padding: 15px;
     box-shadow: var(--shadow-lg);
     border: none;
     height: 100%;
@@ -362,7 +362,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     border-radius: 50%;
     background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
     border: none;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     z-index: 1000;
     cursor: pointer;
     align-items: center;
@@ -599,8 +599,17 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
 
     /* Admin View: Centered content for tabs */
-    #overview, #settings {
+    #overview {
         max-width: 100%;
+    }
+
+    #settings {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    #user-settings {
+        width: 100%;
     }
 
     /* Ensure Hero and Stats are not too wide on full width */
@@ -628,7 +637,7 @@ input:checked + .slider:before { transform: translateX(22px); }
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        gap: 25px;
+        gap: 15px;
         height: 100%;
     }
 
@@ -661,7 +670,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     .stats-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 15px;
+        gap: 10px;
     }
 }
 
