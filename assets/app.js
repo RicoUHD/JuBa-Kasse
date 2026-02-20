@@ -16,6 +16,32 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
+// ⚡ Haptic Feedback Helper
+window.triggerHaptic = (type = 'light') => {
+    if (!navigator.vibrate) return;
+
+    // Patterns for different feedbacks
+    switch (type) {
+        case 'light':
+            navigator.vibrate(10); // Very short, snappy
+            break;
+        case 'medium':
+            navigator.vibrate(20); // Noticeable click
+            break;
+        case 'success':
+            navigator.vibrate([10, 50, 20]); // Da-da (success rhythm)
+            break;
+        case 'error':
+            navigator.vibrate([50, 100, 50]); // Long-pause-long (warning)
+            break;
+        case 'heavy':
+            navigator.vibrate(40);
+            break;
+        default:
+            navigator.vibrate(10);
+    }
+};
+
 let people = [];
 let donations = [];
 let expenses = [];
@@ -168,6 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.switchTab = function(tabName, btn) {
+    window.triggerHaptic('light');
     const isUserNav = !!btn.closest('#user-bottom-nav') || !!btn.closest('#user-desktop-nav');
     const scope = isUserNav ? document.getElementById('user-view') : document.getElementById('admin-view');
     if (!scope) return;
@@ -194,6 +221,7 @@ window.switchTab = function(tabName, btn) {
 };
 
 window.toggleFab = function() {
+    window.triggerHaptic('medium');
     const menu = document.getElementById('fabMenu');
     const fab = document.querySelector('.nav-fab');
     if (!fab) return;
@@ -206,6 +234,7 @@ window.toggleFab = function() {
 };
 
 window.openModal = (id) => {
+    window.triggerHaptic('light');
     const modal = document.getElementById(id);
     if (!modal) return;
 
@@ -232,6 +261,7 @@ window.openModal = (id) => {
 };
 
 window.closeModal = (id) => {
+    window.triggerHaptic('light');
     const modal = document.getElementById(id);
     if (!modal) return;
 
@@ -251,6 +281,7 @@ window.closeModal = (id) => {
 
 // Improved Toggle Details
 window.toggleDetails = function(id) {
+    window.triggerHaptic('light');
     const drawer = document.getElementById(`drawer-${id}`);
     const header = document.getElementById(`person-item-${id}`);
     const wrapper = header.closest('.person-wrapper');
@@ -1778,6 +1809,7 @@ window.addEventListener('resize', () => {
 });
 
 window.showTransactionModal = function() {
+    window.triggerHaptic('medium');
     const container = document.getElementById('full-transaction-list');
     let all = [];
 
@@ -2748,6 +2780,9 @@ window.addEventListener('appinstalled', () => {
 
 let toastTimeout;
 window.showToast = (msg, type='success') => {
+    if (type === 'success') window.triggerHaptic('success');
+    else window.triggerHaptic('error');
+
     let t = document.getElementById('toast');
     if(!t) {
         t = document.createElement('div');
