@@ -73,7 +73,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     box-shadow: var(--shadow-lg);
     position: relative;
     overflow: hidden;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     cursor: pointer;
     transition: transform 0.2s;
 }
@@ -113,7 +113,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .chart-card {
     background: var(--surface);
     border-radius: 28px; /* Match hero-card radius or similar */
-    padding: 15px;
+    padding: 10px;
     box-shadow: var(--shadow-lg);
     border: none;
     height: 100%;
@@ -134,7 +134,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
     position: relative;
     width: 100%;
     flex-grow: 1;
-    min-height: 160px;
+    min-height: 140px;
 }
 
 /* --- Tabs (Content only) --- */
@@ -637,7 +637,7 @@ input:checked + .slider:before { transform: translateX(22px); }
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        gap: 15px;
+        gap: 10px;
         height: 100%;
     }
 
