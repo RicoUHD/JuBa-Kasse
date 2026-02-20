@@ -48,6 +48,10 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 
 .container { max-width: 800px; margin: 0 auto; padding: 20px; }
 
+.app-layout {
+    position: relative;
+}
+
 .header {
     display: flex;
     align-items: center; justify-content: center; gap: 12px;
@@ -540,6 +544,12 @@ input:checked + .slider:before { transform: translateX(22px); }
 
     .desktop-nav {
         display: flex;
+        position: absolute;
+        top: 25px;
+        right: 0;
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
     }
 
     .bottom-nav {
