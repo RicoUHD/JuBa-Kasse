@@ -22,12 +22,14 @@
 
 <div class="container">
     <button id="install-pwa-btn" class="btn btn-primary" style="display:none; margin-bottom: 20px;">📲 App installieren</button>
-    <header class="header">
-        <img src="assets/bgb-logo.svg" alt="JuBa-Kasse Logo">
-        <h1>JuBa-Kasse</h1>
-    </header>
 
-    <!-- ADMIN VIEW -->
+    <div class="app-layout">
+        <header class="header">
+            <img src="assets/bgb-logo.svg" alt="JuBa-Kasse Logo">
+            <h1>JuBa-Kasse</h1>
+        </header>
+
+        <!-- ADMIN VIEW -->
     <div id="admin-view">
         <nav id="admin-desktop-nav" class="desktop-nav">
             <button class="nav-btn active" onclick="switchTab('overview', this)">Startseite</button>
@@ -236,6 +238,8 @@
             <button class="btn btn-danger" onclick="logout()" style="width:100%; margin-top: 20px;">🚪 Abmelden</button>
         </div>
     </div>
+
+    </div> <!-- End of app-layout -->
 
 </div>
 
