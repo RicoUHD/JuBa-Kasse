@@ -2593,7 +2593,17 @@ window.uploadReceipt = async function(file) {
     // Grab the active user's Firebase token to prove their identity
     const token = await user.getIdToken();
     const formData = new FormData();
-    formData.append('receipt', file);
+
+    // Custom filename: <name of user>-<timestamp by YYYY-MM-DD>
+    let filename = file.name;
+    if (currentUser && currentUser.firstName && currentUser.lastName) {
+        const safeName = `${currentUser.firstName}_${currentUser.lastName}`.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const date = new Date().toISOString().split('T')[0];
+        const extension = file.name.split('.').pop();
+        filename = `${safeName}-${date}.${extension}`;
+    }
+
+    formData.append('receipt', file, filename);
 
     // Replace with your UNRAID server's IP address
     const url = `https://api.lehn.site/api/upload`;
