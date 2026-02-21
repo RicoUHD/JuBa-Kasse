@@ -2632,7 +2632,8 @@ window.uploadReceipt = async function(file) {
         filename = candidateName;
     }
 
-    formData.append('receipt', file, filename);
+    const renamedFile = new File([file], filename, { type: file.type });
+    formData.append('receipt', renamedFile);
 
     // Replace with your UNRAID server's IP address
     const url = `https://api.lehn.site/api/upload`;
