@@ -1,4 +1,4 @@
-const CACHE_NAME = 'juba-kasse-v2.1.6';
+const CACHE_NAME = 'juba-kasse-v2.1.7';
 const URLS_TO_CACHE = [
     './',
     './index.html',
@@ -12,6 +12,8 @@ const URLS_TO_CACHE = [
 ];
 
 self.addEventListener('install', event => {
+    // Force the waiting service worker to become the active service worker.
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -29,7 +31,12 @@ self.addEventListener('fetch', event => {
                 if (response) {
                     return response;
                 }
-                return fetch(event.request);
+                return fetch(event.request).catch(() => {
+                    // Fallback for navigation requests
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('./index.html');
+                    }
+                });
             })
     );
 });
@@ -45,6 +52,9 @@ self.addEventListener('activate', event => {
                     }
                 })
             );
+        }).then(() => {
+            // Take control of all clients immediately
+            return self.clients.claim();
         })
     );
 });
