@@ -2606,7 +2606,7 @@ window.fetchReceiptImage = async function(filename) {
     
     const token = await user.getIdToken();
     // Replace with your UNRAID server's IP address
-    const url = `http://YOUR_UNRAID_IP:3000/api/receipts/${filename}`;
+    const url = `https://api.lehn.site/api/receipts/${filename}`;
 
     try {
         const response = await fetch(url, {
@@ -2619,33 +2619,6 @@ window.fetchReceiptImage = async function(filename) {
         }
 
         // Convert the returned file into an object URL for the <img> tag
-        const blob = await response.blob();
-        return URL.createObjectURL(blob);
-    } catch (error) {
-        console.error('Fetch image error:', error);
-        throw error;
-    }
-};
-
-
-window.fetchReceiptImage = async function(filename) {
-    const username = 'juba-bot';
-    const password = 'JuBa-!Bot+#21';
-    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Kassenbongs/${filename}`;
-
-    const headers = new Headers();
-    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
-
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers
-        });
-
-        if (!response.ok) {
-            throw new Error('Fetch failed: ' + response.statusText);
-        }
-
         const blob = await response.blob();
         return URL.createObjectURL(blob);
     } catch (error) {
