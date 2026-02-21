@@ -2768,3 +2768,16 @@ window.showToast = (msg, type='success') => {
     if (toastTimeout) clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
 };
+
+window.copyInviteCode = async () => {
+    const codeInput = document.getElementById('admin-invite-code');
+    if (!codeInput || !codeInput.value) return;
+
+    try {
+        await navigator.clipboard.writeText(codeInput.value);
+        showToast("Code kopiert!");
+    } catch (err) {
+        console.error("Copy failed", err);
+        showToast("Kopieren fehlgeschlagen", "error");
+    }
+};
