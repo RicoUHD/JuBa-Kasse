@@ -2567,37 +2567,66 @@ window.generateNewCode = async () => {
     }
 };
 
-// --- WebDAV Receipt Handling ---
+// --- Node.js Backend Receipt Handling ---
 
 window.uploadReceipt = async function(file) {
-    const username = 'juba-bot';
-    const password = 'JuBa-!Bot+#21';
-    const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}_${safeName}`;
-    const url = `https://cloud.lehn.site/remote.php/dav/files/${username}/Kassenbongs/${filename}`;
+    const user = auth.currentUser;
+    if (!user) throw new Error('Not authenticated');
+    
+    // Grab the active user's Firebase token to prove their identity
+    const token = await user.getIdToken();
+    const formData = new FormData();
+    formData.append('receipt', file);
 
-    const headers = new Headers();
-    headers.set('Authorization', 'Basic ' + btoa(username + ':' + password));
-    headers.set('Content-Type', file.type);
+    // Replace with your UNRAID server's IP address
+    const url = `https://api.lehn.site/api/upload`;
 
     try {
         const response = await fetch(url, {
-            method: 'PUT',
-            headers: headers,
-            body: file
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
         });
 
         if (!response.ok) {
             throw new Error('Upload failed: ' + response.statusText);
         }
 
-        return filename;
+        const data = await response.json();
+        return data.filename;
     } catch (error) {
         console.error('Upload error:', error);
         throw error;
     }
 };
+
+window.fetchReceiptImage = async function(filename) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Not authenticated');
+    
+    const token = await user.getIdToken();
+    // Replace with your UNRAID server's IP address
+    const url = `http://YOUR_UNRAID_IP:3000/api/receipts/${filename}`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Fetch failed: ' + response.statusText);
+        }
+
+        // Convert the returned file into an object URL for the <img> tag
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch (error) {
+        console.error('Fetch image error:', error);
+        throw error;
+    }
+};
+
 
 window.fetchReceiptImage = async function(filename) {
     const username = 'juba-bot';
