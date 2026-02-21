@@ -2594,13 +2594,42 @@ window.uploadReceipt = async function(file) {
     const token = await user.getIdToken();
     const formData = new FormData();
 
-    // Custom filename: <name of user>-<timestamp by YYYY-MM-DD>
+    // Custom filename: <name of user>-<timestamp by YYYY-MM-DD>-<counter>
     let filename = file.name;
     if (currentUser && currentUser.firstName && currentUser.lastName) {
         const safeName = `${currentUser.firstName}_${currentUser.lastName}`.replace(/[^a-zA-Z0-9_\-]/g, '_');
         const date = new Date().toISOString().split('T')[0];
         const extension = file.name.split('.').pop();
-        filename = `${safeName}-${date}.${extension}`;
+
+        let counter = 1;
+        let candidateName = `${safeName}-${date}-${String(counter).padStart(3, '0')}.${extension}`;
+
+        // Check availability (limit to 10 tries)
+        while (counter <= 10) {
+            try {
+                // Check if file exists by fetching HEAD/GET
+                const checkUrl = `https://api.lehn.site/api/receipts/${encodeURIComponent(candidateName)}`;
+                const checkRes = await fetchWithTimeout(checkUrl, {
+                    method: 'HEAD',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    timeout: 3000 // Quick check
+                });
+
+                if (checkRes.ok) {
+                    // File exists, try next number
+                    counter++;
+                    candidateName = `${safeName}-${date}-${String(counter).padStart(3, '0')}.${extension}`;
+                } else {
+                    // File does not exist (or error), use this name
+                    break;
+                }
+            } catch (e) {
+                // Network error or timeout -> assume safe to use or proceed
+                break;
+            }
+        }
+
+        filename = candidateName;
     }
 
     formData.append('receipt', file, filename);
