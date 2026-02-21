@@ -140,7 +140,10 @@
                         <label class="form-label" for="admin-invite-code">Aktueller Code</label>
                         <div style="display:flex; gap:10px;">
                             <input type="text" id="admin-invite-code" class="form-input" readonly>
-                            <button class="btn btn-secondary" onclick="generateNewCode()">Neu</button>
+                            <button class="btn btn-secondary" onclick="copyInviteCode()" aria-label="Code kopieren" title="Code kopieren">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                            <button class="btn btn-secondary" onclick="generateNewCode()" aria-label="Neuen Code generieren">Neu</button>
                         </div>
                         <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
                             Dieser Code wird für neue Registrierungen benötigt.
