@@ -1964,12 +1964,16 @@ window.addExpense = async () => {
         return;
     }
 
+    const issuer = document.getElementById('expense-issuer').value;
+    const date = document.getElementById('expense-date').value;
+    const desc = document.getElementById('expense-desc').value;
+
     let receiptFilename = null;
     const fileInput = document.getElementById('expense-receipt');
     if (fileInput && fileInput.files.length > 0) {
         try {
             setButtonLoading('btn-add-expense', true, "Lade hoch...");
-            receiptFilename = await uploadReceipt(fileInput.files[0]);
+            receiptFilename = await uploadReceipt(fileInput.files[0], issuer, date);
         } catch (err) {
             console.error(err);
             alert("Fehler beim Hochladen des Belegs: " + err.message);
@@ -1980,9 +1984,9 @@ window.addExpense = async () => {
 
     const newExpense = {
         amount: amt,
-        issuer: document.getElementById('expense-issuer').value,
-        description: document.getElementById('expense-desc').value,
-        date: document.getElementById('expense-date').value,
+        issuer: issuer,
+        description: desc,
+        date: date,
         id: Date.now(),
         receipt: receiptFilename
     };
@@ -2521,7 +2525,7 @@ window.submitUserRequest = async () => {
         if (fileInput && fileInput.files.length > 0) {
              setButtonLoading('btn-submit-request', true, "Lade hoch...");
              try {
-                reqData.receipt = await uploadReceipt(fileInput.files[0]);
+                reqData.receipt = await uploadReceipt(fileInput.files[0], person.name, date);
              } catch(err) {
                  alert("Fehler beim Hochladen: " + err.message);
                  setButtonLoading('btn-submit-request', false);
@@ -2586,7 +2590,7 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
-window.uploadReceipt = async function(file) {
+window.uploadReceipt = async function(file, transactionName, transactionDate) {
     const user = auth.currentUser;
     if (!user) throw new Error('Not authenticated');
     
@@ -2594,46 +2598,9 @@ window.uploadReceipt = async function(file) {
     const token = await user.getIdToken();
     const formData = new FormData();
 
-    // Custom filename: <name of user>-<timestamp by YYYY-MM-DD>-<counter>
-    let filename = file.name;
-    if (currentUser && currentUser.firstName && currentUser.lastName) {
-        const safeName = `${currentUser.firstName}_${currentUser.lastName}`.replace(/[^a-zA-Z0-9_\-]/g, '_');
-        const date = new Date().toISOString().split('T')[0];
-        const extension = file.name.split('.').pop();
-
-        let counter = 1;
-        let candidateName = `${safeName}-${date}-${String(counter).padStart(3, '0')}.${extension}`;
-
-        // Check availability (limit to 10 tries)
-        while (counter <= 10) {
-            try {
-                // Check if file exists by fetching HEAD/GET
-                const checkUrl = `https://api.lehn.site/api/receipts/${encodeURIComponent(candidateName)}`;
-                const checkRes = await fetchWithTimeout(checkUrl, {
-                    method: 'HEAD',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    timeout: 3000 // Quick check
-                });
-
-                if (checkRes.ok) {
-                    // File exists, try next number
-                    counter++;
-                    candidateName = `${safeName}-${date}-${String(counter).padStart(3, '0')}.${extension}`;
-                } else {
-                    // File does not exist (or error), use this name
-                    break;
-                }
-            } catch (e) {
-                // Network error or timeout -> assume safe to use or proceed
-                break;
-            }
-        }
-
-        filename = candidateName;
-    }
-
-    const renamedFile = new File([file], filename, { type: file.type });
-    formData.append('receipt', renamedFile);
+    formData.append('receipt', file);
+    if (transactionName) formData.append('name', transactionName);
+    if (transactionDate) formData.append('date', transactionDate);
 
     // Replace with your UNRAID server's IP address
     const url = `https://api.lehn.site/api/upload`;
