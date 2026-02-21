@@ -2598,9 +2598,12 @@ window.uploadReceipt = async function(file, transactionName, transactionDate) {
     const token = await user.getIdToken();
     const formData = new FormData();
 
-    formData.append('receipt', file);
+    // 1. Append text fields FIRST
     if (transactionName) formData.append('name', transactionName);
     if (transactionDate) formData.append('date', transactionDate);
+
+    // 2. Append the file LAST
+    formData.append('receipt', file);
 
     // Replace with your UNRAID server's IP address
     const url = `https://api.lehn.site/api/upload`;
@@ -2623,6 +2626,7 @@ window.uploadReceipt = async function(file, transactionName, transactionDate) {
         throw error;
     }
 };
+
 
 window.fetchReceiptImage = async function(filename) {
     const user = auth.currentUser;
