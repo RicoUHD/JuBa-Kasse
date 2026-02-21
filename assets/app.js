@@ -2569,6 +2569,23 @@ window.generateNewCode = async () => {
 
 // --- Node.js Backend Receipt Handling ---
 
+async function fetchWithTimeout(resource, options = {}) {
+    const { timeout = 10000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        throw error;
+    }
+}
+
 window.uploadReceipt = async function(file) {
     const user = auth.currentUser;
     if (!user) throw new Error('Not authenticated');
@@ -2582,7 +2599,7 @@ window.uploadReceipt = async function(file) {
     const url = `https://api.lehn.site/api/upload`;
 
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -2606,10 +2623,10 @@ window.fetchReceiptImage = async function(filename) {
     
     const token = await user.getIdToken();
     // Replace with your UNRAID server's IP address
-    const url = `https://api.lehn.site/api/receipts/${filename}`;
+    const url = `https://api.lehn.site/api/receipts/${encodeURIComponent(filename)}`;
 
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -2631,10 +2648,17 @@ window.viewRequestReceipt = async function(filename, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    // Revoke previous URL if any
+    if (container.dataset.blobUrl) {
+        URL.revokeObjectURL(container.dataset.blobUrl);
+        delete container.dataset.blobUrl;
+    }
+
     container.innerHTML = '<div class="spinner" style="margin:10px auto;"></div><div style="text-align:center; font-size:0.8rem; color:var(--text-secondary);">Lade Beleg...</div>';
 
     try {
         const imgUrl = await fetchReceiptImage(filename);
+        container.dataset.blobUrl = imgUrl;
         container.innerHTML = `
             <img src="${imgUrl}" style="width:100%; max-width:100%; border-radius:8px; border:1px solid var(--border); margin-top:10px;" alt="Beleg">
         `;
@@ -2667,6 +2691,13 @@ window.showTransactionDetails = async function(id, type) {
     closeModal('transaction-modal'); // Hide the list
     openModal('transaction-details-modal');
     const content = document.getElementById('transaction-details-content');
+
+    // Revoke previous URL if any
+    if (content.dataset.blobUrl) {
+         URL.revokeObjectURL(content.dataset.blobUrl);
+         delete content.dataset.blobUrl;
+    }
+
     content.innerHTML = '<div class="spinner" style="margin:20px auto;"></div><div style="text-align:center">Lade Details...</div>';
 
     let html = `
@@ -2699,6 +2730,8 @@ window.showTransactionDetails = async function(id, type) {
     if (item.receipt) {
         try {
             const imgUrl = await fetchReceiptImage(item.receipt);
+            content.dataset.blobUrl = imgUrl;
+
             html += `
                 <div style="margin-top:20px;">
                     <div style="font-weight:600; margin-bottom:10px;">Beleg</div>
