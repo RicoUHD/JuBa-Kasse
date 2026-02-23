@@ -1727,6 +1727,13 @@ function renderBalanceChart() {
 
     const { dataPoints, minVal, maxVal } = chartDataCache;
 
+    // Palette: Accessible Chart Description
+    if (dataPoints && dataPoints.length > 0) {
+        const startBalance = formatCurrency(dataPoints[0].y);
+        const endBalance = formatCurrency(dataPoints[dataPoints.length - 1].y);
+        canvas.setAttribute('aria-label', `Kontostandsverlauf über 90 Tage. Start: ${startBalance} Euro. Aktuell: ${endBalance} Euro.`);
+    }
+
     // 3. Drawing
     // Margins
     const padTop = 20;
