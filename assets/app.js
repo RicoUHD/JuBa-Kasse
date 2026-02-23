@@ -20,6 +20,7 @@ let people = [];
 let donations = [];
 let expenses = [];
 let settings = { vollverdiener: 50, geringverdiener: 25, keinverdiener: 10, pausiert: 0, reportStartDate: null };
+let settingsVersion = 0;
 let currentPersonId = null;
 let isAuthenticated = false;
 let currentUser = null;
@@ -411,73 +412,88 @@ function calculatePaidUntil(person) {
  * Used to optimize overdue calculation.
  */
 function calculatePaymentStatus(person) {
+    // ⚡ Bolt: Memoization to avoid costly re-calculation on every render
+    if (person._cache_paymentStatus &&
+        person._cache_version === settingsVersion &&
+        person._cache_totalPaid === person.totalPaid) {
+        return person._cache_paymentStatus;
+    }
+
     const totalPaid = person.totalPaid || 0;
     const start = person.memberSinceObj || new Date(person.originalMemberSince || person.memberSince);
+    let result;
 
     // Fall 1: Keine Zahlungen
     if (totalPaid === 0) {
         // Letzter Tag des Vormonats
-        return {
+        result = {
             paidUntil: new Date(start.getFullYear(), start.getMonth(), 0),
             remainingCredit: 0
         };
-    }
+    } else {
+        let remainingCredit = totalPaid;
 
-    let remainingCredit = totalPaid;
+        let year = start.getFullYear();
+        let month = start.getMonth();
 
-    let year = start.getFullYear();
-    let month = start.getMonth();
+        // History is already sorted in loadData
+        const sortedHistory = person.statusHistory;
 
-    // History is already sorted in loadData
-    const sortedHistory = person.statusHistory;
+        // Maximal 120 Monate (10 Jahre) in die Zukunft prüfen
+        const maxIterations = 120;
+        let iterations = 0;
 
-    // Maximal 120 Monate (10 Jahre) in die Zukunft prüfen
-    const maxIterations = 120;
-    let iterations = 0;
+        // ⚡ Bolt: Optimized linear scan through history
+        let historyIdx = 0;
 
-    // ⚡ Bolt: Optimized linear scan through history
-    let historyIdx = 0;
+        while (remainingCredit >= 0 && iterations < maxIterations) {
+            // Fast status lookup using pre-calculated total months
+            const currentTotal = year * 12 + month;
 
-    while (remainingCredit >= 0 && iterations < maxIterations) {
-        // Fast status lookup using pre-calculated total months
-        const currentTotal = year * 12 + month;
+            const { status: historyStatus, newIdx } = findStatusInHistory(sortedHistory, historyIdx, currentTotal);
+            historyIdx = newIdx;
 
-        const { status: historyStatus, newIdx } = findStatusInHistory(sortedHistory, historyIdx, currentTotal);
-        historyIdx = newIdx;
+            const status = historyStatus || person.status; // Default/Fallback
+            const monthlyRate = status ? (settings[status] || 0) : 0;
 
-        const status = historyStatus || person.status; // Default/Fallback
-        const monthlyRate = status ? (settings[status] || 0) : 0;
-
-        if (monthlyRate > 0) {
-            if (remainingCredit >= monthlyRate) {
-                remainingCredit -= monthlyRate;
-            } else {
-                // Nicht genug für den vollen Monat - Vormonat ist bezahlt
-                break;
+            if (monthlyRate > 0) {
+                if (remainingCredit >= monthlyRate) {
+                    remainingCredit -= monthlyRate;
+                } else {
+                    // Nicht genug für den vollen Monat - Vormonat ist bezahlt
+                    break;
+                }
             }
+
+            // Nächster Monat
+            month++;
+            if (month > 11) {
+                month = 0;
+                year++;
+            }
+            iterations++;
         }
 
-        // Nächster Monat
-        month++;
-        if (month > 11) {
-            month = 0;
-            year++;
+        // Der letzte vollständig bezahlte Monat ist der Vormonat
+        month--;
+        if (month < 0) {
+            month = 11;
+            year--;
         }
-        iterations++;
+
+        // Letzter Tag dieses Monats
+        result = {
+            paidUntil: new Date(year, month + 1, 0),
+            remainingCredit: remainingCredit
+        };
     }
 
-    // Der letzte vollständig bezahlte Monat ist der Vormonat
-    month--;
-    if (month < 0) {
-        month = 11;
-        year--;
-    }
+    // Cache the result
+    person._cache_paymentStatus = result;
+    person._cache_version = settingsVersion;
+    person._cache_totalPaid = totalPaid;
 
-    // Letzter Tag dieses Monats
-    return {
-        paidUntil: new Date(year, month + 1, 0),
-        remainingCredit: remainingCredit
-    };
+    return result;
 }
 
 /**
@@ -838,7 +854,10 @@ async function loadData() {
     if (currentUser && !currentUser.admin) {
         // 1. Fetch Settings
         const sSnap = await get(child(dbRef, 'settings'));
-        if (sSnap.exists()) settings = sSnap.val();
+        if (sSnap.exists()) {
+            settings = sSnap.val();
+            settingsVersion++;
+        }
 
         // 2. Fetch User's Person Entry (Securely with Fallback)
         const peopleRef = child(dbRef, 'people');
@@ -948,7 +967,10 @@ async function loadData() {
         donations = safeList(dSnap.val());
         expenses = safeList(eSnap.val());
         requests = safeList(rSnap.val());
-        if (sSnap.exists()) settings = sSnap.val();
+        if (sSnap.exists()) {
+            settings = sSnap.val();
+            settingsVersion++;
+        }
         users = uSnap.exists()
             ? Object.entries(uSnap.val()).map(([uid, data]) => ({...data, uid}))
             : [];
@@ -2211,6 +2233,7 @@ window.saveSettings = async () => {
     settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value.replace(',', '.'));
     settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value.replace(',', '.'));
     settings.reportStartDate = document.getElementById('report-start-date').value || null;
+    settingsVersion++;
     try {
         await set(ref(db, 'settings'), settings);
         renderAll();
