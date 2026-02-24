@@ -373,7 +373,10 @@ function calculateTotalCostUntil(person, untilDate) {
     // ⚡ Bolt: Optimized linear scan
     let historyIdx = 0;
 
-    while (new Date(year, month, 1) <= untilDate) {
+    // ⚡ Bolt: Pre-calculate target months for faster integer comparison
+    const targetTotal = untilDate.getFullYear() * 12 + untilDate.getMonth();
+
+    while ((year * 12 + month) <= targetTotal) {
         const currentTotal = year * 12 + month;
 
         const { status: historyStatus, newIdx } = findStatusInHistory(sortedHistory, historyIdx, currentTotal);
@@ -511,7 +514,10 @@ function calculateCostRange(person, startDate, endDate) {
     // ⚡ Bolt: Optimized linear scan
     let historyIdx = 0;
 
-    while (new Date(year, month, 1) <= endDate && limit < 120) {
+    // ⚡ Bolt: Pre-calculate target months for faster integer comparison
+    const targetTotal = endDate.getFullYear() * 12 + endDate.getMonth();
+
+    while ((year * 12 + month) <= targetTotal && limit < 120) {
         const currentTotal = year * 12 + month;
 
         const { status: historyStatus, newIdx } = findStatusInHistory(sortedHistory, historyIdx, currentTotal);
