@@ -145,16 +145,53 @@ function formatCurrency(amount) {
 
 function validateRequired(ids) {
     let isValid = true;
+    let firstErrorEl = null;
+
     ids.forEach(id => {
         const el = document.getElementById(id);
-        if (!el || !el.value.trim()) {
+        if (!el) return;
+
+        if (!el.value.trim()) {
             isValid = false;
-            if(el) {
-                el.classList.add('input-error');
-                el.addEventListener('input', () => el.classList.remove('input-error'), {once: true});
+            if (!firstErrorEl) firstErrorEl = el;
+
+            // Visual feedback
+            el.classList.add('input-error');
+            el.setAttribute('aria-invalid', 'true');
+
+            // Error Message
+            let errorMsgId = id + '-error';
+            let errorSpan = document.getElementById(errorMsgId);
+
+            if (!errorSpan) {
+                errorSpan = document.createElement('div');
+                errorSpan.id = errorMsgId;
+                errorSpan.className = 'error-message';
+                errorSpan.innerText = 'Dieses Feld ist erforderlich.';
+                // Insert after input (or wrapping div if needed, but afterend is usually safe here)
+                el.insertAdjacentElement('afterend', errorSpan);
             }
+            errorSpan.style.display = 'block';
+
+            // Link ARIA
+            let describedBy = el.getAttribute('aria-describedby') || '';
+            if (!describedBy.includes(errorMsgId)) {
+                el.setAttribute('aria-describedby', describedBy ? describedBy + ' ' + errorMsgId : errorMsgId);
+            }
+
+            // Remove error on input
+            el.addEventListener('input', () => {
+                el.classList.remove('input-error');
+                el.removeAttribute('aria-invalid');
+                if (errorSpan) errorSpan.style.display = 'none';
+            }, {once: true});
         }
     });
+
+    if (firstErrorEl) {
+        firstErrorEl.focus();
+    }
+
     return isValid;
 }
 

@@ -717,6 +717,15 @@ input:checked + .slider:before { transform: translateX(22px); }
     background-color: rgba(239, 68, 68, 0.05) !important;
 }
 
+.error-message {
+    color: var(--danger);
+    font-size: 0.8rem;
+    margin-top: 4px;
+    font-weight: 600;
+    display: none;
+    animation: fadeIn 0.2s;
+}
+
 /* --- User View UI Improvements --- */
 .user-hero-status {
     background: var(--surface);
