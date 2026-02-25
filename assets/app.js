@@ -552,18 +552,11 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
          return true;
     });
 
-    if (hasActiveSO) {
-        return {
-            text: 'Dauerauftrag aktiv',
-            isOverdue: false,
-            isSoonDue: false,
-            isActiveStandingOrder: true
-        };
-    }
-    // END CHECK
-
     const paidUntil = preCalculatedPaidUntil !== undefined ? preCalculatedPaidUntil : calculatePaidUntil(person);
     if (!paidUntil) {
+        if (hasActiveSO) {
+             return { text: 'Keine Zahlungen', isOverdue: true, isSoonDue: false, isActiveStandingOrder: true };
+        }
         return { text: 'Keine Zahlungen', isOverdue: true, isSoonDue: false };
     }
 
@@ -578,76 +571,58 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
     if (monthsDiff < 0) {
         const overdueMonths = Math.abs(monthsDiff);
 
-        // Check if standing order covers the current missing month
-        if (overdueMonths === 1) {
-            const standingOrders = safeList(person.standingOrders);
-            const hasCoverage = standingOrders.some(so => {
-                // If we have a standing order, check if it targets this month
-                // Simplified: If last payment was last month, or start date is this month
-                const targetMonth = currentMonth.getMonth();
-                const targetYear = currentMonth.getFullYear();
+        if (hasActiveSO) {
+            // Check if standing order covers the current missing month
+            if (overdueMonths === 1) {
+                const hasCoverage = standingOrders.some(so => {
+                    const targetMonth = currentMonth.getMonth();
+                    const targetYear = currentMonth.getFullYear();
 
-                // Check if the standing order ends before this target month
-                if (so.endDate) {
-                    const end = new Date(so.endDate);
-                    // End date must be >= last day of target month to cover it fully?
-                    // Or at least >= first day?
-                    // If I set end date 15.02, does it cover Feb? Yes, payment happens on 15.02.
-                    // If I set end date 01.02, it covers Feb.
-                    // If I set end date 31.01, it does NOT cover Feb.
-                    // So we check if the PAYMENT DATE for this month is <= endDate.
+                    if (so.endDate) {
+                        const endDay = new Date(so.endDate);
+                        endDay.setHours(23, 59, 59, 999);
 
-                    // Estimate payment date for this target month
-                    // We know the day of month from startDate
-                    const start = new Date(so.startDate);
-                    const dayOfMonth = start.getDate();
-
-                    const paymentDateInTargetMonth = new Date(targetYear, targetMonth, dayOfMonth);
-                    // Handle short months
-                    if (paymentDateInTargetMonth.getMonth() !== targetMonth) {
-                        paymentDateInTargetMonth.setDate(0); // Set to last day of previous month? No, last day of target month.
-                        // Actually new Date(2024, 1, 30) -> March 1st or 2nd.
-                        // Correct logic:
+                        const start = new Date(so.startDate);
+                        const dayOfMonth = start.getDate();
                         const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
-                        paymentDateInTargetMonth.setMonth(targetMonth);
-                        paymentDateInTargetMonth.setDate(Math.min(dayOfMonth, lastDay));
+                        const paymentDateInTargetMonth = new Date(targetYear, targetMonth, Math.min(dayOfMonth, lastDay));
+
+                        if (paymentDateInTargetMonth > endDay) return false;
                     }
+                    return true;
+                });
 
-                    const endDay = new Date(so.endDate);
-                    endDay.setHours(23, 59, 59, 999);
-
-                    if (paymentDateInTargetMonth > endDay) return false;
+                if (hasCoverage) {
+                    return {
+                        text: 'Dauerauftrag aktiv',
+                        isOverdue: false,
+                        isSoonDue: false,
+                        isActiveStandingOrder: true
+                    };
                 }
-
-                if (so.lastAutoPayment) {
-                    const last = new Date(so.lastAutoPayment);
-                    // Next payment is last + 1 month
-                    last.setMonth(last.getMonth() + 1);
-                    return last.getMonth() === targetMonth && last.getFullYear() === targetYear;
-                } else {
-                    const start = new Date(so.startDate);
-                    // If start is this month or earlier (and not paid yet means it's due/pending)
-                    // If start is earlier, and no payment exists, it means we are overdue, but
-                    // if the SO exists, we might treat it as "will be paid".
-                    // But here strict check: start date falls in this month
-                    return start.getMonth() === targetMonth && start.getFullYear() === targetYear;
-                }
-            });
-
-            if (hasCoverage) {
-                return {
-                    text: 'Dauerauftrag geplant',
-                    isOverdue: false,
-                    isSoonDue: false,
-                    isPlanned: true
-                };
             }
+
+            return {
+                text: 'Dauerauftrag aktiv',
+                isOverdue: true,
+                isSoonDue: false,
+                isActiveStandingOrder: true
+            };
         }
 
         return {
             text: `${overdueMonths} Monat${overdueMonths !== 1 ? 'e' : ''} überfällig`,
             isOverdue: true,
             isSoonDue: false
+        };
+    }
+
+    if (hasActiveSO) {
+        return {
+            text: 'Dauerauftrag aktiv',
+            isOverdue: false,
+            isSoonDue: false,
+            isActiveStandingOrder: true
         };
     }
 
@@ -1344,7 +1319,7 @@ function renderUserView() {
             <h2 style="color: ${statusColor}; font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">
                 ${statusMeta.isOverdue ? 'Zahlung überfällig' : (statusMeta.isSoonDue ? 'Bald fällig' : 'Alles in Ordnung')}
             </h2>
-            ${statusMeta.isActiveStandingOrder ? '' : `<div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>`}
+            ${(statusMeta.isActiveStandingOrder && !statusMeta.isOverdue) ? '' : `<div style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">Bezahlt bis <strong>${dateText}</strong></div>`}
             <div style="font-size: 0.95rem; opacity: 0.75; color: var(--text);">${statusMeta.text}</div>
             ${statusMeta.isOverdue ? `
                 <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
@@ -1596,7 +1571,7 @@ function generatePersonHTML(p, preCalcData = null) {
                         <span class="person-status">${currentStatus}</span>
                     </div>
                     <div class="person-right">
-                        ${statusMeta.isActiveStandingOrder ? '' : `<span class="payment-pill ${pillClass}">${dateText}</span>`}
+                        ${(statusMeta.isActiveStandingOrder && !statusMeta.isOverdue) ? '' : `<span class="payment-pill ${pillClass}">${dateText}</span>`}
                         <span class="time-remaining">${statusMeta.text}</span>
                     </div>
                 </div>
@@ -1605,7 +1580,7 @@ function generatePersonHTML(p, preCalcData = null) {
                 <div class="details-content">
 
                     <div class="details-status-card ${cardClass}">
-                        ${statusMeta.isActiveStandingOrder ? '' : `
+                        ${(statusMeta.isActiveStandingOrder && !statusMeta.isOverdue) ? '' : `
                         <div class="details-row">
                             <span class="details-label">Bezahlt bis</span>
                             <span class="details-value">${dateText}</span>
