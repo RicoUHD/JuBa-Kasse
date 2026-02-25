@@ -1290,12 +1290,19 @@ window.rejectRequest = async (reqId) => {
 function renderUserView() {
     if (people.length === 0) {
         document.getElementById('user-status-card').innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-                Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.
+            <div style="text-align:center; padding: 40px 20px; color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: 15px;">⏳</div>
+                <h3 style="margin-bottom: 10px; color: var(--text);">Warte auf Genehmigung vom Admin</h3>
+                <p>Bitte habe noch etwas Geduld.</p>
             </div>
         `;
+        const content = document.getElementById('user-approved-content');
+        if (content) content.style.display = 'none';
         return;
     }
+
+    const content = document.getElementById('user-approved-content');
+    if (content) content.style.display = 'block';
 
     const p = people[0]; // User has only one person (themselves)
     const { paidUntil, remainingCredit } = calculatePaymentStatus(p);
