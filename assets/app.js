@@ -946,6 +946,10 @@ async function loadData() {
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('user-view').style.display = 'block';
 
+        // Hide desktop FAB for non-admins
+        const desktopFab = document.getElementById('desktop-fab');
+        if(desktopFab) desktopFab.style.display = 'none';
+
         const adminBottomNav = document.getElementById('admin-bottom-nav');
         if(adminBottomNav) adminBottomNav.style.display = 'none';
         const userBottomNav = document.getElementById('user-bottom-nav');
@@ -989,6 +993,10 @@ async function loadData() {
         // UI toggles
         document.getElementById('admin-view').style.display = 'block';
         document.getElementById('user-view').style.display = 'none';
+
+        // Show desktop FAB for admins (CSS handles layout)
+        const desktopFab = document.getElementById('desktop-fab');
+        if(desktopFab) desktopFab.style.display = '';
 
         const adminBottomNav = document.getElementById('admin-bottom-nav');
         if(adminBottomNav) adminBottomNav.style.display = 'flex';
