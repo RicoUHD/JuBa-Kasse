@@ -746,15 +746,20 @@ function checkAndExecuteStandingOrders(person) {
         const dayOfMonth = startDate.getDate();
         let lastAuto = currentSO.lastAutoPayment ? new Date(currentSO.lastAutoPayment) : null;
 
-        // Determine limit date: min(today, endDate)
-        let limitDate = new Date(today);
+        // Determine limit date: min(end of month, endDate)
+        let limitDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
         let isExpired = false;
 
         if (currentSO.endDate) {
             const end = new Date(currentSO.endDate);
             end.setHours(23, 59, 59, 999);
-            if (end < today) {
+
+            // Constraint 1: Still respect currentSO.endDate.
+            if (end < limitDate) {
                 limitDate = end;
+            }
+
+            if (end < today) {
                 isExpired = true;
             }
         }
