@@ -572,36 +572,6 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
         const overdueMonths = Math.abs(monthsDiff);
 
         if (hasActiveSO) {
-            // Check if standing order covers the current missing month
-            if (overdueMonths === 1) {
-                const hasCoverage = standingOrders.some(so => {
-                    const targetMonth = currentMonth.getMonth();
-                    const targetYear = currentMonth.getFullYear();
-
-                    if (so.endDate) {
-                        const endDay = new Date(so.endDate);
-                        endDay.setHours(23, 59, 59, 999);
-
-                        const start = new Date(so.startDate);
-                        const dayOfMonth = start.getDate();
-                        const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
-                        const paymentDateInTargetMonth = new Date(targetYear, targetMonth, Math.min(dayOfMonth, lastDay));
-
-                        if (paymentDateInTargetMonth > endDay) return false;
-                    }
-                    return true;
-                });
-
-                if (hasCoverage) {
-                    return {
-                        text: 'Dauerauftrag aktiv',
-                        isOverdue: false,
-                        isSoonDue: false,
-                        isActiveStandingOrder: true
-                    };
-                }
-            }
-
             return {
                 text: 'Dauerauftrag aktiv',
                 isOverdue: true,
@@ -746,15 +716,20 @@ function checkAndExecuteStandingOrders(person) {
         const dayOfMonth = startDate.getDate();
         let lastAuto = currentSO.lastAutoPayment ? new Date(currentSO.lastAutoPayment) : null;
 
-        // Determine limit date: min(today, endDate)
-        let limitDate = new Date(today);
+        // Determine limit date: min(end of month, endDate)
+        let limitDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
         let isExpired = false;
 
         if (currentSO.endDate) {
             const end = new Date(currentSO.endDate);
             end.setHours(23, 59, 59, 999);
-            if (end < today) {
+
+            // Constraint 1: Still respect currentSO.endDate.
+            if (end < limitDate) {
                 limitDate = end;
+            }
+
+            if (end < today) {
                 isExpired = true;
             }
         }
