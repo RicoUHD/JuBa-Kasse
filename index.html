@@ -16,8 +16,35 @@
 <body>
 
 <div id="loading-overlay">
-    <div class="spinner"></div>
-    <div id="loading-message" style="font-weight:600; color:var(--text)">Lade Daten...</div>
+    <div class="piggy-wrapper">
+        <div class="coin"></div>
+        <div class="coin delay-1"></div>
+        <div class="coin delay-2"></div>
+        <svg class="piggy-bank" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+             <g fill="#ffb6c1" stroke="#ff9aa2" stroke-width="2">
+                <!-- Legs -->
+                <rect x="60" y="130" width="20" height="30" rx="5" />
+                <rect x="120" y="130" width="20" height="30" rx="5" />
+                <!-- Tail -->
+                <path d="M35 110 Q 20 100 25 120 T 35 130" fill="none" stroke="#ff9aa2" stroke-width="4" stroke-linecap="round"/>
+                <!-- Body -->
+                <ellipse cx="100" cy="110" rx="70" ry="50" />
+                <!-- Snout -->
+                <ellipse cx="160" cy="105" rx="15" ry="12" fill="#ff9aa2" />
+                <circle cx="165" cy="102" r="2" fill="#d67b84" stroke="none"/> <!-- Nostril -->
+                <circle cx="165" cy="108" r="2" fill="#d67b84" stroke="none"/> <!-- Nostril -->
+                <!-- Ears -->
+                <path d="M70 70 L60 40 L90 60 Z" />
+                <path d="M130 70 L140 40 L110 60 Z" />
+                <!-- Eye -->
+                <circle cx="140" cy="85" r="4" fill="#333" stroke="none" />
+                <!-- Slot -->
+                <rect x="85" y="65" width="30" height="6" rx="3" fill="#d67b84" stroke="none" />
+            </g>
+        </svg>
+    </div>
+    <div id="loading-message" style="font-weight:600; color:#333; margin-top: 20px;">Lade Daten...</div>
+    <div class="loading-footer">JuBa-Kasse (C) 2026</div>
 </div>
 
 <div class="container">

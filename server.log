@@ -1,0 +1,16 @@
+127.0.0.1 - - [26/Feb/2026 11:33:03] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:04] "GET /assets/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:04] "GET /assets/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:04] "GET /assets/bgb-logo.svg HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:04] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:05] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:05] "GET /manifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:05] "GET /assets/icon.png HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET /assets/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET /assets/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET /assets/bgb-logo.svg HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET /manifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [26/Feb/2026 11:33:35] "GET /assets/icon.png HTTP/1.1" 200 -
