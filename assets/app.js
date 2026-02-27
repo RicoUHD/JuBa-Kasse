@@ -1780,8 +1780,12 @@ function renderBalanceChart() {
 }
 
 // Re-render chart on resize
+let resizeTimeout;
 window.addEventListener('resize', () => {
-    requestAnimationFrame(renderBalanceChart);
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        requestAnimationFrame(renderBalanceChart);
+    }, 100);
 });
 
 window.showTransactionModal = function() {
