@@ -2677,7 +2677,7 @@ window.viewRequestReceipt = async function(filename, containerId) {
         const imgUrl = await fetchReceiptImage(filename);
         container.dataset.blobUrl = imgUrl;
         container.innerHTML = `
-            <img src="${imgUrl}" style="width:100%; max-width:100%; border-radius:8px; border:1px solid var(--border); margin-top:10px;" alt="Beleg">
+                <img src="${imgUrl}" style="width:100%; max-width:100%; border-radius:8px; border:1px solid var(--border); margin-top:10px; opacity:0; transition:opacity 0.3s ease-in;" onload="this.style.opacity=1" alt="Beleg">
         `;
     } catch (err) {
         console.error(err);
@@ -2715,8 +2715,6 @@ window.showTransactionDetails = async function(id, type) {
          delete content.dataset.blobUrl;
     }
 
-    content.innerHTML = '<div class="spinner" style="margin:20px auto;"></div><div style="text-align:center">Lade Details...</div>';
-
     let html = `
         <div style="text-align:center; margin-bottom:20px;">
             <div style="font-size:2rem; font-weight:800;">${formatCurrency(item.amount)} €</div>
@@ -2742,27 +2740,28 @@ window.showTransactionDetails = async function(id, type) {
                 <span class="details-value">${escapeHtml(item.description || item.note || '-')}</span>
             </div>
         </div>
+        <div id="receipt-container" style="margin-top:20px;"></div>
     `;
 
+    content.innerHTML = html;
+
     if (item.receipt) {
+        const receiptContainer = document.getElementById('receipt-container');
+        receiptContainer.innerHTML = '<div class="spinner" style="margin:20px auto;"></div><div style="text-align:center">Lade Beleg...</div>';
+
         try {
             const imgUrl = await fetchReceiptImage(item.receipt);
             content.dataset.blobUrl = imgUrl;
-
-            html += `
-                <div style="margin-top:20px;">
-                    <div style="font-weight:600; margin-bottom:10px;">Beleg</div>
-                    <img src="${imgUrl}" style="width:100%; border-radius:12px; border:1px solid var(--border);" alt="Beleg">
-                </div>
+            receiptContainer.innerHTML = `
+                <div style="font-weight:600; margin-bottom:10px;">Beleg</div>
+                <img src="${imgUrl}" style="width:100%; border-radius:12px; border:1px solid var(--border); opacity:0; transition:opacity 0.3s ease-in;" onload="this.style.opacity=1" alt="Beleg">
             `;
         } catch (err) {
-            html += `<div style="color:var(--danger); margin-top:20px; text-align:center;">Beleg konnte nicht geladen werden.</div>`;
+            receiptContainer.innerHTML = `<div style="color:var(--danger); text-align:center;">Beleg konnte nicht geladen werden.</div>`;
         }
     } else {
-        html += `<div style="margin-top:20px; color:var(--text-secondary); text-align:center; font-size:0.9rem;">Kein Beleg vorhanden.</div>`;
+        document.getElementById('receipt-container').innerHTML = `<div style="color:var(--text-secondary); text-align:center; font-size:0.9rem;">Kein Beleg vorhanden.</div>`;
     }
-
-    content.innerHTML = html;
 };
 
 // --- PWA Install Logic ---
