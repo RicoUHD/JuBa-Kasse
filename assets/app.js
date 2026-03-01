@@ -626,8 +626,21 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
  */
 function calculateOverdueAmount(person, preCalcPaidUntil, preCalcCredit) {
     const today = new Date();
-    // Ziel: Ende des aktuellen Monats
-    const targetDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    // Check for active standing orders
+    const standingOrders = safeList(person.standingOrders);
+    const todayStr = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const hasActiveSO = standingOrders.some(so => {
+         if (so.startDate > todayStr) return false;
+         if (so.endDate && so.endDate < todayStr) return false;
+         return true;
+    });
+
+    // Wenn es einen aktiven Dauerauftrag gibt, fehlt der Betrag für diesen Monat noch nicht (wird ja noch ausgeführt)
+    // Ziel: Ende des Vormonats, andernfalls Ende des aktuellen Monats
+    const targetDate = hasActiveSO
+        ? new Date(today.getFullYear(), today.getMonth(), 0)
+        : new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     // ⚡ Bolt: Optimized path avoiding full history iteration
     if (preCalcPaidUntil) {
