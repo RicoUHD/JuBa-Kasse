@@ -2506,7 +2506,7 @@ window.openUserRequestModal = (type) => {
             </div>
             <div class="form-group">
                 <label class="form-label" for="req-receipt">Beleg (Optional)</label>
-                <input type="file" id="req-receipt" accept="image/*" class="form-input">
+                <input type="file" id="req-receipt" accept="image/*,.heic,.heif" class="form-input">
             </div>
         `;
     }
@@ -2633,8 +2633,28 @@ window.uploadReceipt = async function(file, transactionName, transactionDate) {
     if (transactionName) formData.append('name', transactionName);
     if (transactionDate) formData.append('date', transactionDate);
 
+    // Check if it's HEIC/HEIF and convert
+    let uploadFile = file;
+    const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif';
+    if (isHeic) {
+        try {
+            const blob = await heic2any({
+                blob: file,
+                toType: "image/jpeg",
+                quality: 0.8
+            });
+            // heic2any can return an array of blobs or a single blob
+            const convertedBlob = Array.isArray(blob) ? blob[0] : blob;
+            const newName = file.name.replace(/\.hei[cf]$/i, '.jpg');
+            uploadFile = new File([convertedBlob], newName, { type: "image/jpeg" });
+        } catch (e) {
+            console.error("HEIC conversion failed:", e);
+            // fallback to uploading original if conversion fails
+        }
+    }
+
     // 2. Append the file LAST
-    formData.append('receipt', file);
+    formData.append('receipt', uploadFile);
 
     // Replace with your UNRAID server's IP address
     const url = `https://api.lehn.site/api/upload`;
@@ -2678,7 +2698,24 @@ window.fetchReceiptImage = async function(filename) {
         }
 
         // Convert the returned file into an object URL for the <img> tag
-        const blob = await response.blob();
+        let blob = await response.blob();
+
+        // If the filename indicates it's a HEIC file, try to convert it for display
+        const isHeic = filename.toLowerCase().endsWith('.heic') || filename.toLowerCase().endsWith('.heif') || blob.type === 'image/heic' || blob.type === 'image/heif';
+        if (isHeic) {
+            try {
+                const converted = await heic2any({
+                    blob: blob,
+                    toType: "image/jpeg",
+                    quality: 0.8
+                });
+                blob = Array.isArray(converted) ? converted[0] : converted;
+            } catch (e) {
+                console.error("HEIC fetch conversion failed:", e);
+                // Just use the original blob if it fails, though it might not display
+            }
+        }
+
         return URL.createObjectURL(blob);
     } catch (error) {
         console.error('Fetch image error:', error);
