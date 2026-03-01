@@ -572,12 +572,24 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
         const overdueMonths = Math.abs(monthsDiff);
 
         if (hasActiveSO) {
-            return {
-                text: 'Dauerauftrag aktiv',
-                isOverdue: true,
-                isSoonDue: false,
-                isActiveStandingOrder: true
-            };
+            // If there's an active standing order and they are only missing the current month's payment (monthsDiff === -1),
+            // they shouldn't be considered overdue yet because the standing order might just execute later in the month.
+            // If they are missing more than one month, then the standing order must have failed or wasn't enough, so they are overdue.
+            if (monthsDiff === -1) {
+                return {
+                    text: 'Dauerauftrag aktiv',
+                    isOverdue: false,
+                    isSoonDue: true, // Mark them as soon due since the standing order is expected this month
+                    isActiveStandingOrder: true
+                };
+            } else {
+                return {
+                    text: 'Dauerauftrag aktiv (Betrag fehlt)',
+                    isOverdue: true,
+                    isSoonDue: false,
+                    isActiveStandingOrder: true
+                };
+            }
         }
 
         return {
@@ -716,8 +728,8 @@ function checkAndExecuteStandingOrders(person) {
         const dayOfMonth = startDate.getDate();
         let lastAuto = currentSO.lastAutoPayment ? new Date(currentSO.lastAutoPayment) : null;
 
-        // Determine limit date: min(end of month, endDate)
-        let limitDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+        // Determine limit date: min(today, endDate)
+        let limitDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
         let isExpired = false;
 
         if (currentSO.endDate) {
