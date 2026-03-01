@@ -12,6 +12,7 @@
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js">
     <link rel="stylesheet" href="assets/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 </head>
 <body>
 
@@ -428,7 +429,7 @@
         <label for="expense-date" class="sr-only">Datum</label>
         <input type="date" id="expense-date" class="form-input" style="margin-bottom:10px">
         <label for="expense-receipt" class="sr-only">Beleg</label>
-        <input type="file" id="expense-receipt" accept="image/*" class="form-input" style="margin-bottom:10px">
+        <input type="file" id="expense-receipt" accept="image/*,.heic,.heif" class="form-input" style="margin-bottom:10px">
         <button id="btn-add-expense" class="btn btn-primary btn-block" onclick="addExpense()">Speichern</button>
     </div>
 </div>
