@@ -1602,6 +1602,7 @@ function generatePersonHTML(p, preCalcData = null) {
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
+                        ${statusMeta.isOverdue ? `<button class="btn btn-secondary" onclick="sendReminderEmail('${p.id}')">📧 Erinnerung</button>` : ''}
                     </div>
 
                     <div class="history-header">Verlauf</div>
@@ -2580,6 +2581,32 @@ window.submitUserRequest = async () => {
 
     try {
         await set(ref(db, 'requests/' + newReq.id), newReq);
+
+        // Notify admins
+        try {
+            const usersSnap = await get(ref(db, 'users'));
+            if (usersSnap.exists()) {
+                const allUsers = usersSnap.val();
+                const adminEmails = Object.values(allUsers).filter(u => u.admin).map(u => u.email);
+
+                const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe', standing_order: 'Dauerauftrag' };
+                const reqTypeLabel = typeLabels[currentRequestType] || currentRequestType;
+
+                for (const adminEmail of adminEmails) {
+                    if (adminEmail) {
+                        await window.sendEmailViaBackend(
+                            adminEmail,
+                            'Neue Anfrage bei JuBa-Kasse',
+                            `Eine neue Anfrage (${reqTypeLabel}) von ${person.name} wurde eingereicht.\n\nBitte prüfe die Anfrage in der App.`,
+                            ''
+                        );
+                    }
+                }
+            }
+        } catch (emailErr) {
+            console.error('Konnte keine Admin-Emails versenden:', emailErr);
+        }
+
         closeModal('user-request-modal');
         showToast("Anfrage erfolgreich gesendet");
         loadData();
@@ -2620,6 +2647,71 @@ async function fetchWithTimeout(resource, options = {}) {
         throw error;
     }
 }
+
+window.sendReminderEmail = async (personId) => {
+    const p = people.find(p => String(p.id) === String(personId));
+    if (!p) return;
+
+    if (!p.uid) {
+        alert('Dieser Person ist kein Benutzerkonto zugeordnet. Eine E-Mail kann nicht gesendet werden.');
+        return;
+    }
+
+    const user = users.find(u => u.uid === p.uid);
+    if (!user || !user.email) {
+        alert('Keine E-Mail-Adresse für diesen Benutzer gefunden.');
+        return;
+    }
+
+    const { paidUntil, remainingCredit } = calculatePaymentStatus(p);
+    const overdueAmount = calculateOverdueAmount(p, paidUntil, remainingCredit);
+
+    if (overdueAmount <= 0) {
+        alert('Diese Person hat keine ausstehenden Zahlungen.');
+        return;
+    }
+
+    try {
+        await window.sendEmailViaBackend(
+            user.email,
+            'Zahlungserinnerung JuBa-Kasse',
+            `Hallo ${p.name},\n\nDu hast noch einen offenen Betrag von ${formatCurrency(overdueAmount)} € bei der JuBa-Kasse.\n\nBitte überweise den Betrag zeitnah.\n\nViele Grüße,\nDein Admin-Team`,
+            ''
+        );
+        showToast('Erinnerung erfolgreich gesendet');
+    } catch (err) {
+        console.error('Fehler beim Senden der Erinnerung:', err);
+        alert('Erinnerung konnte nicht gesendet werden.');
+    }
+};
+
+window.sendEmailViaBackend = async function(to, subject, text, html = '') {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Not authenticated');
+
+    const token = await user.getIdToken();
+    const url = `https://api.lehn.site/api/send-email`;
+
+    try {
+        const response = await fetchWithTimeout(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ to, subject, text, html })
+        });
+
+        if (!response.ok) {
+            throw new Error('Email failed: ' + response.statusText);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Email send error:', error);
+        throw error;
+    }
+};
 
 window.uploadReceipt = async function(file, transactionName, transactionDate) {
     const user = auth.currentUser;
