@@ -315,6 +315,7 @@ body { background-color: var(--bg); color: var(--text); min-height: 100vh; paddi
 .details-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
 .details-actions .btn { font-size: 0.9rem; padding: 10px; }
 .details-actions .btn-primary { box-shadow: none; }
+.details-actions .btn-span-all { grid-column: span 2; }
 
 .history-header {
     font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);
