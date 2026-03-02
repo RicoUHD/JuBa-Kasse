@@ -1606,7 +1606,7 @@ function generatePersonHTML(p, preCalcData = null) {
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
-                        <button class="btn btn-secondary" onclick="sendStatusEmail('${p.id}')">📧 Status-E-Mail senden</button>
+                        <button class="btn btn-secondary btn-span-all" onclick="sendStatusEmail('${p.id}')">📧 Status-E-Mail senden</button>
                     </div>
 
                     <div class="history-header">Verlauf</div>
