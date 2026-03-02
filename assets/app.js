@@ -2556,13 +2556,25 @@ window.submitUserRequest = async () => {
         const fileInput = document.getElementById('req-receipt');
         if (fileInput && fileInput.files.length > 0) {
              setButtonLoading('btn-submit-request', true, "Lade hoch...");
-             try {
-                reqData.receipt = await uploadReceipt(fileInput.files[0], person.name, date);
-             } catch(err) {
-                 alert("Fehler beim Hochladen: " + err.message);
-                 setButtonLoading('btn-submit-request', false);
-                 return;
-             }
+             // Notify admins via the new secure backend endpoint
+        try {
+            const userToken = await auth.currentUser.getIdToken();
+            const notifyUrl = `https://api.lehn.site/api/notify-admins`;
+
+            await fetchWithTimeout(notifyUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${userToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    reqType: currentRequestType,
+                    personName: person.name
+                })
+            });
+        } catch (emailErr) {
+            console.error('Konnte Admin-Benachrichtigung nicht auslösen:', emailErr);
+        }
         }
     }
 
