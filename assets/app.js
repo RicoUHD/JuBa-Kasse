@@ -1026,6 +1026,10 @@ function renderAll() {
         document.getElementById('rate-geringverdiener').value = settings.geringverdiener;
         document.getElementById('rate-keinverdiener').value = settings.keinverdiener;
         document.getElementById('report-start-date').value = settings.reportStartDate || '';
+
+        if (currentUser) {
+            document.getElementById('admin-email-notifications').checked = !!currentUser.emailNotifications;
+        }
     }
 }
 
@@ -1602,6 +1606,7 @@ function generatePersonHTML(p, preCalcData = null) {
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
+                        <button class="btn btn-secondary" onclick="sendStatusEmail('${p.id}')">📧 Status-E-Mail senden</button>
                     </div>
 
                     <div class="history-header">Verlauf</div>
@@ -2158,6 +2163,78 @@ window.openChangeStatusModal = (id) => {
     openModal('change-status-modal');
 };
 
+window.sendStatusEmail = async (personId) => {
+    if (!currentUser || !currentUser.admin) return;
+
+    const person = people.find(p => String(p.id) === String(personId));
+    if (!person) {
+        showToast('Person nicht gefunden', 'error');
+        return;
+    }
+
+    let email = null;
+    if (person.uid) {
+        const linkedUser = users.find(u => u.uid === person.uid);
+        if (linkedUser && linkedUser.email) {
+            email = linkedUser.email;
+        }
+    }
+
+    if (!email) {
+        showToast('Keine E-Mail-Adresse für diese Person hinterlegt', 'error');
+        return;
+    }
+
+    const { paidUntil, remainingCredit } = calculatePaymentStatus(person);
+    const statusMeta = calculateTimeRemaining(person, paidUntil);
+    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(person, paidUntil, remainingCredit) : 0;
+    const currentStatus = getCurrentStatus(person);
+
+    const statusLabels = {
+        'vollverdiener': 'Vollverdiener',
+        'geringverdiener': 'Geringverdiener',
+        'keinverdiener': 'Keinverdiener',
+        'pausiert': 'Pausiert'
+    };
+    const readableStatus = statusLabels[currentStatus] || currentStatus;
+
+    const subject = 'Dein aktueller Kassenstatus - JuBa-Kasse';
+    const text = `Hallo ${person.name},\n\ndein aktueller Status ist: ${readableStatus}.\nDu bist aktuell ${statusMeta.text}.\nOffener Betrag: ${formatCurrency(overdueAmount)} €.\n\nViele Grüße,\nDein JuBa-Kasse Team`;
+    const html = `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+            <h2>Hallo ${escapeHtml(person.name)},</h2>
+            <p>dein aktueller Status ist: <strong>${escapeHtml(readableStatus)}</strong>.</p>
+            <p>Du bist aktuell: <strong>${escapeHtml(statusMeta.text)}</strong>.</p>
+            ${statusMeta.isOverdue ? `<p style="color: red; font-size: 1.1em; font-weight: bold;">Offener Betrag: ${formatCurrency(overdueAmount)} €</p>` : `<p style="color: green;">Dein Konto ist ausgeglichen.</p>`}
+            <br>
+            <p>Viele Grüße,</p>
+            <p>Dein JuBa-Kasse Team</p>
+        </div>
+    `;
+
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('https://api.lehn.site/api/send-email', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ to: email, subject, text, html })
+        });
+
+        if (response.ok) {
+            showToast('Status-E-Mail gesendet');
+        } else {
+            showToast('Fehler beim Senden der E-Mail', 'error');
+            console.error('Email API response not ok:', await response.text());
+        }
+    } catch (err) {
+        console.error('Fehler beim Senden der Status-E-Mail:', err);
+        showToast('Fehler beim Senden der E-Mail', 'error');
+    }
+};
+
 window.saveStatusChange = async () => {
     if(!currentPersonId) return;
 
@@ -2227,8 +2304,15 @@ window.saveSettings = async () => {
     settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value.replace(',', '.'));
     settings.reportStartDate = document.getElementById('report-start-date').value || null;
     settingsVersion++;
+
+    const emailNotifications = document.getElementById('admin-email-notifications').checked;
+
     try {
         await set(ref(db, 'settings'), settings);
+        if (currentUser && currentUser.uid) {
+            await update(ref(db, 'users/' + currentUser.uid), { emailNotifications });
+            currentUser.emailNotifications = emailNotifications;
+        }
         renderAll();
         showToast("Einstellungen gespeichert");
     } catch (err) {
@@ -2583,6 +2667,22 @@ window.submitUserRequest = async () => {
         closeModal('user-request-modal');
         showToast("Anfrage erfolgreich gesendet");
         loadData();
+
+        // Notify opted-in admins using the backend endpoint to avoid frontend permission denied errors
+        try {
+            const token = await auth.currentUser.getIdToken();
+            await fetch('https://api.lehn.site/api/notify-admins', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reqType: currentRequestType, personName: person.name })
+            }).catch(e => console.warn("Fehler beim Senden der Admin-Info über Backend", e));
+        } catch (e) {
+            console.warn("Konnte Admins nicht benachrichtigen:", e);
+        }
+
     } catch (err) {
         console.error('Fehler beim Senden der Anfrage:', err);
         alert('Anfrage konnte nicht gesendet werden. Bitte erneut versuchen.');
