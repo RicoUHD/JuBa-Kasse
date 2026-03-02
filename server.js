@@ -129,6 +129,54 @@ app.post('/api/send-email', verifyToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to send email' });
     }
 });
+
+// Route to Notify Admins of a New Request
+app.post('/api/notify-admins', verifyToken, async (req, res) => {
+    try {
+        const { reqType, personName } = req.body;
+
+        if (!reqType || !personName) {
+            return res.status(400).json({ error: 'Missing required fields: reqType, personName' });
+        }
+
+        // Map request types to German labels
+        const typeLabels = { payment: 'Zahlung', status: 'Status', expense: 'Ausgabe', standing_order: 'Dauerauftrag' };
+        const reqTypeLabel = typeLabels[reqType] || reqType;
+
+        // Fetch ALL users securely from the backend using the Admin SDK
+        const usersSnap = await admin.database().ref('users').once('value');
+        if (!usersSnap.exists()) {
+            return res.status(404).json({ error: 'No users found in database' });
+        }
+
+        const allUsers = usersSnap.val();
+        
+        // Filter out only the admins who have an email address
+        const adminEmails = Object.values(allUsers)
+            .filter(u => u.admin === true && u.email)
+            .map(u => u.email);
+
+        if (adminEmails.length === 0) {
+            return res.status(200).json({ message: 'No admins found to notify' });
+        }
+
+        // Send the email to all admins at once using an array
+        const mailOptions = {
+            from: `"JuBa-Kasse" <${process.env.EMAIL_USER}>`,
+            to: adminEmails, 
+            subject: 'Neue Anfrage bei JuBa-Kasse',
+            text: `Eine neue Anfrage (${reqTypeLabel}) von ${personName} wurde eingereicht.\n\nBitte prüfe die Anfrage in der App.`
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Admin notification sent successfully: %s', info.messageId);
+        
+        res.status(200).json({ success: true, messageId: info.messageId });
+    } catch (error) {
+        console.error('Error notifying admins:', error);
+        res.status(500).json({ error: 'Failed to notify admins' });
+    }
+});
 // -----------------------------------------
 
 const PORT = 3000;
