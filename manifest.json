@@ -1,6 +1,6 @@
 {
-  "name": "JuBa-Kasse",
-  "short_name": "JuBa-Kasse",
+  "name": "Nova",
+  "short_name": "Nova",
   "description": "Kassenverwaltung für die Jugendarbeit",
   "start_url": "/index.html",
   "display": "standalone",
