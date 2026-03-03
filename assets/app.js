@@ -1,18 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
 import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild, equalTo, runTransaction, remove } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
+import { config } from "./config.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyD5z2-ND8Ukx46wDhYJlUQhiUqHITrLxy0",
-    authDomain: "juba-kasse.firebaseapp.com",
-    databaseURL: "https://juba-kasse-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "juba-kasse",
-    storageBucket: "juba-kasse.firebasestorage.app",
-    messagingSenderId: "522007065248",
-    appId: "1:522007065248:web:1c2490e03cd40c25e58fc5"
-};
-
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(config.firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
@@ -2214,7 +2205,7 @@ window.sendStatusEmail = async (personId) => {
 
     try {
         const token = await auth.currentUser.getIdToken();
-        const response = await fetch('https://api.lehn.site/api/send-email', {
+        const response = await fetch(`${config.apiBaseUrl}/send-email`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -2671,7 +2662,7 @@ window.submitUserRequest = async () => {
         // Notify opted-in admins using the backend endpoint to avoid frontend permission denied errors
         try {
             const token = await auth.currentUser.getIdToken();
-            await fetch('https://api.lehn.site/api/notify-admins', {
+            await fetch(`${config.apiBaseUrl}/notify-admins`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -2756,8 +2747,7 @@ window.uploadReceipt = async function(file, transactionName, transactionDate) {
     // 2. Append the file LAST
     formData.append('receipt', uploadFile);
 
-    // Replace with your UNRAID server's IP address
-    const url = `https://api.lehn.site/api/upload`;
+    const url = `${config.apiBaseUrl}/upload`;
 
     try {
         const response = await fetchWithTimeout(url, {
@@ -2784,8 +2774,7 @@ window.fetchReceiptImage = async function(filename) {
     if (!user) throw new Error('Not authenticated');
     
     const token = await user.getIdToken();
-    // Replace with your UNRAID server's IP address
-    const url = `https://api.lehn.site/api/receipts/${encodeURIComponent(filename)}`;
+    const url = `${config.apiBaseUrl}/receipts/${encodeURIComponent(filename)}`;
 
     try {
         const response = await fetchWithTimeout(url, {
