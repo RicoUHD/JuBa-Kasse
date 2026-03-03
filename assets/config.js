@@ -1,12 +1,22 @@
-export const config = {
+let storedConfig = null;
+try {
+    const raw = localStorage.getItem('juba-config');
+    if (raw) {
+        storedConfig = JSON.parse(raw);
+    }
+} catch (e) {
+    console.warn("Failed to read config from localStorage", e);
+}
+
+export const config = storedConfig || {
     firebaseConfig: {
-        apiKey: "AIzaSyD5z2-ND8Ukx46wDhYJlUQhiUqHITrLxy0",
-        authDomain: "juba-kasse.firebaseapp.com",
-        databaseURL: "https://juba-kasse-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "juba-kasse",
-        storageBucket: "juba-kasse.firebasestorage.app",
-        messagingSenderId: "522007065248",
-        appId: "1:522007065248:web:1c2490e03cd40c25e58fc5"
+        apiKey: "",
+        authDomain: "",
+        databaseURL: "",
+        projectId: "",
+        storageBucket: "",
+        messagingSenderId: "",
+        appId: ""
     },
-    apiBaseUrl: "https://api.lehn.site/api"
+    apiBaseUrl: ""
 };

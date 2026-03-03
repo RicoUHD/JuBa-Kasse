@@ -3,9 +3,40 @@ import { getDatabase, ref, set, get, child, onValue, update, query, orderByChild
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 import { config } from "./config.js";
 
-const app = initializeApp(config.firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
+let app, db, auth;
+let isSetupComplete = !!(config && config.firebaseConfig && config.firebaseConfig.apiKey);
+
+if (isSetupComplete) {
+    app = initializeApp(config.firebaseConfig);
+    db = getDatabase(app);
+    auth = getAuth(app);
+}
+
+window.saveSetupWizard = () => {
+    const newConfig = {
+        firebaseConfig: {
+            apiKey: document.getElementById('setup-apiKey').value.trim(),
+            authDomain: document.getElementById('setup-authDomain').value.trim(),
+            databaseURL: document.getElementById('setup-databaseURL').value.trim(),
+            projectId: document.getElementById('setup-projectId').value.trim(),
+            storageBucket: document.getElementById('setup-storageBucket').value.trim(),
+            messagingSenderId: document.getElementById('setup-messagingSenderId').value.trim(),
+            appId: document.getElementById('setup-appId').value.trim()
+        },
+        apiBaseUrl: document.getElementById('setup-apiBaseUrl').value.trim()
+    };
+
+    localStorage.setItem('juba-config', JSON.stringify(newConfig));
+    window.location.reload();
+};
+
+window.resetSetup = () => {
+    if (confirm("Setup wirklich zurücksetzen? Die App muss danach neu konfiguriert werden.")) {
+        localStorage.removeItem('juba-config');
+        localStorage.removeItem('juba-is-logged-in');
+        window.location.reload();
+    }
+};
 
 let people = [];
 let donations = [];
@@ -151,6 +182,28 @@ function validateRequired(ids) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     initTheme();
+
+    if (!isSetupComplete) {
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('login-modal').classList.remove('show');
+        document.getElementById('setup-wizard-modal').classList.add('show');
+        return;
+    }
+
+    // Optional backend UI checks
+    if (!config.apiBaseUrl) {
+        const expReceipt = document.getElementById('expense-receipt');
+        if (expReceipt) expReceipt.parentElement.style.display = 'none';
+
+        const reqReceipt = document.getElementById('req-receipt');
+        if (reqReceipt) reqReceipt.parentElement.style.display = 'none';
+
+        const adminEmailToggle = document.getElementById('admin-email-notifications-container');
+        if (adminEmailToggle) adminEmailToggle.style.display = 'none';
+
+        // sendStatusEmail buttons are hidden dynamically in render method logic below
+    }
+
     checkAuth();
 
     const today = new Date().toISOString().split('T')[0];
@@ -1597,7 +1650,7 @@ function generatePersonHTML(p, preCalcData = null) {
                     <div class="details-actions" style="${(currentUser && !currentUser.admin) ? 'display:none' : ''}">
                         <button class="btn btn-primary" onclick="openPaymentModal('${p.id}')">💰 Zahlung</button>
                         <button class="btn btn-secondary" onclick="openChangeStatusModal('${p.id}')">🔄 Status</button>
-                        <button class="btn btn-secondary btn-span-all" onclick="sendStatusEmail('${p.id}')">📧 Status-E-Mail senden</button>
+                        ${config.apiBaseUrl ? `<button class="btn btn-secondary btn-span-all" onclick="sendStatusEmail('${p.id}')">📧 Status-E-Mail senden</button>` : ''}
                     </div>
 
                     <div class="history-header">Verlauf</div>
@@ -2155,6 +2208,7 @@ window.openChangeStatusModal = (id) => {
 };
 
 window.sendStatusEmail = async (personId) => {
+    if (!config.apiBaseUrl) return;
     if (!currentUser || !currentUser.admin) return;
 
     const person = people.find(p => String(p.id) === String(personId));
@@ -2393,6 +2447,7 @@ async function fetchUserProfile(uid, retries = 2) {
 }
 
 // Auth Listener
+if (auth) {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         // Ensure spinner is visible while fetching user profile
@@ -2424,6 +2479,7 @@ onAuthStateChanged(auth, async (user) => {
         showLogin();
     }
 });
+}
 
 function checkAuth() {
     // Initial check handled by onAuthStateChanged
@@ -2660,18 +2716,20 @@ window.submitUserRequest = async () => {
         loadData();
 
         // Notify opted-in admins using the backend endpoint to avoid frontend permission denied errors
-        try {
-            const token = await auth.currentUser.getIdToken();
-            await fetch(`${config.apiBaseUrl}/notify-admins`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ reqType: currentRequestType, personName: person.name })
-            }).catch(e => console.warn("Fehler beim Senden der Admin-Info über Backend", e));
-        } catch (e) {
-            console.warn("Konnte Admins nicht benachrichtigen:", e);
+        if (config.apiBaseUrl) {
+            try {
+                const token = await auth.currentUser.getIdToken();
+                await fetch(`${config.apiBaseUrl}/notify-admins`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reqType: currentRequestType, personName: person.name })
+                }).catch(e => console.warn("Fehler beim Senden der Admin-Info über Backend", e));
+            } catch (e) {
+                console.warn("Konnte Admins nicht benachrichtigen:", e);
+            }
         }
 
     } catch (err) {
@@ -2713,6 +2771,8 @@ async function fetchWithTimeout(resource, options = {}) {
 }
 
 window.uploadReceipt = async function(file, transactionName, transactionDate) {
+    if (!config.apiBaseUrl) throw new Error('Backend URL not configured');
+
     const user = auth.currentUser;
     if (!user) throw new Error('Not authenticated');
     
@@ -2770,6 +2830,8 @@ window.uploadReceipt = async function(file, transactionName, transactionDate) {
 
 
 window.fetchReceiptImage = async function(filename) {
+    if (!config.apiBaseUrl) throw new Error('Backend URL not configured');
+
     const user = auth.currentUser;
     if (!user) throw new Error('Not authenticated');
     
@@ -2813,6 +2875,7 @@ window.fetchReceiptImage = async function(filename) {
 };
 
 window.viewRequestReceipt = async function(filename, containerId) {
+    if (!config.apiBaseUrl) return;
     const container = document.getElementById(containerId);
     if (!container) return;
 

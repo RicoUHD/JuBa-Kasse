@@ -158,7 +158,7 @@
             <div class="card card-settings" id="card-security">
                 <div class="card-header">Sicherheit & Benachrichtigungen</div>
                 <div class="card-body">
-                    <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                    <div class="form-group" id="admin-email-notifications-container" style="display:flex; align-items:center; gap:10px;">
                         <input type="checkbox" id="admin-email-notifications" style="width:20px; height:20px;">
                         <label for="admin-email-notifications" style="margin:0; font-weight:600; cursor:pointer">E-Mail Benachrichtigungen bei Anfragen</label>
                     </div>
@@ -171,7 +171,10 @@
                             </button>
                         </div>
                     </div>
-                    <button class="btn btn-secondary" onclick="changePassword()">Passwort ändern</button>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-secondary" onclick="changePassword()">Passwort ändern</button>
+                        <button class="btn btn-danger" onclick="window.resetSetup()" style="margin-left:auto; background:none; border:1px solid var(--danger); color:var(--danger);">Setup zurücksetzen</button>
+                    </div>
                 </div>
             </div>
 
@@ -541,6 +544,46 @@
         </form>
         
         <div id="auth-error" style="color: var(--danger); text-align: center; margin-top: 15px; display: none; font-weight: bold;"></div>
+    </div>
+</div>
+
+<div id="setup-wizard-modal" class="modal" style="z-index:3000;" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+    <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 id="setup-title" style="margin-bottom: 15px;">Ersteinrichtung (Setup)</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Bitte geben Sie Ihre Firebase-Konfigurationsdaten ein, um die App zu nutzen.</p>
+        </div>
+
+        <form id="setup-form" onsubmit="event.preventDefault(); window.saveSetupWizard()">
+            <h3 style="font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Firebase Config</h3>
+            <label for="setup-apiKey" class="sr-only">apiKey</label>
+            <input type="text" id="setup-apiKey" class="form-input" placeholder="apiKey" style="margin-bottom:10px;" required>
+
+            <label for="setup-authDomain" class="sr-only">authDomain</label>
+            <input type="text" id="setup-authDomain" class="form-input" placeholder="authDomain" style="margin-bottom:10px;" required>
+
+            <label for="setup-databaseURL" class="sr-only">databaseURL</label>
+            <input type="text" id="setup-databaseURL" class="form-input" placeholder="databaseURL" style="margin-bottom:10px;" required>
+
+            <label for="setup-projectId" class="sr-only">projectId</label>
+            <input type="text" id="setup-projectId" class="form-input" placeholder="projectId" style="margin-bottom:10px;" required>
+
+            <label for="setup-storageBucket" class="sr-only">storageBucket</label>
+            <input type="text" id="setup-storageBucket" class="form-input" placeholder="storageBucket" style="margin-bottom:10px;" required>
+
+            <label for="setup-messagingSenderId" class="sr-only">messagingSenderId</label>
+            <input type="text" id="setup-messagingSenderId" class="form-input" placeholder="messagingSenderId" style="margin-bottom:10px;" required>
+
+            <label for="setup-appId" class="sr-only">appId</label>
+            <input type="text" id="setup-appId" class="form-input" placeholder="appId" style="margin-bottom:20px;" required>
+
+            <h3 style="font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Backend API (Optional)</h3>
+            <p style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 10px;">Wenn Sie Belege hochladen und Status-E-Mails versenden möchten, benötigen Sie ein Node.js Backend.</p>
+            <label for="setup-apiBaseUrl" class="sr-only">API Base URL</label>
+            <input type="text" id="setup-apiBaseUrl" class="form-input" placeholder="https://ihr-backend.de/api" style="margin-bottom:20px;">
+
+            <button type="submit" class="btn btn-primary btn-block">Speichern & Neuladen</button>
+        </form>
     </div>
 </div>
 
