@@ -1,4 +1,4 @@
-# JuBa-Kasse
+# Nova
 
 JuBa-Kasse is a web-based financial management application for small groups, clubs, or flatshares. It provides features to track income, expenses, donations, and individual members' contributions. The app consists of a frontend written in HTML/JS and a Node.js backend for handling file uploads and email notifications.
 
