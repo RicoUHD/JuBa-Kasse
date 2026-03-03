@@ -129,3 +129,46 @@ To secure your application, apply the following rules in your Firebase Realtime 
 ## License
 
 This project is licensed under the newest GNU General Public License (GPLv3). See the `LICENSE` file for more details.
+
+## Optional: Backend Installation
+
+If you wish to use features like receipt image uploads or automated email notifications, you need to set up the Node.js backend.
+
+1.  **Navigate to the backend directory:**
+    ```bash
+    cd backend
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+3.  **Configure Environment Variables:**
+    Create a `.env` file in the `backend/` directory:
+    ```bash
+    touch .env
+    ```
+    Add the following variables to the `.env` file, replacing the placeholder values with your actual credentials:
+    ```env
+    # Your Firebase Database URL
+    FIREBASE_DATABASE_URL="https://YOUR_PROJECT_ID.firebasedatabase.app"
+
+    # Gmail credentials for sending notifications
+    EMAIL_USER="your-email@gmail.com"
+    EMAIL_PASS="your-app-password"
+    ```
+    *Note: If using Gmail, it is highly recommended to use an [App Password](https://support.google.com/accounts/answer/185833).*
+
+4.  **Add Firebase Service Account JSON:**
+    To allow the backend to communicate securely with Firebase, you must provide a service account key.
+    - Go to your [Firebase Console](https://console.firebase.google.com/).
+    - Navigate to **Project Settings** (the gear icon) > **Service Accounts**.
+    - Click on **Generate new private key**.
+    - Save the downloaded JSON file as `firebase-service-account.json` and place it directly inside the `backend/` directory.
+
+5.  **Start the Server:**
+    ```bash
+    npm start
+    ```
+    The backend server will start running on `http://localhost:3000`. Ensure that your frontend's `apiBaseUrl` in `assets/config.js` is set to point to this URL.
