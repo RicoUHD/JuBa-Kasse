@@ -1,4 +1,3 @@
-require('dotenv').config(); // <-- NEW: Load environment variables from a .env file
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
@@ -7,8 +6,34 @@ const fs = require('fs');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer'); // <-- NEW: Import Nodemailer
 
-// Initialize Firebase Admin safely using your Service Account JSON
-const serviceAccount = require('./firebase-service-account.json');
+// Dynamically generate frontend assets/config.js based on environment variables
+const publicDir = process.env.PUBLIC_DIR || path.join(__dirname, '../public');
+const assetsDir = path.join(publicDir, 'assets');
+
+if (!fs.existsSync(assetsDir)) {
+    fs.mkdirSync(assetsDir, { recursive: true });
+}
+
+const configJsContent = `export const config = {
+    firebaseConfig: {
+        apiKey: "${process.env.FIREBASE_API_KEY || ''}",
+        authDomain: "${process.env.FIREBASE_AUTH_DOMAIN || ''}",
+        databaseURL: "${process.env.FIREBASE_DATABASE_URL || ''}",
+        projectId: "${process.env.FIREBASE_PROJECT_ID || ''}",
+        storageBucket: "${process.env.FIREBASE_STORAGE_BUCKET || ''}",
+        messagingSenderId: "${process.env.FIREBASE_MESSAGING_SENDER_ID || ''}",
+        appId: "${process.env.FIREBASE_APP_ID || ''}"
+    },
+    apiBaseUrl: "${process.env.API_BASE_URL || '/api'}"
+};
+`;
+
+fs.writeFileSync(path.join(assetsDir, 'config.js'), configJsContent);
+
+// Initialize Firebase Admin safely using your Service Account JSON from persistent volume
+const serviceAccountPath = process.env.SERVICE_ACCOUNT_PATH || '/app/data/firebase-service-account.json';
+const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: process.env.FIREBASE_DATABASE_URL
@@ -18,9 +43,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Set up Local Storage using Multer
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+// Serve static frontend files
+app.use(express.static(publicDir));
+
+// Set up Local Storage using Multer on persistent volume
+const uploadDir = process.env.UPLOAD_DIR || '/app/data/uploads';
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
