@@ -18,6 +18,10 @@ let currentUser = null;
 let users = [];
 let chartDataCache = null;
 
+// ⚡ Bolt: Global formatters for improved performance (avoiding re-initialization)
+const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const currencyFormatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+
 document.addEventListener('DOMContentLoaded', async () => {
     const appName = config.appName || "Nova";
 
@@ -75,11 +79,19 @@ function safeList(val) {
     return Object.values(val);
 }
 
+// ⚡ Bolt: Centralized date helper
+function getTodayStr() {
+    return new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+}
+
 // ⚡ Bolt: Helper to normalize and pre-calculate person data for performance
 function preprocessPerson(person) {
-    if (!person.memberSince) person.memberSince = new Date().toISOString().split('T')[0];
+    if (!person.memberSince) person.memberSince = getTodayStr();
     if (!person.originalMemberSince) person.originalMemberSince = person.memberSince;
     person.payments = safeList(person.payments);
+
+    // ⚡ Bolt: Ensure totalPaid is accurately cached in memory
+    person.totalPaid = person.payments.reduce((acc, p) => acc + parseFloat(p.amount || 0), 0);
 
     // Pre-process history for faster lookup (avoid Date creation in loops)
     person.statusHistory = safeList(person.statusHistory).sort(
@@ -142,7 +154,8 @@ function escapeHtml(text) {
 function formatCurrency(amount) {
     const val = parseFloat(amount);
     if (isNaN(val)) return "0,00";
-    return val.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // ⚡ Bolt: Using persistent NumberFormat for performance
+    return numberFormatter.format(val);
 }
 
 function validateRequired(ids) {
@@ -280,6 +293,16 @@ window.toggleDetails = function(id) {
     });
 
     if (!isOpen) {
+        // ⚡ Bolt: Lazy Timeline Injection
+        const placeholder = document.getElementById(`timeline-${id}`);
+        if (placeholder && !placeholder.dataset.loaded) {
+            const person = people.find(p => String(p.id) === String(id));
+            if (person) {
+                placeholder.innerHTML = generateTimelineHTML(person);
+                placeholder.dataset.loaded = "true";
+            }
+        }
+
         header.classList.add('active');
         header.setAttribute('aria-expanded', 'true');
         drawer.classList.add('active');
@@ -542,11 +565,10 @@ function calculateCostRange(person, startDate, endDate) {
  * @param {Object} person - Die Person
  * @returns {Object} - { text, isOverdue, isSoonDue }
  */
-function calculateTimeRemaining(person, preCalculatedPaidUntil) {
+function calculateTimeRemaining(person, preCalculatedPaidUntil, todayStrArg = null) {
     // START CHECK
     const standingOrders = safeList(person.standingOrders);
-    const now = new Date();
-    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const todayStr = todayStrArg || getTodayStr();
 
     const hasActiveSO = standingOrders.some(so => {
          if (so.startDate > todayStr) return false;
@@ -626,12 +648,12 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil) {
  * @param {number} [preCalcCredit] - Optional: Vorberechnetes Restguthaben
  * @returns {number} - Fehlender Betrag (0 wenn ausgeglichen oder Guthaben)
  */
-function calculateOverdueAmount(person, preCalcPaidUntil, preCalcCredit) {
+function calculateOverdueAmount(person, preCalcPaidUntil, preCalcCredit, todayStrArg = null) {
     const today = new Date();
 
     // Check for active standing orders
     const standingOrders = safeList(person.standingOrders);
-    const todayStr = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const todayStr = todayStrArg || getTodayStr();
     const hasActiveSO = standingOrders.some(so => {
          if (so.startDate > todayStr) return false;
          if (so.endDate && so.endDate < todayStr) return false;
@@ -1288,8 +1310,12 @@ function renderUserView() {
 
     const p = people[0]; // User has only one person (themselves)
     const { paidUntil, remainingCredit } = calculatePaymentStatus(p);
-    const statusMeta = calculateTimeRemaining(p, paidUntil);
-    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, paidUntil, remainingCredit) : 0;
+
+    // ⚡ Bolt: Centralized todayStr calculation
+    const todayStr = getTodayStr();
+
+    const statusMeta = calculateTimeRemaining(p, paidUntil, todayStr);
+    const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, paidUntil, remainingCredit, todayStr) : 0;
 
     // Get current status (not future status)
     const currentStatus = getCurrentStatus(p);
@@ -1403,12 +1429,15 @@ function renderPeople() {
     }
     empty.style.display = 'none';
 
+    // ⚡ Bolt: Centralized todayStr calculation for performance
+    const todayStr = getTodayStr();
+
     // ⚡ Bolt: Calculate costly status/dates ONCE per person here
     const processed = people.map(p => {
         const { paidUntil, remainingCredit } = calculatePaymentStatus(p);
-        const statusMeta = calculateTimeRemaining(p, paidUntil);
+        const statusMeta = calculateTimeRemaining(p, paidUntil, todayStr);
         // Only calculate overdue amount if actually overdue
-        const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, paidUntil, remainingCredit) : 0;
+        const overdueAmount = statusMeta.isOverdue ? calculateOverdueAmount(p, paidUntil, remainingCredit, todayStr) : 0;
         return { p, paidUntil, statusMeta, overdueAmount };
     });
 
@@ -1612,7 +1641,9 @@ function generatePersonHTML(p, preCalcData = null) {
                     </div>
 
                     <div class="history-header">Verlauf</div>
-                    ${generateTimelineHTML(p)}
+                    <div id="timeline-${p.id}">
+                        <div style="padding:10px; color:var(--text-secondary); font-size:0.8rem; font-style:italic;">Lade Verlauf...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1623,31 +1654,41 @@ function renderStats() {
     let periodInc = 0, periodExp = 0;
     let totalInc = 0, totalExp = 0;
 
-    const startDate = settings.reportStartDate ? new Date(settings.reportStartDate) : null;
+    // ⚡ Bolt: Using string comparison for dates to avoid creating thousands of Date objects
+    const startStr = settings.reportStartDate || '';
 
     people.forEach(p => {
-        safeList(p.payments).forEach(pay => {
-            const amount = parseFloat(pay.amount);
-            totalInc += amount;
-            if(!startDate || new Date(pay.date) >= startDate) periodInc += amount;
-        });
+        const pTotal = parseFloat(p.totalPaid || 0);
+        totalInc += pTotal;
+
+        if (startStr) {
+            // If we have a filter, we still need to iterate payments
+            safeList(p.payments).forEach(pay => {
+                if (pay.date >= startStr) periodInc += parseFloat(pay.amount);
+            });
+        } else {
+            periodInc += pTotal;
+        }
     });
+
     donations.forEach(d => {
         const amount = parseFloat(d.amount);
         totalInc += amount;
-        if(!startDate || new Date(d.date) >= startDate) periodInc += amount;
+        if (!startStr || d.date >= startStr) periodInc += amount;
     });
+
     expenses.forEach(e => {
         const amount = parseFloat(e.amount);
         totalExp += amount;
-        if(!startDate || new Date(e.date) >= startDate) periodExp += amount;
+        if (!startStr || e.date >= startStr) periodExp += amount;
     });
 
     const totalBalance = totalInc - totalExp;
 
-    document.getElementById('heroAmount').textContent = totalBalance.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
-    document.getElementById('totalIncome').textContent = periodInc.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
-    document.getElementById('totalExpenses').textContent = periodExp.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+    // ⚡ Bolt: Using persistent currencyFormatter
+    document.getElementById('heroAmount').textContent = currencyFormatter.format(totalBalance);
+    document.getElementById('totalIncome').textContent = currencyFormatter.format(periodInc);
+    document.getElementById('totalExpenses').textContent = currencyFormatter.format(periodExp);
 
     chartDataCache = null;
     renderBalanceChart();

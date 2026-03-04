@@ -1,0 +1,3 @@
+## 2026-03-04 - Lazy Rendering and Intl Optimization
+**Learning:** Large lists with hidden detail sections (like member timelines) create massive DOM overhead. Eagerly generating HTML for thousands of hidden nodes slows down initial paint and parsing. Reusing Intl.NumberFormat instances is significantly faster than repeated .toLocaleString() calls.
+**Action:** Use lazy rendering for complex hidden UI elements. Initialize formatters globally. Ensure pre-calculated total fields (like totalPaid) are reliably populated during data normalization (preprocessPerson) to enable O(1) stat lookups instead of O(N) payment iterations.
