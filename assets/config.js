@@ -8,5 +8,6 @@ export const config = {
         messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
         appId: "YOUR_APP_ID"
     },
-    apiBaseUrl: "http://localhost:3000/api" // Point this to your backend or skip if using without backend
+    apiBaseUrl: "http://localhost:3000/api", // Point this to your backend or skip if using without backend
+    appName: "Nova"
 };
