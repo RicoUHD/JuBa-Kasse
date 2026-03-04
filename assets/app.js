@@ -30,26 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Update document title
     document.title = appName;
-
-    // Dynamically update manifest
-    try {
-        const manifestLink = document.querySelector('link[rel="manifest"]');
-        if (manifestLink) {
-            const manifestUrl = manifestLink.href;
-            const res = await fetch(manifestUrl);
-            if (res.ok) {
-                const manifestData = await res.json();
-                manifestData.name = appName;
-                manifestData.short_name = appName;
-
-                const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-                const blobUrl = URL.createObjectURL(blob);
-                manifestLink.href = blobUrl;
-            }
-        }
-    } catch (e) {
-        console.error("Failed to update manifest dynamically", e);
-    }
 });
 
 window.showLogin = () => {
