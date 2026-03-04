@@ -18,6 +18,40 @@ let currentUser = null;
 let users = [];
 let chartDataCache = null;
 
+document.addEventListener('DOMContentLoaded', async () => {
+    const appName = config.appName || "Nova";
+
+    // Update visual elements
+    const headerEl = document.getElementById('app-name-header');
+    if (headerEl) headerEl.textContent = appName;
+
+    const footerEl = document.getElementById('app-name-footer');
+    if (footerEl) footerEl.textContent = appName;
+
+    // Update document title
+    document.title = appName;
+
+    // Dynamically update manifest
+    try {
+        const manifestLink = document.querySelector('link[rel="manifest"]');
+        if (manifestLink) {
+            const manifestUrl = manifestLink.href;
+            const res = await fetch(manifestUrl);
+            if (res.ok) {
+                const manifestData = await res.json();
+                manifestData.name = appName;
+                manifestData.short_name = appName;
+
+                const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+                const blobUrl = URL.createObjectURL(blob);
+                manifestLink.href = blobUrl;
+            }
+        }
+    } catch (e) {
+        console.error("Failed to update manifest dynamically", e);
+    }
+});
+
 window.showLogin = () => {
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('register-form').style.display = 'none';
