@@ -2420,13 +2420,41 @@ async function saveNewPerson(person) {
 }
 
 function initTheme() {
-    const t = localStorage.getItem('juba-theme') || 'light';
+    const t = localStorage.getItem('juba-theme') || 'system';
     window.setTheme(t);
+
+    // Listen for system theme changes if set to system
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (localStorage.getItem('juba-theme') === 'system') {
+            applyTheme('system');
+        }
+    });
 }
-window.setTheme = (t) => {
-    document.documentElement.setAttribute('data-theme', t);
+
+function applyTheme(t) {
+    let activeTheme = t;
+    if (t === 'system') {
+        activeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', activeTheme);
+    document.querySelector('meta[name="theme-color"]').content = activeTheme === 'dark' ? '#0f172a' : '#06b6d4';
+}
+
+window.setTheme = (t, view = null) => {
     localStorage.setItem('juba-theme', t);
-    document.querySelector('meta[name="theme-color"]').content = t==='dark' ? '#0f172a' : '#06b6d4';
+    applyTheme(t);
+
+    // Update UI toggles if view is provided or update both
+    const views = view ? [view] : ['admin', 'user'];
+    views.forEach(v => {
+        const wrapper = document.querySelector(`#theme-slider-${v}`)?.parentElement;
+        if (wrapper) {
+            wrapper.setAttribute('data-active', t);
+            wrapper.querySelectorAll('.theme-toggle-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`theme-btn-${t}-${v}`);
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+    });
 };
 
 function setLoadingMessage(msg) {
