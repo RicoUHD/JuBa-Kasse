@@ -25,9 +25,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const headerEl = document.getElementById('app-name-header');
     if (headerEl) headerEl.textContent = appName;
 
-    const footerEl = document.getElementById('app-name-footer');
-    if (footerEl) footerEl.textContent = appName;
-
     // Update document title
     document.title = appName;
 });
