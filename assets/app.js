@@ -21,6 +21,10 @@ let chartDataCache = null;
 // ⚡ Bolt: Global formatters for improved performance (avoiding re-initialization)
 const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+const dateFormatter = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const monthYearFormatter = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' });
+const dateTimeFormatter = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const shortDateFormatter = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
 
 document.addEventListener('DOMContentLoaded', async () => {
     const appName = config.appName || "Nova";
@@ -94,8 +98,9 @@ function preprocessPerson(person) {
     person.totalPaid = person.payments.reduce((acc, p) => acc + parseFloat(p.amount || 0), 0);
 
     // Pre-process history for faster lookup (avoid Date creation in loops)
+    // ⚡ Bolt: Fast string comparison for ISO dates
     person.statusHistory = safeList(person.statusHistory).sort(
-        (a, b) => new Date(a.startDate) - new Date(b.startDate)
+        (a, b) => a.startDate.localeCompare(b.startDate)
     );
     person.statusHistory.forEach(entry => {
         const s = new Date(entry.startDate);
@@ -143,12 +148,9 @@ function findStatusInHistory(history, idx, currentTotal) {
 
 function escapeHtml(text) {
     if (!text) return '';
-    return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    // ⚡ Bolt: Single-pass regex for HTML escaping
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
 function formatCurrency(amount) {
@@ -585,12 +587,10 @@ function calculateTimeRemaining(person, preCalculatedPaidUntil, todayStrArg = nu
     }
 
     const today = new Date();
-    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const paidMonth = new Date(paidUntil.getFullYear(), paidUntil.getMonth(), 1);
-
-    // Differenz in Monaten berechnen
-    const monthsDiff = (paidMonth.getFullYear() - currentMonth.getFullYear()) * 12
-                     + (paidMonth.getMonth() - currentMonth.getMonth());
+    // ⚡ Bolt: Calculate monthsDiff using integer math
+    const currentTotal = today.getFullYear() * 12 + today.getMonth();
+    const paidTotal = paidUntil.getFullYear() * 12 + paidUntil.getMonth();
+    const monthsDiff = paidTotal - currentTotal;
 
     if (monthsDiff < 0) {
         const overdueMonths = Math.abs(monthsDiff);
@@ -696,8 +696,9 @@ function calculateOverdueAmount(person, preCalcPaidUntil, preCalcCredit, todaySt
  * @returns {string} - HTML String
  */
 function generateStatusHistoryHTML(person) {
+    // ⚡ Bolt: Fast string comparison for ISO dates
     const history = safeList(person.statusHistory).slice().sort(
-        (a, b) => new Date(b.startDate) - new Date(a.startDate)
+        (a, b) => b.startDate.localeCompare(a.startDate)
     );
 
     // Aktueller Status hinzufügen (offen)
@@ -716,7 +717,7 @@ function generateStatusHistoryHTML(person) {
         <div class="trans-item" style="background: rgba(6, 182, 212, 0.05); margin: -5px; padding: 12px; border-radius: 8px;">
             <div class="trans-left">
                 <span style="font-weight:600;">${statusLabels[person.status] || person.status}</span>
-                <div class="trans-meta">Seit ${new Date(currentStatusStart).toLocaleDateString('de-DE')} • Aktuell</div>
+                <div class="trans-meta">Seit ${dateFormatter.format(new Date(currentStatusStart))} • Aktuell</div>
             </div>
             <div style="font-size:0.75rem; color:var(--success); font-weight:600;">AKTIV</div>
         </div>
@@ -727,8 +728,8 @@ function generateStatusHistoryHTML(person) {
     }
 
     html += history.map(entry => {
-        const start = new Date(entry.startDate).toLocaleDateString('de-DE');
-        const end = entry.endDate ? new Date(entry.endDate).toLocaleDateString('de-DE') : 'Offen';
+        const start = dateFormatter.format(new Date(entry.startDate));
+        const end = entry.endDate ? dateFormatter.format(new Date(entry.endDate)) : 'Offen';
         const rate = settings[entry.status] || 0;
 
         return `
@@ -1080,14 +1081,14 @@ function renderAdminRequests() {
 
         if (req.type === 'payment') {
             typeLabel = '💰 Zahlung';
-            details = `${formatCurrency(req.data.amount)} € am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            details = `${formatCurrency(req.data.amount)} € am ${dateFormatter.format(new Date(req.data.date))}`;
             if (req.data.note) details += `<br><small>"${req.data.note}"</small>`;
         } else if (req.type === 'status') {
             typeLabel = '🔄 Statusänderung';
-            details = `Neu: <strong>${req.data.newStatus}</strong> ab ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            details = `Neu: <strong>${req.data.newStatus}</strong> ab ${dateFormatter.format(new Date(req.data.date))}`;
         } else if (req.type === 'expense') {
             typeLabel = '💸 Ausgabe';
-            details = `${formatCurrency(req.data.amount)} € für "${req.data.description}" am ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            details = `${formatCurrency(req.data.amount)} € für "${req.data.description}" am ${dateFormatter.format(new Date(req.data.date))}`;
             if (req.data.receipt) {
                 const safeReceipt = escapeHtml(req.data.receipt.replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
                 const safeId = escapeHtml(req.id);
@@ -1097,7 +1098,7 @@ function renderAdminRequests() {
             }
         } else if (req.type === 'standing_order') {
             typeLabel = '🔄 Dauerauftrag';
-            details = `${formatCurrency(req.data.amount)} € / Monat<br>Start: ${new Date(req.data.date).toLocaleDateString('de-DE')}`;
+            details = `${formatCurrency(req.data.amount)} € / Monat<br>Start: ${dateFormatter.format(new Date(req.data.date))}`;
             if (req.data.note) details += `<br><small>"${escapeHtml(req.data.note)}"</small>`;
         }
 
@@ -1105,7 +1106,7 @@ function renderAdminRequests() {
             <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 8px 0;">
                 <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:8px; align-items:flex-start;">
                     <span style="font-weight:800;">${typeLabel}</span>
-                    <span style="font-size:0.8rem; color:var(--text-secondary); white-space:nowrap;">${new Date(req.timestamp).toLocaleString()}</span>
+                    <span style="font-size:0.8rem; color:var(--text-secondary); white-space:nowrap;">${dateTimeFormatter.format(new Date(req.timestamp))}</span>
                 </div>
                 <div style="margin-bottom:10px;">${details}</div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -1321,7 +1322,7 @@ function renderUserView() {
     const currentStatus = getCurrentStatus(p);
 
     // Format date to show only month and year
-    let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
+    let dateText = paidUntil ? monthYearFormatter.format(paidUntil) : 'Nie';
 
     const statusLabels = {
         'vollverdiener': '💼 Vollverdiener',
@@ -1399,7 +1400,7 @@ function renderUserView() {
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                         <div>
                             <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">${typeIcons[req.type]} ${typeLabels[req.type] || req.type}</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(req.timestamp).toLocaleDateString('de-DE', {day:'numeric', month:'short', year:'numeric'})}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">${dateFormatter.format(new Date(req.timestamp))}</div>
                         </div>
                         <div style="background: ${statusBg}; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
                             ${statusBadge} ${statusText}
@@ -1469,11 +1470,12 @@ function renderPeople() {
 
 function generateTimelineHTML(person) {
     const historyList = safeList(person.statusHistory);
+    // ⚡ Bolt: Store ISO strings for faster sorting
     const history = historyList.map(h => ({
         type: 'status',
-        date: new Date(h.startDate),
+        dateStr: h.startDate,
         status: h.status,
-        endDate: h.endDate ? new Date(h.endDate) : null
+        endDate: h.endDate
     }));
 
     // Find start date of current status
@@ -1487,7 +1489,7 @@ function generateTimelineHTML(person) {
     if (currentStatusStart) {
         history.push({
             type: 'status',
-            date: new Date(currentStatusStart),
+            dateStr: currentStatusStart,
             status: person.status,
             endDate: null
         });
@@ -1495,12 +1497,13 @@ function generateTimelineHTML(person) {
 
     const payments = safeList(person.payments).map(p => ({
         type: 'payment',
-        date: new Date(p.date),
+        dateStr: p.date,
         amount: p.amount,
         description: p.description
     }));
 
-    const allEvents = [...history, ...payments].sort((a, b) => b.date - a.date);
+    // ⚡ Bolt: Use localeCompare for faster sorting without Date objects
+    const allEvents = [...history, ...payments].sort((a, b) => b.dateStr.localeCompare(a.dateStr));
 
     if (allEvents.length === 0) {
         return '<div style="font-size:0.8rem; color:var(--text-secondary); font-style:italic;">Keine Einträge vorhanden.</div>';
@@ -1514,7 +1517,7 @@ function generateTimelineHTML(person) {
     };
 
     const timelineItems = allEvents.map(event => {
-        const dateStr = event.date.toLocaleDateString('de-DE');
+        const dateStr = dateFormatter.format(new Date(event.dateStr));
         let content = '';
         let dotClass = 'timeline-dot';
 
@@ -1551,7 +1554,7 @@ function generatePersonHTML(p, preCalcData = null) {
     // Get current status (not future status)
     const currentStatus = getCurrentStatus(p);
 
-    let dateText = paidUntil ? paidUntil.toLocaleDateString('de-DE', {month:'long', year:'numeric'}) : 'Nie';
+    let dateText = paidUntil ? monthYearFormatter.format(paidUntil) : 'Nie';
     let pillClass = 'status-ok';
     let cardClass = 'success';
 
@@ -1578,8 +1581,8 @@ function generatePersonHTML(p, preCalcData = null) {
                             <div style="font-size:0.9rem; font-weight:600;">${formatCurrency(so.amount)} € / Monat</div>
                             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">${escapeHtml(so.note || 'Ohne Notiz')}</div>
                             <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
-                                Start: ${new Date(so.startDate).toLocaleDateString('de-DE')}
-                                ${so.endDate ? `<br>Ende: ${new Date(so.endDate).toLocaleDateString('de-DE')}` : ''}
+                                Start: ${dateFormatter.format(new Date(so.startDate))}
+                                ${so.endDate ? `<br>Ende: ${dateFormatter.format(new Date(so.endDate))}` : ''}
                             </div>
                         </div>
                         ${(true) ? `
@@ -1846,10 +1849,10 @@ function renderBalanceChart() {
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#64748b';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(dataPoints[0].date.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}), padLeft, height - 5);
+    ctx.fillText(shortDateFormatter.format(dataPoints[0].date), padLeft, height - 5);
 
     ctx.textAlign = 'right';
-    ctx.fillText(dataPoints[90].date.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}), width - padRight, height - 5);
+    ctx.fillText(shortDateFormatter.format(dataPoints[90].date), width - padRight, height - 5);
 }
 
 // Re-render chart on resize
@@ -1871,20 +1874,18 @@ window.showTransactionModal = function() {
 
     safePeople.forEach(p => {
         safeList(p.payments).forEach(pay => {
-            const d = pay.date ? new Date(pay.date) : new Date(0);
-            all.push({...pay, who: p.name, type: 'pay', dateObj: d});
+            all.push({...pay, who: p.name, type: 'pay'});
         });
     });
     safeDonations.forEach(d => {
-        const date = d.date ? new Date(d.date) : new Date(0);
-        all.push({...d, who: d.name || 'Spende', type: 'don', dateObj: date});
+        all.push({...d, who: d.name || 'Spende', type: 'don'});
     });
     safeExpenses.forEach(e => {
-        const date = e.date ? new Date(e.date) : new Date(0);
-        all.push({...e, who: e.issuer, type: 'exp', dateObj: date});
+        all.push({...e, who: e.issuer, type: 'exp'});
     });
 
-    all.sort((a,b) => b.dateObj - a.dateObj);
+    // ⚡ Bolt: Use localeCompare for faster sorting without Date objects
+    all.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
 
     if (all.length === 0) {
         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">Keine Buchungen vorhanden.</div>';
@@ -1899,7 +1900,7 @@ window.showTransactionModal = function() {
                 <div class="trans-item" role="button" tabindex="0" onclick="showTransactionDetails('${t.id}', '${t.type}')" onkeydown="if(event.key==='Enter'||event.key===' '){showTransactionDetails('${t.id}', '${t.type}')}" style="cursor:pointer;">
                     <div class="trans-left">
                         <span style="font-weight:600;">${icon} ${t.who}</span>
-                        <div class="trans-meta">${t.description || '-'} ${hasReceipt} • ${t.date ? new Date(t.date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                        <div class="trans-meta">${t.description || '-'} ${hasReceipt} • ${t.date ? dateFormatter.format(new Date(t.date)) : 'Kein Datum'}</div>
                     </div>
                     <div class="trans-amount ${color}">${sign}${formatCurrency(t.amount)}€</div>
                 </div>
@@ -2926,7 +2927,7 @@ window.showTransactionDetails = async function(id, type) {
         <div class="details-status-card" style="background:var(--surface-alt); border:1px solid var(--border);">
             <div class="details-row">
                 <span class="details-label">Datum</span>
-                <span class="details-value">${item.date ? new Date(item.date).toLocaleDateString('de-DE') : '-'}</span>
+                <span class="details-value">${item.date ? dateFormatter.format(new Date(item.date)) : '-'}</span>
             </div>
             ${item.who ? `
             <div class="details-row">
