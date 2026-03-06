@@ -2444,6 +2444,15 @@ function applyActualTheme(t) {
 window.setTheme = (t) => {
     localStorage.setItem('juba-theme', t);
     applyActualTheme(t);
+
+    // Update active button state
+    document.querySelectorAll("button[onclick^='setTheme']").forEach(btn => {
+        if (btn.getAttribute('onclick') === `setTheme('${t}')`) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 };
 
 function setLoadingMessage(msg) {

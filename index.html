@@ -91,16 +91,16 @@
                 <div class="card-body">
                     <div class="form-group">
                         <span class="form-label">Farbschema</span>
-                        <div style="display:flex; gap:10px; width:100%;">
-                            <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="setTheme('light')">
+                        <div class="settings-flex-row">
+                            <button class="btn btn-secondary" onclick="setTheme('light')">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
                                 Hell
                             </button>
-                            <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="setTheme('dark')">
+                            <button class="btn btn-secondary" onclick="setTheme('dark')">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                                 Dunkel
                             </button>
-                            <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="setTheme('system')">
+                            <button class="btn btn-secondary" onclick="setTheme('system')">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                                 System
                             </button>
@@ -145,8 +145,8 @@
                 <div class="card-body">
                     <div class="form-group">
                         <label class="form-label" for="admin-invite-code">Aktueller Code</label>
-                        <div style="display:flex; gap:10px; width:100%;">
-                            <input type="text" id="admin-invite-code" class="form-input" style="flex: 1;" readonly>
+                        <div class="settings-flex-row">
+                            <input type="text" id="admin-invite-code" class="form-input" readonly>
                             <button class="btn btn-secondary" onclick="copyInviteCode()" aria-label="Code kopieren" title="Code kopieren">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </button>
@@ -260,16 +260,16 @@
                 <div class="card-body">
                     <div class="form-group">
                         <span class="form-label">Farbschema</span>
-                        <div style="display:flex; gap:10px; width:100%;">
-                            <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="setTheme('light')">
+                        <div class="settings-flex-row">
+                            <button class="btn btn-secondary" onclick="setTheme('light')">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
                                 Hell
                             </button>
-                            <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="setTheme('dark')">
+                            <button class="btn btn-secondary" onclick="setTheme('dark')">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                                 Dunkel
                             </button>
-                            <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="setTheme('system')">
+                            <button class="btn btn-secondary" onclick="setTheme('system')">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                                 System
                             </button>
