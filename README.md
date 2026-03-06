@@ -130,9 +130,36 @@ To secure your application, apply the following rules in your Firebase Realtime 
 
 This project is licensed under the newest GNU General Public License (GPLv3). See the `LICENSE` file for more details.
 
-## Optional: Backend Installation
+## Running with Docker (All-in-One)
 
-If you wish to use features like receipt image uploads or automated email notifications, you need to set up the Node.js backend.
+You can run the entire application (frontend + backend API) using Docker. This provides a single, easy-to-deploy package.
+
+1.  **Configure Frontend Settings:**
+    Make sure your `assets/config.js` is set up with your Firebase credentials. For the backend API url, you can use the relative path `apiBaseUrl: "/api"` so it works automatically via the Docker container.
+
+2.  **Prepare Backend Credentials:**
+    Create a `.env` file and `firebase-service-account.json` inside the `backend/` directory as described in the Backend Installation instructions below.
+
+3.  **Build the Docker Image:**
+    ```bash
+    docker build -t jubakasse .
+    ```
+
+4.  **Run the Docker Container:**
+    Run the container, making sure to mount your credentials and the uploads directory so your data persists.
+    ```bash
+    docker run -d -p 3000:3000 \
+      -v $(pwd)/backend/firebase-service-account.json:/app/backend/firebase-service-account.json \
+      -v $(pwd)/backend/.env:/app/backend/.env \
+      -v jubakasse_uploads:/app/backend/uploads \
+      --name jubakasse-app \
+      jubakasse
+    ```
+    Now you can access the app at `http://localhost:3000`.
+
+## Optional: Manual Backend Installation
+
+If you wish to use features like receipt image uploads or automated email notifications without Docker, you need to set up the Node.js backend manually.
 
 1.  **Navigate to the backend directory:**
     ```bash

@@ -179,7 +179,17 @@ app.post('/api/notify-admins', verifyToken, async (req, res) => {
 });
 // -----------------------------------------
 
-const PORT = 3000;
+// Serve specific frontend static files safely
+app.use('/assets', express.static(path.join(__dirname, '../assets')));
+app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, '../sw.js')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, '../manifest.json')));
+
+// Fallback for SPA (if any non-API route is hit, serve index.html)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
