@@ -2421,13 +2421,29 @@ async function saveNewPerson(person) {
 }
 
 function initTheme() {
-    const t = localStorage.getItem('juba-theme') || 'light';
+    const t = localStorage.getItem('juba-theme') || 'system';
     window.setTheme(t);
+
+    // Listen for OS theme changes if 'system' is active
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (localStorage.getItem('juba-theme') === 'system') {
+            applyActualTheme('system');
+        }
+    });
 }
+
+function applyActualTheme(t) {
+    let actualTheme = t;
+    if (t === 'system') {
+        actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', actualTheme);
+    document.querySelector('meta[name="theme-color"]').content = actualTheme === 'dark' ? '#0f172a' : '#06b6d4';
+}
+
 window.setTheme = (t) => {
-    document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('juba-theme', t);
-    document.querySelector('meta[name="theme-color"]').content = t==='dark' ? '#0f172a' : '#06b6d4';
+    applyActualTheme(t);
 };
 
 function setLoadingMessage(msg) {
@@ -2584,7 +2600,10 @@ window.openUserRequestModal = (type) => {
         title.innerText = "Zahlung melden";
         container.innerHTML = `
             <div class="form-group" style="display:flex; align-items:center; gap:10px;">
-                <input type="checkbox" id="req-is-standing-order" style="width:20px; height:20px;" onchange="document.getElementById('req-date-label').innerText = this.checked ? 'Startdatum' : 'Datum'">
+                <label class="switch">
+                    <input type="checkbox" id="req-is-standing-order" onchange="document.getElementById('req-date-label').innerText = this.checked ? 'Startdatum' : 'Datum'">
+                    <span class="slider"></span>
+                </label>
                 <label for="req-is-standing-order" style="margin:0; font-weight:600; cursor:pointer">Dauerauftrag</label>
             </div>
             <div class="form-group">
