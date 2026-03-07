@@ -37,12 +37,16 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # If the release is NOT a pre-release, tag it as 'latest'
-            type=raw,value=latest,enable=${{ !github.event.release.prerelease }}
-            # If the release IS a pre-release, tag it as 'beta'
-            type=raw,value=beta,enable=${{ github.event.release.prerelease }}
-            # Always tag with the actual version (e.g., v1.0.0)
+            # Floating 'latest' tag: applies ONLY to stable releases
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
+            
+            # Floating 'beta' tag: applies ONLY to pre-releases
+            type=raw,value=beta,enable=${{ github.event_name == 'release' && github.event.release.prerelease == true }}
+            
+            # The exact version from the Git tag (e.g., v1.3.0 or v1.3.1-beta)
             type=ref,event=tag
+            
+            # Short commit SHA for precise traceability
             type=sha
 
       - name: Build and push image
