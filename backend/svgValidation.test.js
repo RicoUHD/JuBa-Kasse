@@ -21,3 +21,18 @@ test('rejects inline event handlers', () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"></svg>';
   assert.equal(isSafeSvg(svg), false);
 });
+
+test('rejects foreignObject elements', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject></foreignObject></svg>';
+  assert.equal(isSafeSvg(svg), false);
+});
+
+test('rejects javascript URLs', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="javascript:alert(1)">x</a></svg>';
+  assert.equal(isSafeSvg(svg), false);
+});
+
+test('rejects javascript URLs with encoded separators', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="java&#x09;script:alert(1)">x</a></svg>';
+  assert.equal(isSafeSvg(svg), false);
+});
