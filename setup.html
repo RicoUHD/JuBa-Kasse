@@ -72,7 +72,7 @@
         <div class="step-dot"></div>
     </div>
 
-    <form id="setupForm" onsubmit="event.preventDefault(); nextStep();">
+    <form id="setupForm" novalidate onsubmit="event.preventDefault(); nextStep();">
         <!-- Step 1: App Info -->
         <div class="setup-step active" id="step1">
             <h2 style="margin-bottom: 20px;">1. Allgemeine Informationen</h2>
@@ -196,6 +196,13 @@
 
     function nextStep() {
         if (currentStep < totalSteps) {
+            if (currentStep === 1) {
+                const appName = document.getElementById('appName').value.trim();
+                if (!appName) {
+                    alert('Bitte geben Sie einen Namen für die Anwendung ein.');
+                    return;
+                }
+            }
             // Validate JSON in step 2 and 3 before proceeding
             if (currentStep === 2) {
                 try {
@@ -233,6 +240,12 @@
 
         const appName = document.getElementById('appName').value.trim();
         let firebaseConfig, serviceAccount;
+
+        if (!appName) {
+            errorMsg.innerText = "Bitte geben Sie einen Namen für die Anwendung ein.";
+            errorMsg.style.display = 'block';
+            return;
+        }
 
         try {
             firebaseConfig = JSON.parse(document.getElementById('firebaseConfig').value);
