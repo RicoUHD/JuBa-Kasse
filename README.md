@@ -23,6 +23,48 @@ docker run -d \
 
 *Replace `/path/to/your/storage` with a directory on your host machine to ensure your data survives container restarts.*
 
+### Reverse Proxy (Nginx) + CORS for Logo Upload
+
+If Nova is behind Nginx and your frontend is served from a different origin, enable CORS on the proxied `/api/` path and allow preflight (`OPTIONS`) requests for `POST /api/admin/logo`.
+
+> Important: the logo upload endpoint rejects files larger than 5 MB, so set `client_max_body_size` accordingly.
+
+```nginx
+# Allow only known frontend origins (adjust as needed)
+map $http_origin $cors_origin {
+    default "";
+    "https://nova.example.com"        $http_origin;
+    "https://admin.nova.example.com"  $http_origin;
+}
+
+server {
+    listen 443 ssl;
+    server_name api.nova.example.com;
+
+    client_max_body_size 5M;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        add_header Access-Control-Allow-Origin $cors_origin always;
+        add_header Access-Control-Allow-Methods "GET,POST,PUT,DELETE,OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization,Content-Type" always;
+        add_header Access-Control-Max-Age 86400 always;
+
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+}
+```
+
+If your frontend and API are served from the same origin (for example `https://nova.example.com` for both), CORS is not required.
+
 ## Setup Wizard
 
 When you first access the application at `http://localhost:3000` (or your mapped port), you will be greeted by the built-in Setup Wizard. You will need to provide:
