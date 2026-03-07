@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
+const { rateLimit } = require('express-rate-limit');
 
 const app = express();
 
@@ -176,10 +177,21 @@ const logoUpload = multer({
   limits: { fileSize: 1024 * 1024 } // 1MB
 });
 
+const adminRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/admin', adminRateLimit);
+
 // Security Middleware: Verify Firebase ID Token
 const verifyToken = async (req, res, next) => {
-  if (setupMode || admin.apps.length === 0) {
-    return res.status(503).send('App is in setup mode.');
+  if (setupMode) {
+    return res.status(503).send('App is in setup mode. Please complete setup first.');
+  }
+  if (admin.apps.length === 0) {
+    return res.status(503).send('Authentication service unavailable. Please check Firebase configuration.');
   }
 
   const token = req.headers.authorization?.split('Bearer ')[1];
@@ -381,17 +393,24 @@ app.post('/api/admin/logo', verifyToken, verifySuperAdmin, logoUpload.single('lo
     }
 
     const ext = path.extname(req.file.originalname || '').toLowerCase();
-    const mime = req.file.mimetype || '';
-    if (ext !== '.svg' || !mime.includes('svg')) {
+    const mime = String(req.file.mimetype || '').split(';')[0].trim().toLowerCase();
+    if (ext !== '.svg' || mime !== 'image/svg+xml') {
       return res.status(400).json({ error: 'Only SVG files are allowed' });
     }
 
     const content = req.file.buffer.toString('utf8');
-    if (!content.includes('<svg')) {
+    const lower = content.toLowerCase();
+    if (
+      !lower.includes('<svg') ||
+      lower.includes('<script') ||
+      /on[a-z]+\s*=/.test(lower) ||
+      lower.includes('javascript:') ||
+      lower.includes('<foreignobject')
+    ) {
       return res.status(400).json({ error: 'Invalid SVG file' });
     }
 
-    fs.writeFileSync(churchLogoFile, content, 'utf8');
+    await fs.promises.writeFile(churchLogoFile, content, 'utf8');
     res.json({ success: true });
   } catch (error) {
     console.error('Failed to update logo:', error);

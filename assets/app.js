@@ -18,6 +18,9 @@ let currentUser = null;
 let users = [];
 let chartDataCache = null;
 let advancedConfigLoaded = false;
+let advancedConfigAppName = null;
+let superAdminPaymentRows = [];
+let superAdminUserRows = [];
 
 // ⚡ Bolt: Global formatters for improved performance (avoiding re-initialization)
 const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -873,6 +876,7 @@ async function loadData() {
         // Non-admin: fetch only what is needed for their view (people + settings + their requests)
     if (currentUser && !currentUser.admin) {
         advancedConfigLoaded = false;
+        advancedConfigAppName = null;
         // 1. Fetch Settings
         const sSnap = await get(child(dbRef, 'settings'));
         if (sSnap.exists()) {
@@ -978,6 +982,7 @@ async function loadData() {
 
     } else {
         advancedConfigLoaded = false;
+        advancedConfigAppName = null;
         // Admin: fetch full dataset
         const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
             get(child(dbRef, 'people')),
@@ -1242,10 +1247,12 @@ function renderSuperAdminUserManagement() {
         return;
     }
 
-    const rows = users
+    superAdminUserRows = users
         .slice()
-        .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(`${b.firstName || ''} ${b.lastName || ''}`))
-        .map(u => {
+        .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(`${b.firstName || ''} ${b.lastName || ''}`));
+
+    const rows = superAdminUserRows
+        .map((u, index) => {
             const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unbekannt';
             const isSuper = u.superAdmin === true;
             return `
@@ -1255,7 +1262,7 @@ function renderSuperAdminUserManagement() {
                         <div style="font-size:0.85rem; color:var(--text-secondary);">${escapeHtml(u.email || '')}</div>
                     </div>
                     <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
-                        <input type="checkbox" ${u.admin ? 'checked' : ''} ${isSuper ? 'disabled' : ''} onchange="setSupervisorAdmin('${u.uid}', this.checked)">
+                        <input type="checkbox" ${u.admin ? 'checked' : ''} ${isSuper ? 'disabled' : ''} onchange="setSupervisorAdminByIndex(${index}, this.checked)">
                         Supervisor Admin
                     </label>
                 </div>
@@ -1283,14 +1290,15 @@ function renderSuperAdminPaymentEditor() {
     });
 
     allPayments.sort((a, b) => (b.payment.date || '').localeCompare(a.payment.date || ''));
-    const preview = allPayments.slice(0, 30);
+    superAdminPaymentRows = allPayments.slice(0, 30);
+    const preview = superAdminPaymentRows;
 
     if (preview.length === 0) {
         target.innerHTML = '<div style="color:var(--text-secondary);">Keine Zahlungen vorhanden.</div>';
         return;
     }
 
-    target.innerHTML = preview.map(item => `
+    target.innerHTML = preview.map((item, index) => `
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px; border:1px solid var(--border); border-radius:10px;">
             <div>
                 <div style="font-weight:700;">${escapeHtml(item.personName || 'Unbekannt')}</div>
@@ -1299,7 +1307,7 @@ function renderSuperAdminPaymentEditor() {
                     ${item.payment.description ? `• ${escapeHtml(item.payment.description)}` : ''}
                 </div>
             </div>
-            <button class="btn btn-secondary btn-small" style="width:auto;" onclick="editRecordedPayment('${item.personId}', '${item.paymentId}', ${item.paymentIndex})">Bearbeiten</button>
+            <button class="btn btn-secondary btn-small" style="width:auto;" onclick="editRecordedPaymentByIndex(${index})">Bearbeiten</button>
         </div>
     `).join('');
 
@@ -1329,6 +1337,18 @@ window.setSupervisorAdmin = async (uid, isAdmin) => {
         showToast('Benutzerrechte konnten nicht gespeichert werden', 'error');
         loadData();
     }
+};
+
+window.setSupervisorAdminByIndex = async (index, isAdmin) => {
+    const user = superAdminUserRows[index];
+    if (!user || !user.uid) return;
+    await window.setSupervisorAdmin(user.uid, isAdmin);
+};
+
+window.editRecordedPaymentByIndex = async (index) => {
+    const item = superAdminPaymentRows[index];
+    if (!item) return;
+    await window.editRecordedPayment(item.personId, item.paymentId, item.paymentIndex);
 };
 
 window.editRecordedPayment = async (personId, paymentId, paymentIndex) => {
@@ -2533,6 +2553,7 @@ async function loadAdvancedSystemConfig() {
             throw new Error(await response.text());
         }
         const data = await response.json();
+        advancedConfigAppName = data.appName || null;
         document.getElementById('super-admin-firebase-config').value = JSON.stringify(data.firebaseConfig || {}, null, 2);
         document.getElementById('super-admin-service-account').value = JSON.stringify(data.serviceAccount || {}, null, 2);
         document.getElementById('super-admin-smtp-config').value = data.smtp ? JSON.stringify(data.smtp, null, 2) : '';
@@ -2546,8 +2567,13 @@ async function loadAdvancedSystemConfig() {
 window.saveAdvancedSystemConfig = async () => {
     if (!isSuperAdminUser()) return;
     try {
+        const appName = advancedConfigAppName || config.appName;
+        if (!appName) {
+            throw new Error('App-Name konnte nicht ermittelt werden. Dies kann auf fehlende Konfigurationsdaten hinweisen. Bitte Seite neu laden.');
+        }
+
         const payload = {
-            appName: config.appName || 'Nova',
+            appName,
             firebaseConfig: JSON.parse(document.getElementById('super-admin-firebase-config').value || '{}'),
             serviceAccount: JSON.parse(document.getElementById('super-admin-service-account').value || '{}'),
             smtp: null
@@ -2566,7 +2592,7 @@ window.saveAdvancedSystemConfig = async () => {
         showToast('System-Konfiguration gespeichert');
     } catch (err) {
         console.error('Fehler beim Speichern der erweiterten Konfiguration:', err);
-        alert('Erweiterte Konfiguration konnte nicht gespeichert werden. Bitte JSON prüfen.');
+        alert(`Erweiterte Konfiguration konnte nicht gespeichert werden: ${err.message || 'Unbekannter Fehler'}`);
     }
 };
 
@@ -2779,6 +2805,7 @@ onAuthStateChanged(auth, async (user) => {
         localStorage.removeItem('juba-is-logged-in');
         isAuthenticated = false;
         advancedConfigLoaded = false;
+        advancedConfigAppName = null;
         currentUser = null;
         document.getElementById('login-modal').classList.add('show');
         showLogin();
