@@ -6,6 +6,7 @@ const fs = require('fs');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const { rateLimit } = require('express-rate-limit');
+const { isSafeSvg } = require('./svgValidation');
 
 const app = express();
 
@@ -174,7 +175,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 const logoUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 1024 * 1024 } // 1MB
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
 
 const adminRateLimit = rateLimit({
@@ -386,37 +387,37 @@ app.put('/api/admin/users/:uid/admin', verifyToken, verifySuperAdmin, async (req
   }
 });
 
-app.post('/api/admin/logo', verifyToken, verifySuperAdmin, logoUpload.single('logo'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No logo file uploaded' });
+app.post('/api/admin/logo', verifyToken, verifySuperAdmin, (req, res) => {
+  logoUpload.single('logo')(req, res, async (uploadError) => {
+    if (uploadError) {
+      if (uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Logo file too large (max 5MB)' });
+      }
+      return res.status(400).json({ error: 'Invalid logo upload' });
     }
 
-    const ext = path.extname(req.file.originalname || '').toLowerCase();
-    const mime = String(req.file.mimetype || '').split(';')[0].trim().toLowerCase();
-    // Relaxed MIME check to account for varying client uploads, but keeping the extension check strict.
-    if (ext !== '.svg') {
-      return res.status(400).json({ error: 'Only SVG files are allowed' });
-    }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No logo file uploaded' });
+      }
 
-    const content = req.file.buffer.toString('utf8');
-    const lower = content.toLowerCase();
-    if (
-      !lower.includes('<svg') ||
-      lower.includes('<script') ||
-      /on[a-z]+\s*=/.test(lower) ||
-      lower.includes('javascript:') ||
-      lower.includes('<foreignobject')
-    ) {
-      return res.status(400).json({ error: 'Invalid SVG file' });
-    }
+      const ext = path.extname(req.file.originalname || '').toLowerCase();
+      if (ext !== '.svg') {
+        return res.status(400).json({ error: 'Only SVG files are allowed' });
+      }
 
-    await fs.promises.writeFile(churchLogoFile, content, 'utf8');
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Failed to update logo:', error);
-    res.status(500).json({ error: 'Failed to update logo' });
-  }
+      const content = req.file.buffer.toString('utf8');
+      if (!isSafeSvg(content)) {
+        return res.status(400).json({ error: 'Invalid SVG file' });
+      }
+
+      await fs.promises.writeFile(churchLogoFile, content, 'utf8');
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to update logo:', error);
+      res.status(500).json({ error: 'Failed to update logo' });
+    }
+  });
 });
 
 // Route: Upload a receipt
