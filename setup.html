@@ -205,6 +205,47 @@
         return appName;
     }
 
+    function parseFirebaseConfigInput(rawValue) {
+        const requiredFields = ['apiKey', 'authDomain', 'databaseURL', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
+        let parsed;
+        const input = rawValue.trim();
+
+        try {
+            parsed = JSON.parse(input);
+        } catch (jsonError) {
+            const snippetMatch = input.match(/^(?:const|let|var)?\s*firebaseConfig\s*=\s*(\{[\s\S]*\})\s*;?$/);
+            const objectLiteral = snippetMatch ? snippetMatch[1] : input;
+            const extractedConfig = {};
+            const firebaseFieldRegex = /(apiKey|authDomain|databaseURL|projectId|storageBucket|messagingSenderId|appId)\s*:\s*(['"])(.*?)\2/g;
+            let match;
+
+            while ((match = firebaseFieldRegex.exec(objectLiteral)) !== null) {
+                extractedConfig[match[1]] = match[3];
+            }
+
+            if (Object.keys(extractedConfig).length === 0) {
+                throw jsonError;
+            }
+
+            parsed = extractedConfig;
+        }
+
+        if (parsed?.firebaseConfig && typeof parsed.firebaseConfig === 'object') {
+            parsed = parsed.firebaseConfig;
+        }
+
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            throw new Error('Firebase config must be an object.');
+        }
+
+        const missingFields = requiredFields.filter((field) => typeof parsed[field] !== 'string' || !parsed[field].trim());
+        if (missingFields.length > 0) {
+            throw new Error(`Missing Firebase fields: ${missingFields.join(', ')}`);
+        }
+
+        return parsed;
+    }
+
     function nextStep() {
         if (currentStep < totalSteps) {
             if (currentStep === 1) {
@@ -219,9 +260,10 @@
             // Validate JSON in step 2 and 3 before proceeding
             if (currentStep === 2) {
                 try {
-                    JSON.parse(document.getElementById('firebaseConfig').value);
+                    const parsedFirebaseConfig = parseFirebaseConfigInput(document.getElementById('firebaseConfig').value);
+                    document.getElementById('firebaseConfig').value = JSON.stringify(parsedFirebaseConfig, null, 2);
                 } catch (e) {
-                    alert('Ungültiges JSON-Format bei der Firebase Config.');
+                    alert('Ungültige Firebase Config. Erlaubt sind entweder reines JSON oder ein firebaseConfig-Snippet (const firebaseConfig = { ... }).');
                     return;
                 }
             }
@@ -262,10 +304,17 @@
         }
 
         try {
-            firebaseConfig = JSON.parse(document.getElementById('firebaseConfig').value);
+            firebaseConfig = parseFirebaseConfigInput(document.getElementById('firebaseConfig').value);
+        } catch (e) {
+            errorMsg.innerText = "Ungültige Firebase Config. Bitte verwenden Sie JSON oder const firebaseConfig = { ... } mit allen Pflichtfeldern.";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        try {
             serviceAccount = JSON.parse(document.getElementById('serviceAccount').value);
         } catch (e) {
-            errorMsg.innerText = "Fehler beim Parsen der JSON-Eingaben.";
+            errorMsg.innerText = "Fehler beim Parsen des Service Account JSON.";
             errorMsg.style.display = 'block';
             return;
         }
