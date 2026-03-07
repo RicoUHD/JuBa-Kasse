@@ -1258,14 +1258,17 @@ function renderSuperAdminUserManagement() {
             const isSuper = u.superAdmin === true;
             return `
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px; border:1px solid var(--border); border-radius:10px;">
-                    <div>
+                    <div style="flex:1; min-width: 150px;">
                         <div style="font-weight:700;">${escapeHtml(fullName)} ${isSuper ? '👑' : ''}</div>
                         <div style="font-size:0.85rem; color:var(--text-secondary);">${escapeHtml(u.email || '')}</div>
                     </div>
-                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
-                        <input type="checkbox" ${u.admin ? 'checked' : ''} ${isSuper ? 'disabled' : ''} onchange="setSupervisorAdminByIndex(${index}, this.checked)">
-                        Supervisor Admin
-                    </label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label class="switch" style="flex-shrink: 0;">
+                            <input type="checkbox" ${u.admin ? 'checked' : ''} ${isSuper ? 'disabled' : ''} onchange="setSupervisorAdminByIndex(${index}, this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-weight:600; font-size: 0.9rem;">Supervisor Admin</span>
+                    </div>
                 </div>
             `;
         }).join('');
