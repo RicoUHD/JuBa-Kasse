@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Nova</Name>
-  <Repository>yourusername/nova:latest</Repository>
-  <Registry>https://hub.docker.com/r/yourusername/nova</Registry>
+  <Repository>YOUR_DOCKERHUB_USERNAME/nova:latest</Repository>
+  <Registry>https://hub.docker.com/r/YOUR_DOCKERHUB_USERNAME/nova</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
