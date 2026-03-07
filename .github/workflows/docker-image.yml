@@ -2,7 +2,7 @@ name: Docker Image
 
 on:
   release:
-    types: [published, released]
+    types: [published] # Prevents the workflow from running twice
   workflow_dispatch:
 
 env:
@@ -11,6 +11,8 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # This prevents the job from running at all if it's a pre-release
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
     permissions:
       contents: read
       packages: write
@@ -36,20 +38,16 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # Disables the automatic 'latest' tag generation
           flavor: |
             latest=false
           tags: |
-            # Floating 'latest' tag: applies ONLY to stable releases (never beta tags)
-            type=raw,value=latest,enable=${{ github.event_name == 'release' && github.event.release.prerelease == false && !contains(github.event.release.tag_name, 'beta') }}
+            # Floating 'latest' tag (since pre-releases are skipped, this is always safe)
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
             
-            # Floating 'beta' tag: applies to pre-releases and beta-tagged releases
-            type=raw,value=beta,enable=${{ github.event_name == 'release' && (github.event.release.prerelease == true || contains(github.event.release.tag_name, 'beta')) }}
-            
-            # The exact version from the Git tag (e.g., v1.3.0 or v1.3.1-beta)
+            # The exact version from the Git tag (e.g., v1.4.0)
             type=ref,event=tag
             
-            # Short commit SHA for precise traceability
+            # Short commit SHA
             type=sha
 
       - name: Build and push image
