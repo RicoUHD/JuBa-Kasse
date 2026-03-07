@@ -1,25 +1,133 @@
-require('dotenv').config(); // <-- NEW: Load environment variables from a .env file
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer'); // <-- NEW: Import Nodemailer
-
-// Initialize Firebase Admin safely using your Service Account JSON
-const serviceAccount = require('./firebase-service-account.json');
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL
-});
+const nodemailer = require('nodemailer');
 
 const app = express();
+
+// Set up persistent data directory
+const dataDir = path.join(__dirname, '..', 'data');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const configFile = path.join(dataDir, 'config.json');
+
+let appConfig = null;
+let setupMode = true;
+let transporter = null;
+
+function loadConfig() {
+  if (fs.existsSync(configFile)) {
+    try {
+      appConfig = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+      if (appConfig.firebaseConfig && appConfig.serviceAccount && appConfig.appName) {
+        setupMode = false;
+
+        // Initialize Firebase Admin
+        if (admin.apps.length === 0) {
+          admin.initializeApp({
+            credential: admin.credential.cert(appConfig.serviceAccount),
+            databaseURL: appConfig.firebaseConfig.databaseURL
+          });
+        }
+
+        // Initialize Nodemailer if SMTP info is provided
+        if (appConfig.smtp) {
+          transporter = nodemailer.createTransport({
+            host: appConfig.smtp.host,
+            port: appConfig.smtp.port,
+            secure: appConfig.smtp.secure,
+            auth: {
+              user: appConfig.smtp.user,
+              pass: appConfig.smtp.pass
+            }
+          });
+        }
+        console.log("Configuration loaded successfully. Setup mode: false");
+      }
+    } catch (err) {
+      console.error("Error reading config file:", err);
+    }
+  } else {
+    console.log("No config file found. Starting in setup mode.");
+  }
+}
+
+// Initial load
+loadConfig();
 app.use(cors());
 app.use(express.json());
 
+// --- Setup Middleware ---
+app.use((req, res, next) => {
+  // Always allow access to setup API, setup.html, and assets
+  if (
+    req.path.startsWith('/api/setup') ||
+    req.path === '/setup.html' ||
+    req.path.startsWith('/assets/') ||
+    req.path.startsWith('/api/status') // allow checking status
+  ) {
+    return next();
+  }
+
+  // If in setup mode, redirect to setup page for root, else block API calls
+  if (setupMode) {
+    if (req.path === '/' || req.path === '/index.html') {
+      return res.redirect('/setup.html');
+    }
+    return res.status(503).json({ error: 'App is in setup mode. Please configure first.' });
+  }
+
+  // If setup is complete but they try to access setup page, redirect to root
+  if (!setupMode && req.path === '/setup.html') {
+    return res.redirect('/');
+  }
+
+  next();
+});
+
+// Dynamic Config Route (Replaces assets/config.js)
+app.get('/assets/config.js', (req, res) => {
+  if (setupMode || !appConfig || !appConfig.firebaseConfig) {
+    return res.status(503).send('// App not configured yet');
+  }
+
+  const jsConfig = `
+export const config = {
+    firebaseConfig: ${JSON.stringify(appConfig.firebaseConfig, null, 4)},
+    apiBaseUrl: window.location.origin + "/api",
+    appName: "${appConfig.appName}"
+};
+`;
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(jsConfig);
+});
+
+// Serve specific frontend static files (Avoid serving the entire /app directory for security)
+const frontendDir = path.join(__dirname, '..');
+app.use('/assets', express.static(path.join(frontendDir, 'assets')));
+app.get('/sw.js', (req, res) => res.sendFile(path.join(frontendDir, 'sw.js')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(frontendDir, 'manifest.json')));
+app.get('/setup.html', (req, res) => res.sendFile(path.join(frontendDir, 'setup.html')));
+
+// Catch-all for SPA fallback (serves index.html for root)
+app.get('*', (req, res, next) => {
+    // Only serve index.html for GET requests that don't match other routes (like APIs)
+    if (req.method === 'GET' && !req.path.startsWith('/api/') && !req.path.startsWith('/data/')) {
+         return res.sendFile(path.join(frontendDir, 'index.html'));
+    }
+    next();
+});
+
+// Route to check setup status
+app.get('/api/status', (req, res) => {
+  res.json({ setupMode });
+});
+
 // Set up Local Storage using Multer
-const uploadDir = path.join(__dirname, 'uploads');
+const uploadDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
@@ -77,15 +185,71 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// --- NEW: Nodemailer Transporter Setup ---
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS  
+
+// --- Setup Route ---
+app.post('/api/setup', (req, res) => {
+  if (!setupMode) {
+    return res.status(403).json({ error: 'Setup already complete.' });
+  }
+
+  const { appName, firebaseConfig, serviceAccount, smtp } = req.body;
+
+  if (!appName || !firebaseConfig || !serviceAccount) {
+    return res.status(400).json({ error: 'Missing required configuration data.' });
+  }
+
+  const newConfig = {
+    appName,
+    firebaseConfig,
+    serviceAccount,
+    smtp: smtp || null
+  };
+
+  try {
+    // Attempt to initialize Admin SDK with provided credentials first
+    if (admin.apps.length === 0) {
+      try {
+        admin.initializeApp({
+          credential: admin.credential.cert(newConfig.serviceAccount),
+          databaseURL: newConfig.firebaseConfig.databaseURL
+        });
+      } catch (err) {
+        return res.status(400).json({ error: 'Invalid Firebase Service Account or Config: ' + err.message });
+      }
+    } else {
+        // if already initialized, we might need to recreate the instance if we are allowing re-setup,
+        // but since setupMode is true, this is likely the first initialization.
     }
+
+    // Initialize SMTP if provided
+    if (newConfig.smtp) {
+      try {
+        transporter = nodemailer.createTransport({
+          host: newConfig.smtp.host,
+          port: newConfig.smtp.port,
+          secure: newConfig.smtp.secure,
+          auth: {
+            user: newConfig.smtp.user,
+            pass: newConfig.smtp.pass
+          }
+        });
+      } catch (err) {
+         console.warn("SMTP Init failed:", err.message);
+         // we might still allow it to continue, but let's assume valid data
+      }
+    }
+
+    // Save only after successful initialization
+    fs.writeFileSync(configFile, JSON.stringify(newConfig, null, 2), 'utf8');
+    appConfig = newConfig;
+
+    setupMode = false;
+    res.json({ success: true, message: 'Setup completed successfully.' });
+  } catch (error) {
+    console.error("Error saving configuration:", error);
+    res.status(500).json({ error: 'Failed to save configuration.' });
+  }
 });
-// -----------------------------------------
 
 // Route: Upload a receipt
 app.post('/api/upload', verifyToken, upload.single('receipt'), (req, res) => {
@@ -112,8 +276,10 @@ app.post('/api/send-email', verifyToken, async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields: to, subject' });
         }
 
+        if (!transporter) return res.status(500).json({ error: 'SMTP not configured' });
+
         const mailOptions = {
-            from: `"JuBa-Kasse" <${process.env.EMAIL_USER}>`,
+            from: `"${appConfig.appName}" <${appConfig.smtp.user}>`,
             to: to,
             subject: subject,
             text: text,
@@ -160,11 +326,13 @@ app.post('/api/notify-admins', verifyToken, async (req, res) => {
             return res.status(200).json({ message: 'No admins found to notify' });
         }
 
+        if (!transporter) return res.status(500).json({ error: 'SMTP not configured' });
+
         // Send the email to all admins at once using an array
         const mailOptions = {
-            from: `"JuBa-Kasse" <${process.env.EMAIL_USER}>`,
+            from: `"${appConfig.appName}" <${appConfig.smtp.user}>`,
             to: adminEmails, 
-            subject: 'Neue Anfrage bei JuBa-Kasse',
+            subject: `Neue Anfrage bei ${appConfig.appName}`,
             text: `Eine neue Anfrage (${reqTypeLabel}) von ${personName} wurde eingereicht.\n\nBitte prüfe die Anfrage in der App.`
         };
 

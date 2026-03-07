@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#06b6d4">
+    <title>Setup - Nova</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        .setup-container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .setup-step {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .setup-step.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .step-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s ease;
+        }
+        .step-dot.active {
+            background: var(--primary);
+            transform: scale(1.2);
+        }
+        .step-dot.completed {
+            background: var(--success);
+        }
+        textarea.form-input {
+            font-family: monospace;
+            min-height: 150px;
+            resize: vertical;
+        }
+        .help-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="setup-container">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="assets/church-logo.svg" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 10px;">
+        <h1 style="font-size: 2rem; font-weight: 800;">Ersteinrichtung</h1>
+        <p style="color: var(--text-secondary);">Willkommen! Bitte konfigurieren Sie die Anwendung.</p>
+    </div>
+
+    <div class="step-indicator" id="stepIndicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+    </div>
+
+    <form id="setupForm" onsubmit="event.preventDefault(); nextStep();">
+        <!-- Step 1: App Info -->
+        <div class="setup-step active" id="step1">
+            <h2 style="margin-bottom: 20px;">1. Allgemeine Informationen</h2>
+
+            <div class="form-group">
+                <label class="form-label" for="appName">Name der Anwendung</label>
+                <input type="text" id="appName" class="form-input" placeholder="z.B. JuBa-Kasse, Nova..." required>
+                <div class="help-text">Dieser Name wird in der App und in E-Mails angezeigt.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 30px;">Weiter</button>
+        </div>
+
+        <!-- Step 2: Firebase Frontend Config -->
+        <div class="setup-step" id="step2">
+            <h2 style="margin-bottom: 20px;">2. Firebase Frontend-Konfiguration</h2>
+
+            <div class="form-group">
+                <label class="form-label" for="firebaseConfig">Firebase Config JSON</label>
+                <textarea id="firebaseConfig" class="form-input" placeholder='{\n  "apiKey": "...",\n  "authDomain": "...",\n  "databaseURL": "...",\n  "projectId": "...",\n  "storageBucket": "...",\n  "messagingSenderId": "...",\n  "appId": "..."\n}' required></textarea>
+                <div class="help-text">Kopieren Sie das JSON-Objekt aus Ihren Firebase-Projekteinstellungen (Web-App).</div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="prevStep()">Zurück</button>
+                <button type="submit" class="btn btn-primary" style="flex: 2;">Weiter</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Firebase Service Account -->
+        <div class="setup-step" id="step3">
+            <h2 style="margin-bottom: 20px;">3. Firebase Service Account (Backend)</h2>
+
+            <div class="form-group">
+                <label class="form-label" for="serviceAccount">Service Account JSON</label>
+                <textarea id="serviceAccount" class="form-input" placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  "private_key_id": "...",\n  "private_key": "...",\n  "client_email": "...",\n  "client_id": "...",\n  "auth_uri": "...",\n  "token_uri": "...",\n  "auth_provider_x509_cert_url": "...",\n  "client_x509_cert_url": "..."\n}' required></textarea>
+                <div class="help-text">Generieren Sie einen neuen privaten Schlüssel in den Firebase Projekteinstellungen unter "Dienstkonten" und fügen Sie den gesamten Dateiinhalt hier ein.</div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="prevStep()">Zurück</button>
+                <button type="submit" class="btn btn-primary" style="flex: 2;">Weiter</button>
+            </div>
+        </div>
+
+        <!-- Step 4: SMTP Config (Optional) -->
+        <div class="setup-step" id="step4">
+            <h2 style="margin-bottom: 20px;">4. E-Mail Einstellungen (Optional)</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">Diese Einstellungen werden für Benachrichtigungen (Anfragen, Status-Mails) benötigt. Sie können diesen Schritt überspringen.</p>
+
+            <div class="form-group">
+                <label class="form-label" for="smtpHost">SMTP Server</label>
+                <input type="text" id="smtpHost" class="form-input" placeholder="z.B. smtp.gmail.com">
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label" for="smtpPort">Port</label>
+                    <input type="number" id="smtpPort" class="form-input" placeholder="z.B. 465">
+                </div>
+                <div class="form-group" style="flex: 1; display: flex; align-items: flex-end; padding-bottom: 10px;">
+                    <label class="switch" style="margin-right: 10px;">
+                        <input type="checkbox" id="smtpSecure" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <label for="smtpSecure" style="margin:0; font-weight:600; cursor:pointer">SSL/TLS</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="smtpUser">Benutzername (E-Mail)</label>
+                <input type="email" id="smtpUser" class="form-input" placeholder="z.B. no-reply@example.com" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="smtpPass">Passwort</label>
+                <input type="password" id="smtpPass" class="form-input" placeholder="App-Passwort" autocomplete="off">
+                <div class="help-text">Bei Gmail wird dringend ein App-Passwort empfohlen.</div>
+            </div>
+
+            <div id="errorMsg" style="color: var(--danger); font-weight: bold; margin-top: 15px; display: none; text-align: center;"></div>
+
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="prevStep()">Zurück</button>
+                <button type="button" class="btn btn-primary" style="flex: 2;" id="btnSubmit" onclick="submitSetup()">Speichern & Starten</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    // Check if setup is actually needed
+    fetch('/api/status').then(res => res.json()).then(data => {
+        if (!data.setupMode) {
+            window.location.href = '/';
+        }
+    }).catch(() => {
+        // Assume setup is needed if we can't fetch status
+    });
+
+    function updateDots() {
+        const dots = document.querySelectorAll('.step-dot');
+        dots.forEach((dot, index) => {
+            dot.className = 'step-dot';
+            if (index + 1 === currentStep) {
+                dot.classList.add('active');
+            } else if (index + 1 < currentStep) {
+                dot.classList.add('completed');
+            }
+        });
+    }
+
+    function showStep(step) {
+        document.querySelectorAll('.setup-step').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step${step}`).classList.add('active');
+        updateDots();
+    }
+
+    function nextStep() {
+        if (currentStep < totalSteps) {
+            // Validate JSON in step 2 and 3 before proceeding
+            if (currentStep === 2) {
+                try {
+                    JSON.parse(document.getElementById('firebaseConfig').value);
+                } catch (e) {
+                    alert('Ungültiges JSON-Format bei der Firebase Config.');
+                    return;
+                }
+            }
+            if (currentStep === 3) {
+                try {
+                    JSON.parse(document.getElementById('serviceAccount').value);
+                } catch (e) {
+                    alert('Ungültiges JSON-Format beim Service Account.');
+                    return;
+                }
+            }
+
+            currentStep++;
+            showStep(currentStep);
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            showStep(currentStep);
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+    }
+
+    async function submitSetup() {
+        const btn = document.getElementById('btnSubmit');
+        const errorMsg = document.getElementById('errorMsg');
+
+        const appName = document.getElementById('appName').value.trim();
+        let firebaseConfig, serviceAccount;
+
+        try {
+            firebaseConfig = JSON.parse(document.getElementById('firebaseConfig').value);
+            serviceAccount = JSON.parse(document.getElementById('serviceAccount').value);
+        } catch (e) {
+            errorMsg.innerText = "Fehler beim Parsen der JSON-Eingaben.";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        const smtpHost = document.getElementById('smtpHost').value.trim();
+        let smtp = null;
+        if (smtpHost) {
+            smtp = {
+                host: smtpHost,
+                port: parseInt(document.getElementById('smtpPort').value) || 465,
+                secure: document.getElementById('smtpSecure').checked,
+                user: document.getElementById('smtpUser').value.trim(),
+                pass: document.getElementById('smtpPass').value.trim()
+            };
+        }
+
+        const payload = {
+            appName,
+            firebaseConfig,
+            serviceAccount,
+            smtp
+        };
+
+        btn.innerText = "Speichert...";
+        btn.disabled = true;
+        errorMsg.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/setup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                // Redirect to main app
+                window.location.href = '/';
+            } else {
+                errorMsg.innerText = data.error || "Ein unbekannter Fehler ist aufgetreten.";
+                errorMsg.style.display = 'block';
+                btn.innerText = "Speichern & Starten";
+                btn.disabled = false;
+            }
+        } catch (err) {
+            errorMsg.innerText = "Netzwerkfehler beim Speichern.";
+            errorMsg.style.display = 'block';
+            btn.innerText = "Speichern & Starten";
+            btn.disabled = false;
+        }
+    }
+
+    // Initialize OS theme
+    const actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', actualTheme);
+</script>
+</body>
+</html>
