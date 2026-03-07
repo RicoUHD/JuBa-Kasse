@@ -7,6 +7,7 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const { rateLimit } = require('express-rate-limit');
 const { isSafeSvg, hasSvgExtension } = require('./svgValidation');
+const { selectChurchLogoFilePath } = require('./logoStorage');
 
 const app = express();
 
@@ -15,7 +16,8 @@ const dataDir = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const configFile = path.join(dataDir, 'config.json');
-const churchLogoFile = path.join(__dirname, '..', 'assets', 'church-logo.svg');
+const bundledChurchLogoFile = path.join(__dirname, '..', 'assets', 'church-logo.svg');
+const churchLogoFile = path.join(dataDir, 'church-logo.svg');
 
 let appConfig = null;
 let setupMode = true;
@@ -110,6 +112,12 @@ export const config = {
 
 // Serve specific frontend static files (Avoid serving the entire /app directory for security)
 const frontendDir = path.join(__dirname, '..');
+app.get('/assets/church-logo.svg', (req, res, next) => {
+  const logoFilePath = selectChurchLogoFilePath(churchLogoFile, bundledChurchLogoFile);
+  res.sendFile(logoFilePath, (error) => {
+    if (error) next(error);
+  });
+});
 app.use('/assets', express.static(path.join(frontendDir, 'assets')));
 app.get('/sw.js', (req, res) => res.sendFile(path.join(frontendDir, 'sw.js')));
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(frontendDir, 'manifest.json')));
