@@ -36,6 +36,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Disables the automatic 'latest' tag generation
+          flavor: |
+            latest=false
           tags: |
             # Floating 'latest' tag: applies ONLY to stable releases
             type=raw,value=latest,enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
