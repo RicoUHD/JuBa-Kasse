@@ -112,7 +112,13 @@ export const config = {
 
 // Serve specific frontend static files (Avoid serving the entire /app directory for security)
 const frontendDir = path.join(__dirname, '..');
-app.get('/assets/church-logo.svg', (req, res, next) => {
+const logoAssetRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.get('/assets/church-logo.svg', logoAssetRateLimit, (req, res, next) => {
   const logoFilePath = selectChurchLogoFilePath(churchLogoFile, bundledChurchLogoFile);
   res.sendFile(logoFilePath, (error) => {
     if (error) next(error);
