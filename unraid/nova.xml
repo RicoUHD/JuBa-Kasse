@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Nova</Name>
+  <Repository>&lt;dockerhub-user&gt;/nova:latest</Repository>
+  <Registry>https://hub.docker.com/r/&lt;dockerhub-user&gt;/nova</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/RicoUHD/Nova/issues</Support>
+  <Project>https://github.com/RicoUHD/Nova</Project>
+  <Overview>Nova all-in-one image (frontend + backend).</Overview>
+  <Category>Productivity: Tools:</Category>
+  <WebUI>http://[IP]:[PORT:3000]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/RicoUHD/Nova/main/unraid/nova.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/RicoUHD/Nova/main/assets/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+
+  <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="Container Port: 3000" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="FIREBASE_DATABASE_URL" Target="FIREBASE_DATABASE_URL" Default="https://YOUR_PROJECT_ID.firebasedatabase.app" Mode="" Description="Firebase Realtime Database URL" Type="Variable" Display="always" Required="true" Mask="false">https://YOUR_PROJECT_ID.firebasedatabase.app</Config>
+  <Config Name="EMAIL_USER" Target="EMAIL_USER" Default="your-email@gmail.com" Mode="" Description="Gmail address used for notifications" Type="Variable" Display="always" Required="true" Mask="false">your-email@gmail.com</Config>
+  <Config Name="EMAIL_PASS" Target="EMAIL_PASS" Default="your-app-password" Mode="" Description="Gmail app password" Type="Variable" Display="always" Required="true" Mask="true">your-app-password</Config>
+  <Config Name="NODE_ENV" Target="NODE_ENV" Default="production" Mode="" Description="Node environment" Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
+  <Config Name="Uploads Path" Target="/app/backend/uploads" Default="/mnt/user/appdata/nova/uploads" Mode="rw" Description="Persistent receipt uploads directory" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nova/uploads</Config>
+  <Config Name="Firebase Service Account JSON" Target="/app/backend/firebase-service-account.json" Default="/mnt/user/appdata/nova/firebase-service-account.json" Mode="ro" Description="Host file path to firebase-service-account.json" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nova/firebase-service-account.json</Config>
+</Container>

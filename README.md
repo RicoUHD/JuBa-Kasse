@@ -179,6 +179,25 @@ If you wish to use features like receipt image uploads or automated email notifi
 
 You can build one Docker image that includes both the static frontend and the Node.js backend API.
 
+### Use it without building locally
+
+If an image is already published to Docker Hub, you can pull and run it directly (no local build):
+
+```bash
+docker pull <dockerhub-user>/nova:latest
+docker run -d \
+  --name nova \
+  -p 3000:3000 \
+  -e FIREBASE_DATABASE_URL="https://YOUR_PROJECT_ID.firebasedatabase.app" \
+  -e EMAIL_USER="your-email@gmail.com" \
+  -e EMAIL_PASS="your-app-password" \
+  -v /path/on/host/uploads:/app/backend/uploads \
+  -v /path/on/host/firebase-service-account.json:/app/backend/firebase-service-account.json:ro \
+  <dockerhub-user>/nova:latest
+```
+
+> Replace `<dockerhub-user>` with the Docker Hub account that published the image.
+
 1. **Build the image locally (initial build):**
    ```bash
    docker build -t <dockerhub-user>/nova:1.0.0 .
@@ -206,12 +225,22 @@ You can build one Docker image that includes both the static frontend and the No
      <dockerhub-user>/nova:latest
    ```
 
-### UNRAID template notes
+### UNRAID template
 
-- **Repository:** `<dockerhub-user>/nova`
-- **Network Type:** bridge
-- **Port mapping:** Container `3000` → Host `3000` (or any host port you prefer)
-- **Required env vars:** `FIREBASE_DATABASE_URL`, `EMAIL_USER`, `EMAIL_PASS`
-- **Required volume/file mappings:**
-  - `/app/backend/uploads` (persistent receipt storage)
-  - `/app/backend/firebase-service-account.json` (read-only service account file)
+An importable UNRAID template is included at:
+
+- `/unraid/nova.xml`
+
+To use it:
+
+1. In UNRAID, go to **Docker** → **Add Container**.
+2. Choose **Template** and load/import `nova.xml` (or host it and use its raw URL).
+3. Set **Repository** to your published image (for example: `yourname/nova:latest`).
+4. Fill required environment values:
+   - `FIREBASE_DATABASE_URL`
+   - `EMAIL_USER`
+   - `EMAIL_PASS`
+5. Ensure path mappings are correct:
+   - `/app/backend/uploads` (persistent directory)
+   - `/app/backend/firebase-service-account.json` (read-only file mount)
+6. Apply and start the container.
