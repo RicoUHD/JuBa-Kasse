@@ -34,27 +34,19 @@ When you first access the application at `http://localhost:3000` (or your mapped
 
 Once configured, the app will save this data to `/app/data/config.json` and start the main application seamlessly.
 
-## First User Setup (Admin)
+## First User Setup (Super-Admin)
 
-For the first user to access the administrative dashboard and manage other users, they must manually be set as an administrator in the database.
+The **first user who logs in after setup** is automatically promoted to:
 
-1.  Register a new account via the Nova web interface (requires the default invite code: `123456` if not changed).
-2.  Open your [Firebase Console](https://console.firebase.google.com/).
-3.  Navigate to **Realtime Database**.
-4.  Find the `users` node and locate your newly created user ID (`uid`).
-5.  Add or modify the `admin` key under your `uid` and set its value to boolean `true`.
+- `admin: true` (regular admin/supervisor rights)
+- `superAdmin: true` (advanced admin/admin rights)
 
-    Example:
-    ```json
-    "users": {
-      "your_uid_here": {
-        "admin": true,
-        "email": "you@example.com",
-        "firstName": "John",
-        "lastName": "Doe"
-      }
-    }
-    ```
+The super-admin can then:
+
+- promote/demote other users to regular admins (supervisors),
+- edit recorded payments afterwards,
+- update `assets/church-logo.svg` (church icon),
+- update Firebase and SMTP configuration directly from the advanced settings UI.
 
 ## Firebase Database Rules
 

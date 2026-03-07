@@ -182,6 +182,44 @@
                 </div>
             </div>
 
+            <div class="card card-settings" id="card-super-admin" style="display:none;">
+                <div class="card-header">Erweiterte Einstellungen (Super-Admin)</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <div style="font-weight:700; margin-bottom:8px;">Benutzerrechte verwalten</div>
+                        <div id="super-admin-user-management" style="display:grid; gap:10px;"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:20px;">
+                        <div style="font-weight:700; margin-bottom:8px;">Zahlungen bearbeiten</div>
+                        <div id="super-admin-payment-editor" style="display:grid; gap:10px;"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:20px;">
+                        <label class="form-label" for="super-admin-logo-file">church-icon.svg / church-logo.svg ersetzen</label>
+                        <input type="file" id="super-admin-logo-file" class="form-input" accept=".svg,image/svg+xml">
+                        <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="uploadChurchLogo()">Logo hochladen</button>
+                    </div>
+
+                    <div class="form-group" style="margin-top:20px;">
+                        <label class="form-label" for="super-admin-firebase-config">Firebase Config (JSON)</label>
+                        <textarea id="super-admin-firebase-config" class="form-input" rows="5" spellcheck="false"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="super-admin-service-account">Firebase Service Account (JSON)</label>
+                        <textarea id="super-admin-service-account" class="form-input" rows="5" spellcheck="false"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="super-admin-smtp-config">SMTP Config (JSON, optional)</label>
+                        <textarea id="super-admin-smtp-config" class="form-input" rows="5" spellcheck="false"></textarea>
+                    </div>
+
+                    <button class="btn btn-secondary btn-block" onclick="saveAdvancedSystemConfig()">Erweiterte System-Konfiguration speichern</button>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 10px; margin-bottom: 30px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="saveSettings()">Alle Einstellungen Speichern</button>
 
