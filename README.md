@@ -1,51 +1,44 @@
 # Nova
 
-JuBa-Kasse is a web-based financial management application for small groups, clubs, or flatshares. It provides features to track income, expenses, donations, and individual members' contributions. The app consists of a frontend written in HTML/JS and a Node.js backend for handling file uploads and email notifications.
+JuBa-Kasse (Nova) is a web-based financial management application for small groups, clubs, or flatshares. It provides features to track income, expenses, donations, and individual members' contributions. The app consists of a frontend written in HTML/JS and a Node.js backend for handling file uploads, email notifications, and configuration.
 
-## Running the Application Locally
+## Running the Application
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
+Nova is distributed as an all-in-one Docker image. It includes both the frontend and the backend server.
 
-2.  **Serve the Frontend:**
-    You can use any simple HTTP server to serve the static frontend files. For example, using Python:
-    ```bash
-    # Python 3
-    python3 -m http.server 8000
-    ```
-    Then, open `http://localhost:8000` in your web browser.
+### Quick Start (Docker)
 
-3.  **Firebase Setup:**
-    The application relies on Firebase for authentication and database services. You need to create a Firebase project and configure it in the `assets/config.js` file:
-    ```javascript
-    export const config = {
-        firebaseConfig: {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID.firebasedatabase.app",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        },
-        apiBaseUrl: "http://localhost:3000/api" // Point this to your backend or skip if using without backend
-    };
-    ```
+To run Nova, pull the latest image and start a container. It is highly recommended to map the `/app/data` path to a persistent storage pool or volume, as this is where your configuration and uploaded receipts will be saved.
 
-## Using the App Without the Backend
+```bash
+docker pull ghcr.io/<owner>/<repo>:latest
 
-You can run JuBa-Kasse purely as a frontend application if you do not need features like receipt image uploads or automated email notifications.
+docker run -d \
+  -p 3000:3000 \
+  -v /path/to/your/storage:/app/data \
+  --name nova-app \
+  --restart unless-stopped \
+  ghcr.io/<owner>/<repo>:latest
+```
 
-To do so, simply skip starting the Node.js server located in the `backend/` directory. The core functionality, such as managing people, recording transactions, and viewing statistics, will still work entirely via Firebase.
+*Replace `/path/to/your/storage` with a directory on your host machine to ensure your data survives container restarts.*
+
+## Setup Wizard
+
+When you first access the application at `http://localhost:3000` (or your mapped port), you will be greeted by the built-in Setup Wizard. You will need to provide:
+
+1. **App Name:** The name of your instance (e.g., Nova).
+2. **Firebase Frontend Config:** The JSON object from your Firebase Project Settings.
+3. **Firebase Service Account:** A newly generated private key JSON from Firebase > Project Settings > Service Accounts.
+4. **SMTP Details (Optional):** Credentials for a mail server to send automated status and request notifications.
+
+Once configured, the app will save this data to `/app/data/config.json` and start the main application seamlessly.
 
 ## First User Setup (Admin)
 
 For the first user to access the administrative dashboard and manage other users, they must manually be set as an administrator in the database.
 
-1.  Register a new account via the JuBa-Kasse web interface.
+1.  Register a new account via the Nova web interface (requires the default invite code: `123456` if not changed).
 2.  Open your [Firebase Console](https://console.firebase.google.com/).
 3.  Navigate to **Realtime Database**.
 4.  Find the `users` node and locate your newly created user ID (`uid`).
@@ -129,68 +122,3 @@ To secure your application, apply the following rules in your Firebase Realtime 
 ## License
 
 This project is licensed under the newest GNU General Public License (GPLv3). See the `LICENSE` file for more details.
-
-## Optional: Backend Installation
-
-If you wish to use features like receipt image uploads or automated email notifications, you need to set up the Node.js backend.
-
-1.  **Navigate to the backend directory:**
-    ```bash
-    cd backend
-    ```
-
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
-
-3.  **Configure Environment Variables:**
-    Create a `.env` file in the `backend/` directory:
-    ```bash
-    touch .env
-    ```
-    Add the following variables to the `.env` file, replacing the placeholder values with your actual credentials:
-    ```env
-    # Your Firebase Database URL
-    FIREBASE_DATABASE_URL="https://YOUR_PROJECT_ID.firebasedatabase.app"
-
-    # Gmail credentials for sending notifications
-    EMAIL_USER="your-email@gmail.com"
-    EMAIL_PASS="your-app-password"
-    ```
-    *Note: If using Gmail, it is highly recommended to use an [App Password](https://support.google.com/accounts/answer/185833).*
-
-4.  **Add Firebase Service Account JSON:**
-    To allow the backend to communicate securely with Firebase, you must provide a service account key.
-    - Go to your [Firebase Console](https://console.firebase.google.com/).
-    - Navigate to **Project Settings** (the gear icon) > **Service Accounts**.
-    - Click on **Generate new private key**.
-    - Save the downloaded JSON file as `firebase-service-account.json` and place it directly inside the `backend/` directory.
-
-5.  **Start the Server:**
-    ```bash
-    npm start
-    ```
-    The backend server will start running on `http://localhost:3000`. Ensure that your frontend's `apiBaseUrl` in `assets/config.js` is set to point to this URL.
-
-## Docker Image Publishing (GHCR)
-
-Yes, the image push can be done for you automatically through GitHub Actions.
-
-A workflow is included at `.github/workflows/docker-image.yml` and will:
-- Build the backend image from `Dockerfile`
-- Push it to `ghcr.io/<owner>/<repo>` when code is pushed to `main`
-- Also push on version tags (for example `v1.0.0`)
-- Support manual test runs via **Actions → Docker Image → Run workflow**
-
-### Pull and run the published image
-
-```bash
-docker pull ghcr.io/<owner>/<repo>:latest
-docker run --rm -p 3000:3000 \
-  -e FIREBASE_DATABASE_URL="https://YOUR_PROJECT_ID.firebasedatabase.app" \
-  -e EMAIL_USER="your-email@gmail.com" \
-  -e EMAIL_PASS="your-app-password" \
-  -v "$(pwd)/backend/firebase-service-account.json:/app/backend/firebase-service-account.json:ro" \
-  ghcr.io/<owner>/<repo>:latest
-```
