@@ -72,7 +72,7 @@
         <div class="step-dot"></div>
     </div>
 
-    <form id="setupForm" onsubmit="event.preventDefault(); nextStep();">
+    <form id="setupForm" novalidate onsubmit="event.preventDefault(); nextStep();">
         <!-- Step 1: App Info -->
         <div class="setup-step active" id="step1">
             <h2 style="margin-bottom: 20px;">1. Allgemeine Informationen</h2>
@@ -194,8 +194,28 @@
         updateDots();
     }
 
+    function validateAppName(onError) {
+        const appNameInput = document.getElementById('appName');
+        const appName = appNameInput.value.trim();
+        appNameInput.setCustomValidity('');
+        if (!appName) {
+            onError('Bitte geben Sie einen Namen für die Anwendung ein.');
+            return null;
+        }
+        return appName;
+    }
+
     function nextStep() {
         if (currentStep < totalSteps) {
+            if (currentStep === 1) {
+                if (!validateAppName((message) => {
+                    const appNameInput = document.getElementById('appName');
+                    appNameInput.setCustomValidity(message);
+                    appNameInput.reportValidity();
+                })) {
+                    return;
+                }
+            }
             // Validate JSON in step 2 and 3 before proceeding
             if (currentStep === 2) {
                 try {
@@ -231,8 +251,15 @@
         const btn = document.getElementById('btnSubmit');
         const errorMsg = document.getElementById('errorMsg');
 
-        const appName = document.getElementById('appName').value.trim();
+        const appName = validateAppName((message) => {
+            errorMsg.innerText = message;
+            errorMsg.style.display = 'block';
+        });
         let firebaseConfig, serviceAccount;
+
+        if (!appName) {
+            return;
+        }
 
         try {
             firebaseConfig = JSON.parse(document.getElementById('firebaseConfig').value);
