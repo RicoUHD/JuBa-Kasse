@@ -23,6 +23,28 @@ docker run -d \
 
 *Replace `/path/to/your/storage` with a directory on your host machine to ensure your data survives container restarts.*
 
+### Storage Notes (Backend vs Frontend)
+
+- **Backend persistent data** is stored in `/app/data` inside the container.
+- **Frontend files** (`index.html`, JS, manifest, service worker) are bundled into the Docker image under `/app` and are not stored separately in a writable frontend data directory.
+- **Frontend app data** (users, donations, expenses, requests, settings) is stored in your configured **Firebase Realtime Database**.
+
+### Unraid Pool Mapping
+
+On Unraid, map a host path from your pool/share to `/app/data`.
+
+Example using a user share:
+
+```bash
+-v /mnt/user/appdata/nova:/app/data
+```
+
+Example targeting a specific pool directly:
+
+```bash
+-v /mnt/<pool_name>/appdata/nova:/app/data
+```
+
 ## Setup Wizard
 
 When you first access the application at `http://localhost:3000` (or your mapped port), you will be greeted by the built-in Setup Wizard. You will need to provide:
