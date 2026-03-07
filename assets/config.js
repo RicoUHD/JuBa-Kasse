@@ -8,6 +8,8 @@ export const config = {
         messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
         appId: "YOUR_APP_ID"
     },
-    apiBaseUrl: "http://localhost:3000/api", // Point this to your backend or skip if using without backend
+    apiBaseUrl: (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+        ? "http://localhost:3000/api"
+        : "/api", // Uses same-origin API path when frontend is served by the backend container
     appName: "Nova"
 };

@@ -19,8 +19,9 @@ app.use(cors());
 app.use(express.json());
 
 // Set up Local Storage using Multer
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const frontendDir = path.join(__dirname, '..');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
@@ -179,8 +180,15 @@ app.post('/api/notify-admins', verifyToken, async (req, res) => {
 });
 // -----------------------------------------
 
-const PORT = 3000;
+// Serve frontend files when running as an all-in-one deployment
+app.use('/assets', express.static(path.join(frontendDir, 'assets')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(frontendDir, 'manifest.json')));
+app.get('/sw.js', (req, res) => res.sendFile(path.join(frontendDir, 'sw.js')));
+app.get(/^(?!\/api(?:\/|$)|\/assets\/|\/sw\.js$|\/manifest\.json$).*/, (req, res) => {
+  res.sendFile(path.join(frontendDir, 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-

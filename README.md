@@ -31,7 +31,9 @@ JuBa-Kasse is a web-based financial management application for small groups, clu
             messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
             appId: "YOUR_APP_ID"
         },
-        apiBaseUrl: "http://localhost:3000/api" // Point this to your backend or skip if using without backend
+        apiBaseUrl: (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+            ? "http://localhost:3000/api"
+            : "/api" // Uses same-origin API path when frontend is served by the backend container
     };
     ```
 
@@ -172,3 +174,44 @@ If you wish to use features like receipt image uploads or automated email notifi
     npm start
     ```
     The backend server will start running on `http://localhost:3000`. Ensure that your frontend's `apiBaseUrl` in `assets/config.js` is set to point to this URL.
+
+## All-in-one Docker image (Frontend + Backend)
+
+You can build one Docker image that includes both the static frontend and the Node.js backend API.
+
+1. **Build the image locally (initial build):**
+   ```bash
+   docker build -t <dockerhub-user>/nova:1.0.0 .
+   docker tag <dockerhub-user>/nova:1.0.0 <dockerhub-user>/nova:latest
+   ```
+
+2. **Publish to Docker Hub:**
+   ```bash
+   docker login
+   docker push <dockerhub-user>/nova:1.0.0
+   docker push <dockerhub-user>/nova:latest
+   ```
+
+3. **Pull and run (UNRAID or any Docker host):**
+   ```bash
+   docker pull <dockerhub-user>/nova:latest
+   docker run -d \
+     --name nova \
+     -p 3000:3000 \
+     -e FIREBASE_DATABASE_URL="https://YOUR_PROJECT_ID.firebasedatabase.app" \
+     -e EMAIL_USER="your-email@gmail.com" \
+     -e EMAIL_PASS="your-app-password" \
+     -v /path/on/host/uploads:/app/backend/uploads \
+     -v /path/on/host/firebase-service-account.json:/app/backend/firebase-service-account.json:ro \
+     <dockerhub-user>/nova:latest
+   ```
+
+### UNRAID template notes
+
+- **Repository:** `<dockerhub-user>/nova`
+- **Network Type:** bridge
+- **Port mapping:** Container `3000` → Host `3000` (or any host port you prefer)
+- **Required env vars:** `FIREBASE_DATABASE_URL`, `EMAIL_USER`, `EMAIL_PASS`
+- **Required volume/file mappings:**
+  - `/app/backend/uploads` (persistent receipt storage)
+  - `/app/backend/firebase-service-account.json` (read-only service account file)
