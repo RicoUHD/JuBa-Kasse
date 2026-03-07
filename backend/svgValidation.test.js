@@ -22,6 +22,11 @@ test('rejects inline event handlers', () => {
   assert.equal(isSafeSvg(svg), false);
 });
 
+test('rejects uppercase inline event handlers', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" ONLOAD="alert(1)"></svg>';
+  assert.equal(isSafeSvg(svg), false);
+});
+
 test('rejects foreignObject elements', () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject></foreignObject></svg>';
   assert.equal(isSafeSvg(svg), false);
@@ -34,5 +39,15 @@ test('rejects javascript URLs', () => {
 
 test('rejects javascript URLs with encoded separators', () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="java&#x09;script:alert(1)">x</a></svg>';
+  assert.equal(isSafeSvg(svg), false);
+});
+
+test('rejects javascript URLs with uppercase hex entities', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="java&#x0A;script:alert(1)">x</a></svg>';
+  assert.equal(isSafeSvg(svg), false);
+});
+
+test('rejects javascript URLs with entities missing semicolon', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="java&#x09script:alert(1)">x</a></svg>';
   assert.equal(isSafeSvg(svg), false);
 });
