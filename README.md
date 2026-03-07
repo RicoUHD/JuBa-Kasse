@@ -172,3 +172,25 @@ If you wish to use features like receipt image uploads or automated email notifi
     npm start
     ```
     The backend server will start running on `http://localhost:3000`. Ensure that your frontend's `apiBaseUrl` in `assets/config.js` is set to point to this URL.
+
+## Docker Image Publishing (GHCR)
+
+Yes, the image push can be done for you automatically through GitHub Actions.
+
+A workflow is included at `.github/workflows/docker-image.yml` and will:
+- Build the backend image from `Dockerfile`
+- Push it to `ghcr.io/<owner>/<repo>` when code is pushed to `main`
+- Also push on version tags (for example `v1.0.0`)
+- Support manual test runs via **Actions → Docker Image → Run workflow**
+
+### Pull and run the published image
+
+```bash
+docker pull ghcr.io/<owner>/<repo>:latest
+docker run --rm -p 3000:3000 \
+  -e FIREBASE_DATABASE_URL="https://YOUR_PROJECT_ID.firebasedatabase.app" \
+  -e EMAIL_USER="your-email@gmail.com" \
+  -e EMAIL_PASS="your-app-password" \
+  -v "$(pwd)/backend/firebase-service-account.json:/app/backend/firebase-service-account.json:ro" \
+  ghcr.io/<owner>/<repo>:latest
+```

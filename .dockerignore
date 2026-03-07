@@ -1,0 +1,7 @@
+.git
+.github
+node_modules
+**/node_modules
+backend/.env
+backend/firebase-service-account.json
+backend/uploads
