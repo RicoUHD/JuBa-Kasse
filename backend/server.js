@@ -401,7 +401,16 @@ app.post('/api/admin/logo', verifyToken, verifySuperAdmin, (req, res) => {
         return res.status(400).json({ error: 'No logo file uploaded' });
       }
 
-      if (!hasSvgExtension(req.file.originalname)) {
+      const originalName = req.file.originalname || '';
+      const ext = path.extname(originalName).toLowerCase();
+      const mimeType = (req.file.mimetype || '').toLowerCase();
+
+      if (!hasSvgExtension(originalName)) {
+        return res.status(400).json({ error: 'Only SVG files are allowed' });
+      }
+      // For extensionless files, rely on MIME type when the browser provides one.
+      // Files with .svg extension are still validated via isSafeSvg content checks below.
+      if (!ext && mimeType && mimeType !== 'image/svg+xml') {
         return res.status(400).json({ error: 'Only SVG files are allowed' });
       }
 

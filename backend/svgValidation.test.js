@@ -2,19 +2,19 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { isSafeSvg, hasSvgExtension } = require('./svgValidation');
 
-test('accepts svg extension in lowercase', () => {
+test('hasSvgExtension accepts svg extension in lowercase', () => {
   assert.equal(hasSvgExtension('church-logo.svg'), true);
 });
 
-test('accepts svg extension in uppercase', () => {
+test('hasSvgExtension accepts svg extension in uppercase', () => {
   assert.equal(hasSvgExtension('church-logo.SVG'), true);
 });
 
-test('accepts files without extension for custom upload names', () => {
+test('hasSvgExtension accepts files without extension when browser omits it', () => {
   assert.equal(hasSvgExtension('church-logo'), true);
 });
 
-test('rejects non-svg extensions', () => {
+test('hasSvgExtension rejects non-svg extensions', () => {
   assert.equal(hasSvgExtension('church-logo.png'), false);
 });
 
