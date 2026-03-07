@@ -20,8 +20,22 @@ app.use(express.json());
 
 // Set up Local Storage using Multer
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+} catch (error) {
+  throw new Error(`Failed to create upload directory at ${uploadDir}: ${error.message}`);
+}
 const frontendDir = path.join(__dirname, '..');
+let indexHtml;
+let manifestJson;
+let serviceWorkerJs;
+try {
+  indexHtml = fs.readFileSync(path.join(frontendDir, 'index.html'), 'utf8');
+  manifestJson = fs.readFileSync(path.join(frontendDir, 'manifest.json'), 'utf8');
+  serviceWorkerJs = fs.readFileSync(path.join(frontendDir, 'sw.js'), 'utf8');
+} catch (error) {
+  throw new Error(`Failed to load frontend files: ${error.message}`);
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
@@ -182,10 +196,13 @@ app.post('/api/notify-admins', verifyToken, async (req, res) => {
 
 // Serve frontend files when running as an all-in-one deployment
 app.use('/assets', express.static(path.join(frontendDir, 'assets')));
-app.get('/manifest.json', (req, res) => res.sendFile(path.join(frontendDir, 'manifest.json')));
-app.get('/sw.js', (req, res) => res.sendFile(path.join(frontendDir, 'sw.js')));
-app.get(/^(?!\/api(?:\/|$)|\/assets\/|\/sw\.js$|\/manifest\.json$).*/, (req, res) => {
-  res.sendFile(path.join(frontendDir, 'index.html'));
+app.get('/manifest.json', (req, res) => res.type('application/manifest+json').send(manifestJson));
+app.get('/sw.js', (req, res) => res.type('application/javascript').send(serviceWorkerJs));
+app.get('*', (req, res, next) => {
+  if (req.path === '/api' || req.path.startsWith('/api/')) return next();
+  if (req.path.startsWith('/assets/')) return next();
+  if (req.path === '/sw.js' || req.path === '/manifest.json') return next();
+  return res.type('text/html').send(indexHtml);
 });
 
 const PORT = process.env.PORT || 3000;
