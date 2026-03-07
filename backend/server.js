@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
+const { rateLimit } = require('express-rate-limit');
 
 const app = express();
 
@@ -13,6 +14,7 @@ const dataDir = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const configFile = path.join(dataDir, 'config.json');
+const churchLogoFile = path.join(__dirname, '..', 'assets', 'church-logo.svg');
 
 let appConfig = null;
 let setupMode = true;
@@ -170,9 +172,28 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1024 * 1024 } // 1MB
+});
+
+const adminRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/admin', adminRateLimit);
 
 // Security Middleware: Verify Firebase ID Token
 const verifyToken = async (req, res, next) => {
+  if (setupMode) {
+    return res.status(503).send('App is in setup mode. Please complete setup first.');
+  }
+  if (admin.apps.length === 0) {
+    return res.status(503).send('Authentication service unavailable. Please check Firebase configuration.');
+  }
+
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) return res.status(401).send('Unauthorized');
   
@@ -182,6 +203,19 @@ const verifyToken = async (req, res, next) => {
     next();
   } catch (error) {
     res.status(401).send('Invalid token');
+  }
+};
+
+const verifySuperAdmin = async (req, res, next) => {
+  try {
+    const userSnap = await admin.database().ref(`users/${req.user.uid}`).once('value');
+    if (!userSnap.exists() || userSnap.val().superAdmin !== true) {
+      return res.status(403).json({ error: 'Super admin access required' });
+    }
+    next();
+  } catch (error) {
+    console.error('Failed to verify super admin:', error);
+    res.status(500).json({ error: 'Failed to verify permissions' });
   }
 };
 
@@ -248,6 +282,139 @@ app.post('/api/setup', (req, res) => {
   } catch (error) {
     console.error("Error saving configuration:", error);
     res.status(500).json({ error: 'Failed to save configuration.' });
+  }
+});
+
+app.post('/api/admin/bootstrap-super-admin', verifyToken, async (req, res) => {
+  try {
+    const superAdminRef = admin.database().ref('system/superAdminUid');
+    const txResult = await superAdminRef.transaction(current => current || req.user.uid);
+    const superAdminUid = txResult.snapshot.val();
+    const isSuperAdmin = superAdminUid === req.user.uid;
+
+    if (isSuperAdmin) {
+      await admin.database().ref(`users/${req.user.uid}`).update({
+        admin: true,
+        superAdmin: true,
+        email: req.user.email || null
+      });
+    }
+
+    res.json({
+      isSuperAdmin,
+      superAdminUid,
+      createdNow: txResult.committed
+    });
+  } catch (error) {
+    console.error('Failed to bootstrap super admin:', error);
+    res.status(500).json({ error: 'Failed to bootstrap super admin' });
+  }
+});
+
+app.get('/api/admin/system-config', verifyToken, verifySuperAdmin, async (req, res) => {
+  if (!appConfig) {
+    return res.status(404).json({ error: 'No config found' });
+  }
+  res.json({
+    appName: appConfig.appName,
+    firebaseConfig: appConfig.firebaseConfig || {},
+    serviceAccount: appConfig.serviceAccount || {},
+    smtp: appConfig.smtp || null
+  });
+});
+
+app.put('/api/admin/system-config', verifyToken, verifySuperAdmin, async (req, res) => {
+  try {
+    const { appName, firebaseConfig, serviceAccount, smtp } = req.body || {};
+    if (!appName || !firebaseConfig || !serviceAccount) {
+      return res.status(400).json({ error: 'Missing required config fields' });
+    }
+
+    const newConfig = {
+      appName,
+      firebaseConfig,
+      serviceAccount,
+      smtp: smtp || null
+    };
+
+    fs.writeFileSync(configFile, JSON.stringify(newConfig, null, 2), 'utf8');
+    appConfig = newConfig;
+
+    if (newConfig.smtp) {
+      transporter = nodemailer.createTransport({
+        host: newConfig.smtp.host,
+        port: newConfig.smtp.port,
+        secure: newConfig.smtp.secure,
+        auth: {
+          user: newConfig.smtp.user,
+          pass: newConfig.smtp.pass
+        }
+      });
+    } else {
+      transporter = null;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to update system config:', error);
+    res.status(500).json({ error: 'Failed to update system config' });
+  }
+});
+
+app.put('/api/admin/users/:uid/admin', verifyToken, verifySuperAdmin, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const makeAdmin = req.body?.admin === true;
+
+    const superAdminSnap = await admin.database().ref('system/superAdminUid').once('value');
+    const superAdminUid = superAdminSnap.exists() ? superAdminSnap.val() : null;
+
+    if (uid === superAdminUid && !makeAdmin) {
+      return res.status(400).json({ error: 'Super admin cannot lose admin rights' });
+    }
+
+    const updates = { admin: makeAdmin };
+    if (uid !== superAdminUid) {
+      updates.superAdmin = false;
+    }
+
+    await admin.database().ref(`users/${uid}`).update(updates);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to update admin role:', error);
+    res.status(500).json({ error: 'Failed to update admin role' });
+  }
+});
+
+app.post('/api/admin/logo', verifyToken, verifySuperAdmin, logoUpload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No logo file uploaded' });
+    }
+
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
+    const mime = String(req.file.mimetype || '').split(';')[0].trim().toLowerCase();
+    if (ext !== '.svg' || mime !== 'image/svg+xml') {
+      return res.status(400).json({ error: 'Only SVG files are allowed' });
+    }
+
+    const content = req.file.buffer.toString('utf8');
+    const lower = content.toLowerCase();
+    if (
+      !lower.includes('<svg') ||
+      lower.includes('<script') ||
+      /on[a-z]+\s*=/.test(lower) ||
+      lower.includes('javascript:') ||
+      lower.includes('<foreignobject')
+    ) {
+      return res.status(400).json({ error: 'Invalid SVG file' });
+    }
+
+    await fs.promises.writeFile(churchLogoFile, content, 'utf8');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to update logo:', error);
+    res.status(500).json({ error: 'Failed to update logo' });
   }
 });
 
@@ -351,4 +518,3 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-

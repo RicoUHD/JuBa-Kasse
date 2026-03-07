@@ -17,6 +17,11 @@ let isAuthenticated = false;
 let currentUser = null;
 let users = [];
 let chartDataCache = null;
+let advancedConfigLoaded = false;
+let advancedConfigAppName = null;
+let superAdminPaymentRows = [];
+let superAdminUserRows = [];
+let currentEditedPayment = null;
 
 // ⚡ Bolt: Global formatters for improved performance (avoiding re-initialization)
 const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -81,6 +86,19 @@ function safeList(val) {
     if (!val) return [];
     if (Array.isArray(val)) return val;
     return Object.values(val);
+}
+
+function isSuperAdminUser() {
+    return !!(currentUser && currentUser.superAdmin);
+}
+
+async function fetchWithAuth(url, options = {}) {
+    const token = await auth.currentUser.getIdToken();
+    const headers = {
+        ...(options.headers || {}),
+        'Authorization': `Bearer ${token}`
+    };
+    return fetch(url, { ...options, headers });
 }
 
 // ⚡ Bolt: Centralized date helper
@@ -858,6 +876,8 @@ async function loadData() {
     try {
         // Non-admin: fetch only what is needed for their view (people + settings + their requests)
     if (currentUser && !currentUser.admin) {
+        advancedConfigLoaded = false;
+        advancedConfigAppName = null;
         // 1. Fetch Settings
         const sSnap = await get(child(dbRef, 'settings'));
         if (sSnap.exists()) {
@@ -962,6 +982,8 @@ async function loadData() {
         document.getElementById('user-email-display').innerText = currentUser.email;
 
     } else {
+        advancedConfigLoaded = false;
+        advancedConfigAppName = null;
         // Admin: fetch full dataset
         const [pSnap, dSnap, eSnap, sSnap, cSnap, rSnap, uSnap] = await Promise.all([
             get(child(dbRef, 'people')),
@@ -1055,6 +1077,24 @@ function renderAll() {
         if (currentUser) {
             document.getElementById('admin-email-notifications').checked = !!currentUser.emailNotifications;
         }
+        renderSuperAdminTools();
+    }
+}
+
+function renderSuperAdminTools() {
+    const card = document.getElementById('card-super-admin');
+    if (!card) return;
+
+    if (!isSuperAdminUser()) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+    renderSuperAdminUserManagement();
+    renderSuperAdminPaymentEditor();
+    if (!advancedConfigLoaded) {
+        loadAdvancedSystemConfig();
     }
 }
 
@@ -1196,6 +1236,201 @@ window.assignUserToPerson = async (uid) => {
     } catch (err) {
         console.error('Fehler beim Zuordnen:', err);
         alert('Zuordnung fehlgeschlagen. Bitte erneut versuchen.');
+    }
+};
+
+function renderSuperAdminUserManagement() {
+    const target = document.getElementById('super-admin-user-management');
+    if (!target || !isSuperAdminUser()) return;
+
+    if (!users || users.length === 0) {
+        target.innerHTML = '<div style="color:var(--text-secondary);">Keine Benutzer gefunden.</div>';
+        return;
+    }
+
+    superAdminUserRows = users
+        .slice()
+        .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(`${b.firstName || ''} ${b.lastName || ''}`));
+
+    const rows = superAdminUserRows
+        .map((u, index) => {
+            const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unbekannt';
+            const isSuper = u.superAdmin === true;
+            return `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px; border:1px solid var(--border); border-radius:10px;">
+                    <div>
+                        <div style="font-weight:700;">${escapeHtml(fullName)} ${isSuper ? '👑' : ''}</div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">${escapeHtml(u.email || '')}</div>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
+                        <input type="checkbox" ${u.admin ? 'checked' : ''} ${isSuper ? 'disabled' : ''} onchange="setSupervisorAdminByIndex(${index}, this.checked)">
+                        Supervisor Admin
+                    </label>
+                </div>
+            `;
+        }).join('');
+
+    target.innerHTML = rows;
+}
+
+function renderSuperAdminPaymentEditor() {
+    const target = document.getElementById('super-admin-payment-editor');
+    if (!target || !isSuperAdminUser()) return;
+
+    const allPayments = [];
+    people.forEach(person => {
+        safeList(person.payments).forEach((payment, index) => {
+            allPayments.push({
+                personId: person.id,
+                personName: person.name,
+                paymentId: payment.id ?? `idx-${index}`,
+                paymentIndex: index,
+                payment
+            });
+        });
+    });
+
+    allPayments.sort((a, b) => (b.payment.date || '').localeCompare(a.payment.date || ''));
+    superAdminPaymentRows = allPayments.slice(0, 30);
+    const preview = superAdminPaymentRows;
+
+    if (preview.length === 0) {
+        target.innerHTML = '<div style="color:var(--text-secondary);">Keine Zahlungen vorhanden.</div>';
+        return;
+    }
+
+    const options = preview.map((item, index) => {
+        const dateText = item.payment.date ? dateFormatter.format(new Date(item.payment.date)) : 'Kein Datum';
+        const desc = item.payment.description ? ` • ${item.payment.description}` : '';
+        const label = `${item.personName || 'Unbekannt'} • ${dateText} • ${formatCurrency(item.payment.amount)} €${desc}`;
+        return `<option value="${index}">${escapeHtml(label)}</option>`;
+    }).join('');
+
+    target.innerHTML = `
+        <div class="form-group" style="margin:0;">
+            <label class="form-label" for="super-admin-payment-select">Zahlung auswählen</label>
+            <select id="super-admin-payment-select" class="form-select">
+                <option value="">Bitte wählen...</option>
+                ${options}
+            </select>
+        </div>
+        <button class="btn btn-secondary btn-block" onclick="editSelectedPayment()">Ausgewählte Zahlung bearbeiten</button>
+    `;
+
+    if (allPayments.length > preview.length) {
+        target.innerHTML += `<div style="font-size:0.85rem; color:var(--text-secondary); margin-top:8px;">Es werden die letzten ${preview.length} Zahlungen angezeigt.</div>`;
+    }
+}
+
+window.setSupervisorAdmin = async (uid, isAdmin) => {
+    if (!isSuperAdminUser()) return;
+    try {
+        const response = await fetchWithAuth(`${config.apiBaseUrl}/admin/users/${uid}/admin`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin: !!isAdmin })
+        });
+        if (!response.ok) {
+            const msg = await response.text();
+            throw new Error(msg || 'Speichern fehlgeschlagen');
+        }
+        const localUser = users.find(u => u.uid === uid);
+        if (localUser) localUser.admin = !!isAdmin;
+        renderSuperAdminUserManagement();
+        showToast('Benutzerrechte gespeichert');
+    } catch (err) {
+        console.error('Fehler beim Speichern der Rolle:', err);
+        showToast('Benutzerrechte konnten nicht gespeichert werden', 'error');
+        loadData();
+    }
+};
+
+window.setSupervisorAdminByIndex = async (index, isAdmin) => {
+    const user = superAdminUserRows[index];
+    if (!user || !user.uid) return;
+    await window.setSupervisorAdmin(user.uid, isAdmin);
+};
+
+window.editRecordedPaymentByIndex = async (index) => {
+    const item = superAdminPaymentRows[index];
+    if (!item) {
+        alert('Die ausgewählte Zahlung wurde nicht gefunden. Bitte Liste aktualisieren.');
+        return;
+    }
+    await window.editRecordedPayment(item.personId, item.paymentId, item.paymentIndex, item.personName);
+};
+
+window.editSelectedPayment = async () => {
+    const select = document.getElementById('super-admin-payment-select');
+    if (!select || !select.value) {
+        alert('Bitte zuerst eine Zahlung auswählen.');
+        return;
+    }
+    const index = parseInt(select.value, 10);
+    if (Number.isNaN(index)) return;
+    await window.editRecordedPaymentByIndex(index);
+};
+
+window.editRecordedPayment = async (personId, paymentId, paymentIndex, personName = null) => {
+    if (!isSuperAdminUser()) return;
+    const person = people.find(p => String(p.id) === String(personId));
+    if (!person) return;
+
+    const payments = safeList(person.payments);
+    const idx = payments.findIndex((p, i) => String(p.id ?? `idx-${i}`) === String(paymentId));
+    const targetIndex = idx >= 0 ? idx : paymentIndex;
+    const payment = payments[targetIndex];
+    if (!payment) return;
+
+    currentEditedPayment = { personId, targetIndex };
+    document.getElementById('edit-payment-person').textContent = personName || person.name || 'Unbekannt';
+    document.getElementById('edit-payment-amount').value = String(payment.amount ?? '');
+    document.getElementById('edit-payment-date').value = payment.date || '';
+    document.getElementById('edit-payment-desc').value = payment.description || '';
+    openModal('edit-payment-modal');
+};
+
+window.saveEditedPayment = async () => {
+    if (!isSuperAdminUser() || !currentEditedPayment) return;
+
+    const amount = parseFloat(String(document.getElementById('edit-payment-amount').value || '').replace(',', '.'));
+    const date = document.getElementById('edit-payment-date').value;
+    const description = document.getElementById('edit-payment-desc').value.trim();
+
+    if (Number.isNaN(amount)) {
+        alert('Ungültiger Betrag.');
+        return;
+    }
+    if (!date) {
+        alert('Bitte ein Datum angeben.');
+        return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        alert('Ungültiges Datum.');
+        return;
+    }
+
+    try {
+        await mutatePerson(currentEditedPayment.personId, (draft) => {
+            const nextPayments = safeList(draft.payments).map((entry, i) => {
+                if (i !== currentEditedPayment.targetIndex) return entry;
+                return {
+                    ...entry,
+                    amount,
+                    date,
+                    description
+                };
+            });
+            const totalPaid = nextPayments.reduce((acc, p) => acc + parseFloat(p.amount || 0), 0);
+            return { ...draft, payments: nextPayments, totalPaid };
+        });
+        closeModal('edit-payment-modal');
+        currentEditedPayment = null;
+        renderAll();
+        showToast('Zahlung aktualisiert');
+    } catch (err) {
+        console.error('Fehler beim Bearbeiten der Zahlung:', err);
+        showToast('Zahlung konnte nicht aktualisiert werden', 'error');
     }
 };
 
@@ -2342,6 +2577,105 @@ window.saveStatusChange = async () => {
     }
 };
 
+async function loadAdvancedSystemConfig() {
+    if (!isSuperAdminUser()) return;
+    try {
+        const response = await fetchWithAuth(`${config.apiBaseUrl}/admin/system-config`);
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+        const data = await response.json();
+        advancedConfigAppName = data.appName || null;
+        document.getElementById('super-admin-firebase-config').value = JSON.stringify(data.firebaseConfig || {}, null, 2);
+        document.getElementById('super-admin-service-account').value = JSON.stringify(data.serviceAccount || {}, null, 2);
+        document.getElementById('super-admin-smtp-host').value = data.smtp?.host || '';
+        document.getElementById('super-admin-smtp-port').value = data.smtp?.port || '';
+        document.getElementById('super-admin-smtp-secure').checked = !!data.smtp?.secure;
+        document.getElementById('super-admin-smtp-user').value = data.smtp?.user || '';
+        document.getElementById('super-admin-smtp-pass').value = data.smtp?.pass || '';
+        advancedConfigLoaded = true;
+    } catch (err) {
+        console.error('Fehler beim Laden der erweiterten Konfiguration:', err);
+        showToast('Erweiterte Konfiguration konnte nicht geladen werden', 'error');
+    }
+}
+
+window.saveAdvancedSystemConfig = async () => {
+    if (!isSuperAdminUser()) return;
+    try {
+        const appName = advancedConfigAppName || config.appName;
+        if (!appName) {
+            throw new Error('App-Name konnte nicht ermittelt werden. Dies kann auf fehlende Konfigurationsdaten hinweisen. Bitte Seite neu laden.');
+        }
+
+        const payload = {
+            appName,
+            firebaseConfig: JSON.parse(document.getElementById('super-admin-firebase-config').value || '{}'),
+            serviceAccount: JSON.parse(document.getElementById('super-admin-service-account').value || '{}'),
+            smtp: null
+        };
+
+        const smtpHost = document.getElementById('super-admin-smtp-host').value.trim();
+        if (smtpHost) {
+            const smtpPortRaw = document.getElementById('super-admin-smtp-port').value.trim();
+            payload.smtp = {
+                host: smtpHost,
+                port: smtpPortRaw ? parseInt(smtpPortRaw, 10) : 465,
+                secure: document.getElementById('super-admin-smtp-secure').checked,
+                user: document.getElementById('super-admin-smtp-user').value.trim(),
+                pass: document.getElementById('super-admin-smtp-pass').value
+            };
+            if (!payload.smtp.port || Number.isNaN(payload.smtp.port)) {
+                throw new Error('SMTP Port ist ungültig.');
+            }
+        }
+
+        const response = await fetchWithAuth(`${config.apiBaseUrl}/admin/system-config`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+        showToast('System-Konfiguration gespeichert');
+    } catch (err) {
+        console.error('Fehler beim Speichern der erweiterten Konfiguration:', err);
+        alert(`Erweiterte Konfiguration konnte nicht gespeichert werden: ${err.message || 'Unbekannter Fehler'}`);
+    }
+};
+
+window.uploadChurchLogo = async () => {
+    if (!isSuperAdminUser()) return;
+    const fileInput = document.getElementById('super-admin-logo-file');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        alert('Bitte eine SVG-Datei auswählen.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('logo', fileInput.files[0]);
+
+    try {
+        const response = await fetchWithAuth(`${config.apiBaseUrl}/admin/logo`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+        const cacheBust = `?v=${Date.now()}`;
+        document.querySelectorAll("header img[src^='assets/church-logo.svg']").forEach((img) => {
+            img.src = `assets/church-logo.svg${cacheBust}`;
+        });
+        fileInput.value = '';
+        showToast('Logo aktualisiert');
+    } catch (err) {
+        console.error('Fehler beim Logo-Upload:', err);
+        showToast('Logo konnte nicht aktualisiert werden', 'error');
+    }
+};
+
 window.saveSettings = async () => {
     settings.vollverdiener = parseFloat(document.getElementById('rate-vollverdiener').value.replace(',', '.'));
     settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value.replace(',', '.'));
@@ -2470,6 +2804,27 @@ async function fetchUserProfile(uid, retries = 2) {
     return null;
 }
 
+async function bootstrapSuperAdmin(user) {
+    try {
+        const response = await fetchWithAuth(`${config.apiBaseUrl}/admin/bootstrap-super-admin`, {
+            method: 'POST'
+        });
+        if (!response.ok) return;
+        const result = await response.json();
+        if (result.isSuperAdmin) {
+            currentUser = {
+                ...(currentUser || {}),
+                admin: true,
+                superAdmin: true
+            };
+            const freshProfile = await fetchUserProfile(user.uid, 2);
+            if (freshProfile) currentUser = freshProfile;
+        }
+    } catch (error) {
+        console.warn('Super admin bootstrap skipped:', error);
+    }
+}
+
 // Auth Listener
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -2486,6 +2841,7 @@ onAuthStateChanged(auth, async (user) => {
             setLoadingMessage('Profil nicht gefunden, bitte Admin kontaktieren.');
             currentUser = { role: 'user', email: user.email, uid: user.uid };
         }
+        await bootstrapSuperAdmin(user);
 
         document.getElementById('login-modal').classList.remove('show');
         isAuthenticated = true;
@@ -2497,6 +2853,8 @@ onAuthStateChanged(auth, async (user) => {
 
         localStorage.removeItem('juba-is-logged-in');
         isAuthenticated = false;
+        advancedConfigLoaded = false;
+        advancedConfigAppName = null;
         currentUser = null;
         document.getElementById('login-modal').classList.add('show');
         showLogin();
