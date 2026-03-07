@@ -28,7 +28,7 @@ docker run -d \
 When you first access the application at `http://localhost:3000` (or your mapped port), you will be greeted by the built-in Setup Wizard. You will need to provide:
 
 1. **App Name:** The name of your instance (e.g., Nova).
-2. **Firebase Frontend Config:** The JSON object from your Firebase Project Settings.
+2. **Firebase Frontend Config:** Either the pure JSON object from your Firebase Project Settings or the full snippet (`const firebaseConfig = { ... };`). Required fields: `apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`.
 3. **Firebase Service Account:** A newly generated private key JSON from Firebase > Project Settings > Service Accounts.
 4. **SMTP Details (Optional):** Credentials for a mail server to send automated status and request notifications.
 
