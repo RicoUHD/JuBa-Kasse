@@ -21,6 +21,7 @@ let advancedConfigLoaded = false;
 let advancedConfigAppName = null;
 let superAdminPaymentRows = [];
 let superAdminUserRows = [];
+let currentEditedPayment = null;
 
 // ⚡ Bolt: Global formatters for improved performance (avoiding re-initialization)
 const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1298,18 +1299,23 @@ function renderSuperAdminPaymentEditor() {
         return;
     }
 
-    target.innerHTML = preview.map((item, index) => `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px; border:1px solid var(--border); border-radius:10px;">
-            <div>
-                <div style="font-weight:700;">${escapeHtml(item.personName || 'Unbekannt')}</div>
-                <div style="font-size:0.85rem; color:var(--text-secondary);">
-                    ${dateFormatter.format(new Date(item.payment.date))} • ${formatCurrency(item.payment.amount)} €
-                    ${item.payment.description ? `• ${escapeHtml(item.payment.description)}` : ''}
-                </div>
-            </div>
-            <button class="btn btn-secondary btn-small" style="width:auto;" onclick="editRecordedPaymentByIndex(${index})">Bearbeiten</button>
+    const options = preview.map((item, index) => {
+        const dateText = item.payment.date ? dateFormatter.format(new Date(item.payment.date)) : 'Kein Datum';
+        const desc = item.payment.description ? ` • ${item.payment.description}` : '';
+        const label = `${item.personName || 'Unbekannt'} • ${dateText} • ${formatCurrency(item.payment.amount)} €${desc}`;
+        return `<option value="${index}">${escapeHtml(label)}</option>`;
+    }).join('');
+
+    target.innerHTML = `
+        <div class="form-group" style="margin:0;">
+            <label class="form-label" for="super-admin-payment-select">Zahlung auswählen</label>
+            <select id="super-admin-payment-select" class="form-select">
+                <option value="">Bitte wählen...</option>
+                ${options}
+            </select>
         </div>
-    `).join('');
+        <button class="btn btn-secondary btn-block" onclick="editSelectedPayment()">Ausgewählte Zahlung bearbeiten</button>
+    `;
 
     if (allPayments.length > preview.length) {
         target.innerHTML += `<div style="font-size:0.85rem; color:var(--text-secondary); margin-top:8px;">Es werden die letzten ${preview.length} Zahlungen angezeigt.</div>`;
@@ -1347,11 +1353,25 @@ window.setSupervisorAdminByIndex = async (index, isAdmin) => {
 
 window.editRecordedPaymentByIndex = async (index) => {
     const item = superAdminPaymentRows[index];
-    if (!item) return;
-    await window.editRecordedPayment(item.personId, item.paymentId, item.paymentIndex);
+    if (!item) {
+        alert('Die ausgewählte Zahlung wurde nicht gefunden. Bitte Liste aktualisieren.');
+        return;
+    }
+    await window.editRecordedPayment(item.personId, item.paymentId, item.paymentIndex, item.personName);
 };
 
-window.editRecordedPayment = async (personId, paymentId, paymentIndex) => {
+window.editSelectedPayment = async () => {
+    const select = document.getElementById('super-admin-payment-select');
+    if (!select || !select.value) {
+        alert('Bitte zuerst eine Zahlung auswählen.');
+        return;
+    }
+    const index = parseInt(select.value, 10);
+    if (Number.isNaN(index)) return;
+    await window.editRecordedPaymentByIndex(index);
+};
+
+window.editRecordedPayment = async (personId, paymentId, paymentIndex, personName = null) => {
     if (!isSuperAdminUser()) return;
     const person = people.find(p => String(p.id) === String(personId));
     if (!person) return;
@@ -1362,38 +1382,50 @@ window.editRecordedPayment = async (personId, paymentId, paymentIndex) => {
     const payment = payments[targetIndex];
     if (!payment) return;
 
-    const amountInput = prompt('Neuer Betrag (€):', String(payment.amount ?? ''));
-    if (amountInput === null) return;
-    const amount = parseFloat(String(amountInput).replace(',', '.'));
+    currentEditedPayment = { personId, targetIndex };
+    document.getElementById('edit-payment-person').textContent = personName || person.name || 'Unbekannt';
+    document.getElementById('edit-payment-amount').value = String(payment.amount ?? '');
+    document.getElementById('edit-payment-date').value = payment.date || '';
+    document.getElementById('edit-payment-desc').value = payment.description || '';
+    openModal('edit-payment-modal');
+};
+
+window.saveEditedPayment = async () => {
+    if (!isSuperAdminUser() || !currentEditedPayment) return;
+
+    const amount = parseFloat(String(document.getElementById('edit-payment-amount').value || '').replace(',', '.'));
+    const date = document.getElementById('edit-payment-date').value;
+    const description = document.getElementById('edit-payment-desc').value.trim();
+
     if (Number.isNaN(amount)) {
         alert('Ungültiger Betrag.');
         return;
     }
-
-    const date = prompt('Neues Datum (YYYY-MM-DD):', payment.date || '');
-    if (date === null) return;
+    if (!date) {
+        alert('Bitte ein Datum angeben.');
+        return;
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         alert('Ungültiges Datum.');
         return;
     }
 
-    const description = prompt('Neue Beschreibung:', payment.description || '');
-    if (description === null) return;
-
     try {
-        await mutatePerson(personId, (draft) => {
+        await mutatePerson(currentEditedPayment.personId, (draft) => {
             const nextPayments = safeList(draft.payments).map((entry, i) => {
-                if (i !== targetIndex) return entry;
+                if (i !== currentEditedPayment.targetIndex) return entry;
                 return {
                     ...entry,
                     amount,
                     date,
-                    description: description.trim()
+                    description
                 };
             });
             const totalPaid = nextPayments.reduce((acc, p) => acc + parseFloat(p.amount || 0), 0);
             return { ...draft, payments: nextPayments, totalPaid };
         });
+        closeModal('edit-payment-modal');
+        currentEditedPayment = null;
         renderAll();
         showToast('Zahlung aktualisiert');
     } catch (err) {
@@ -2556,7 +2588,11 @@ async function loadAdvancedSystemConfig() {
         advancedConfigAppName = data.appName || null;
         document.getElementById('super-admin-firebase-config').value = JSON.stringify(data.firebaseConfig || {}, null, 2);
         document.getElementById('super-admin-service-account').value = JSON.stringify(data.serviceAccount || {}, null, 2);
-        document.getElementById('super-admin-smtp-config').value = data.smtp ? JSON.stringify(data.smtp, null, 2) : '';
+        document.getElementById('super-admin-smtp-host').value = data.smtp?.host || '';
+        document.getElementById('super-admin-smtp-port').value = data.smtp?.port || '';
+        document.getElementById('super-admin-smtp-secure').checked = !!data.smtp?.secure;
+        document.getElementById('super-admin-smtp-user').value = data.smtp?.user || '';
+        document.getElementById('super-admin-smtp-pass').value = data.smtp?.pass || '';
         advancedConfigLoaded = true;
     } catch (err) {
         console.error('Fehler beim Laden der erweiterten Konfiguration:', err);
@@ -2578,8 +2614,21 @@ window.saveAdvancedSystemConfig = async () => {
             serviceAccount: JSON.parse(document.getElementById('super-admin-service-account').value || '{}'),
             smtp: null
         };
-        const smtpRaw = document.getElementById('super-admin-smtp-config').value.trim();
-        if (smtpRaw) payload.smtp = JSON.parse(smtpRaw);
+
+        const smtpHost = document.getElementById('super-admin-smtp-host').value.trim();
+        if (smtpHost) {
+            const smtpPortRaw = document.getElementById('super-admin-smtp-port').value.trim();
+            payload.smtp = {
+                host: smtpHost,
+                port: smtpPortRaw ? parseInt(smtpPortRaw, 10) : 465,
+                secure: document.getElementById('super-admin-smtp-secure').checked,
+                user: document.getElementById('super-admin-smtp-user').value.trim(),
+                pass: document.getElementById('super-admin-smtp-pass').value
+            };
+            if (!payload.smtp.port || Number.isNaN(payload.smtp.port)) {
+                throw new Error('SMTP Port ist ungültig.');
+            }
+        }
 
         const response = await fetchWithAuth(`${config.apiBaseUrl}/admin/system-config`, {
             method: 'PUT',

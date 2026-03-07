@@ -187,6 +187,7 @@
                 <div class="card-body">
                     <div class="form-group">
                         <div style="font-weight:700; margin-bottom:8px;">Benutzerrechte verwalten</div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">Aktiviert nur normale Admin-/Supervisor-Rechte (kein Super-Admin).</div>
                         <div id="super-admin-user-management" style="display:grid; gap:10px;"></div>
                     </div>
 
@@ -212,8 +213,27 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="super-admin-smtp-config">SMTP Config (JSON, optional)</label>
-                        <textarea id="super-admin-smtp-config" class="form-input" rows="5" spellcheck="false"></textarea>
+                        <label class="form-label" for="super-admin-smtp-host">SMTP Server (optional)</label>
+                        <input type="text" id="super-admin-smtp-host" class="form-input" placeholder="z.B. smtp.gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="super-admin-smtp-port">SMTP Port</label>
+                        <input type="number" id="super-admin-smtp-port" class="form-input" placeholder="z.B. 465 oder 587">
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                        <label class="switch">
+                            <input type="checkbox" id="super-admin-smtp-secure">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="super-admin-smtp-secure" style="margin:0; font-weight:600; cursor:pointer">SMTP SSL/TLS aktivieren</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="super-admin-smtp-user">SMTP Benutzername / E-Mail</label>
+                        <input type="text" id="super-admin-smtp-user" class="form-input" placeholder="z.B. mail@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="super-admin-smtp-pass">SMTP Passwort</label>
+                        <input type="password" id="super-admin-smtp-pass" class="form-input" placeholder="SMTP Passwort">
                     </div>
 
                     <button class="btn btn-secondary btn-block" onclick="saveAdvancedSystemConfig()">Erweiterte System-Konfiguration speichern</button>
@@ -459,6 +479,26 @@
             <input type="text" id="payment-desc" class="form-input" placeholder="z.B. Beitrag Mai">
         </div>
         <button id="btn-add-payment" class="btn btn-primary btn-block" onclick="addPayment()">Buchen</button>
+    </div>
+</div>
+
+<div id="edit-payment-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-edit-payment">
+    <div class="modal-content">
+        <div class="modal-header"><span id="title-edit-payment">Zahlung bearbeiten</span> <button class="close-btn" onclick="closeModal('edit-payment-modal')" aria-label="Schließen">&times;</button></div>
+        <div id="edit-payment-person" style="font-weight:700; margin-bottom:10px;"></div>
+        <div class="form-group">
+            <label class="form-label" for="edit-payment-amount">Betrag (€)</label>
+            <input type="text" inputmode="decimal" id="edit-payment-amount" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="edit-payment-date">Datum</label>
+            <input type="date" id="edit-payment-date" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="edit-payment-desc">Notiz</label>
+            <input type="text" id="edit-payment-desc" class="form-input" placeholder="z.B. Beitrag Mai">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="saveEditedPayment()">Speichern</button>
     </div>
 </div>
 
