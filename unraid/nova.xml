@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Nova</Name>
-  <Repository>&lt;dockerhub-user&gt;/nova:latest</Repository>
-  <Registry>https://hub.docker.com/r/&lt;dockerhub-user&gt;/nova</Registry>
+  <Repository>yourusername/nova:latest</Repository>
+  <Registry>https://hub.docker.com/r/yourusername/nova</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
@@ -25,7 +25,8 @@
   <Config Name="FIREBASE_DATABASE_URL" Target="FIREBASE_DATABASE_URL" Default="https://YOUR_PROJECT_ID.firebasedatabase.app" Mode="" Description="Firebase Realtime Database URL" Type="Variable" Display="always" Required="true" Mask="false">https://YOUR_PROJECT_ID.firebasedatabase.app</Config>
   <Config Name="EMAIL_USER" Target="EMAIL_USER" Default="your-email@gmail.com" Mode="" Description="Gmail address used for notifications" Type="Variable" Display="always" Required="true" Mask="false">your-email@gmail.com</Config>
   <Config Name="EMAIL_PASS" Target="EMAIL_PASS" Default="your-app-password" Mode="" Description="Gmail app password" Type="Variable" Display="always" Required="true" Mask="true">your-app-password</Config>
+  <Config Name="FIREBASE_SERVICE_ACCOUNT_PATH" Target="FIREBASE_SERVICE_ACCOUNT_PATH" Default="/app/config/firebase-service-account.json" Mode="" Description="Path to firebase-service-account.json inside the container" Type="Variable" Display="always" Required="true" Mask="false">/app/config/firebase-service-account.json</Config>
   <Config Name="NODE_ENV" Target="NODE_ENV" Default="production" Mode="" Description="Node environment" Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
   <Config Name="Uploads Path" Target="/app/backend/uploads" Default="/mnt/user/appdata/nova/uploads" Mode="rw" Description="Persistent receipt uploads directory" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nova/uploads</Config>
-  <Config Name="Firebase Service Account JSON" Target="/app/backend/firebase-service-account.json" Default="/mnt/user/appdata/nova/firebase-service-account.json" Mode="ro" Description="Host file path to firebase-service-account.json" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nova/firebase-service-account.json</Config>
+  <Config Name="Firebase Config Path" Target="/app/config" Default="/mnt/user/appdata/nova/config" Mode="ro" Description="Host directory containing firebase-service-account.json" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nova/config</Config>
 </Container>

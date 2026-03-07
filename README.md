@@ -240,7 +240,8 @@ To use it:
    - `FIREBASE_DATABASE_URL`
    - `EMAIL_USER`
    - `EMAIL_PASS`
+   - `FIREBASE_SERVICE_ACCOUNT_PATH` (template default: `/app/config/firebase-service-account.json`)
 5. Ensure path mappings are correct:
    - `/app/backend/uploads` (persistent directory)
-   - `/app/backend/firebase-service-account.json` (read-only file mount)
+   - `/app/config` (read-only directory containing `firebase-service-account.json`)
 6. Apply and start the container.

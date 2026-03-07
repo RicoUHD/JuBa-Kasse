@@ -8,7 +8,13 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer'); // <-- NEW: Import Nodemailer
 
 // Initialize Firebase Admin safely using your Service Account JSON
-const serviceAccount = require('./firebase-service-account.json');
+const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(__dirname, 'firebase-service-account.json');
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+} catch (error) {
+  throw new Error(`Failed to load Firebase service account from ${serviceAccountPath}: ${error.message}`);
+}
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: process.env.FIREBASE_DATABASE_URL
