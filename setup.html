@@ -194,12 +194,25 @@
         updateDots();
     }
 
+    function validateAppName(onError) {
+        const appNameInput = document.getElementById('appName');
+        const appName = appNameInput.value.trim();
+        appNameInput.setCustomValidity('');
+        if (!appName) {
+            onError('Bitte geben Sie einen Namen für die Anwendung ein.');
+            return null;
+        }
+        return appName;
+    }
+
     function nextStep() {
         if (currentStep < totalSteps) {
             if (currentStep === 1) {
-                const appName = document.getElementById('appName').value.trim();
-                if (!appName) {
-                    alert('Bitte geben Sie einen Namen für die Anwendung ein.');
+                if (!validateAppName((message) => {
+                    const appNameInput = document.getElementById('appName');
+                    appNameInput.setCustomValidity(message);
+                    appNameInput.reportValidity();
+                })) {
                     return;
                 }
             }
@@ -238,12 +251,13 @@
         const btn = document.getElementById('btnSubmit');
         const errorMsg = document.getElementById('errorMsg');
 
-        const appName = document.getElementById('appName').value.trim();
+        const appName = validateAppName((message) => {
+            errorMsg.innerText = message;
+            errorMsg.style.display = 'block';
+        });
         let firebaseConfig, serviceAccount;
 
         if (!appName) {
-            errorMsg.innerText = "Bitte geben Sie einen Namen für die Anwendung ein.";
-            errorMsg.style.display = 'block';
             return;
         }
 
