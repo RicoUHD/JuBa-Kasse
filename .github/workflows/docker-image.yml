@@ -40,11 +40,11 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            # Floating 'latest' tag: applies ONLY to stable releases
-            type=raw,value=latest,enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
+            # Floating 'latest' tag: applies ONLY to stable releases (never beta tags)
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && github.event.release.prerelease == false && !contains(github.event.release.tag_name, 'beta') }}
             
-            # Floating 'beta' tag: applies ONLY to pre-releases
-            type=raw,value=beta,enable=${{ github.event_name == 'release' && github.event.release.prerelease == true }}
+            # Floating 'beta' tag: applies to pre-releases and beta-tagged releases
+            type=raw,value=beta,enable=${{ github.event_name == 'release' && (github.event.release.prerelease == true || contains(github.event.release.tag_name, 'beta')) }}
             
             # The exact version from the Git tag (e.g., v1.3.0 or v1.3.1-beta)
             type=ref,event=tag
