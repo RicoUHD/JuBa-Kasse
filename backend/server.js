@@ -394,7 +394,8 @@ app.post('/api/admin/logo', verifyToken, verifySuperAdmin, logoUpload.single('lo
 
     const ext = path.extname(req.file.originalname || '').toLowerCase();
     const mime = String(req.file.mimetype || '').split(';')[0].trim().toLowerCase();
-    if (ext !== '.svg' || mime !== 'image/svg+xml') {
+    // Relaxed MIME check to account for varying client uploads, but keeping the extension check strict.
+    if (ext !== '.svg') {
       return res.status(400).json({ error: 'Only SVG files are allowed' });
     }
 
