@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <title>Nova - Vuetify 3 Preview</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.7.10/dist/vuetify.min.css" rel="stylesheet">
+  <style>
+    /* Mimic original Nova font family if possible, or stick to Roboto */
+    body { font-family: 'Roboto', sans-serif; }
+    .v-application { background-color: #f8fafc !important; }
+    .hero-amount { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
+    .stat-value { font-size: 1.25rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <v-app>
+      <!-- App Bar (Header) -->
+      <v-app-bar color="white" elevation="1">
+        <v-app-bar-nav-icon @click="drawer = !drawer" class="d-md-none"></v-app-bar-nav-icon>
+
+        <v-toolbar-title class="font-weight-bold d-flex align-center">
+          <v-icon color="cyan-darken-1" class="mr-2">mdi-church</v-icon>
+          Nova
+        </v-toolbar-title>
+
+        <v-spacer></v-spacer>
+
+        <!-- Desktop Navigation -->
+        <div class="d-none d-md-flex">
+          <v-btn variant="text" prepend-icon="mdi-home" color="cyan-darken-1" class="mr-2">Startseite</v-btn>
+          <v-btn variant="text" prepend-icon="mdi-account-group" color="grey-darken-2" class="mr-2">Personen</v-btn>
+          <v-btn variant="text" prepend-icon="mdi-history" color="grey-darken-2" class="mr-2">Historie</v-btn>
+          <v-btn variant="text" prepend-icon="mdi-robot-outline" color="grey-darken-2" class="mr-2">KI-Support</v-btn>
+          <v-btn variant="text" prepend-icon="mdi-cog" color="grey-darken-2">Einstellungen</v-btn>
+        </div>
+
+        <v-spacer></v-spacer>
+
+        <v-btn icon>
+          <v-icon>mdi-account-circle</v-icon>
+        </v-btn>
+      </v-app-bar>
+
+      <!-- Navigation Drawer (Mobile) -->
+      <v-navigation-drawer v-model="drawer" temporary>
+        <v-list nav>
+          <v-list-item prepend-icon="mdi-home" title="Startseite" active color="cyan-darken-1"></v-list-item>
+          <v-list-item prepend-icon="mdi-account-group" title="Personen"></v-list-item>
+          <v-list-item prepend-icon="mdi-history" title="Historie"></v-list-item>
+          <v-list-item prepend-icon="mdi-robot-outline" title="KI-Support"></v-list-item>
+          <v-list-item prepend-icon="mdi-cog" title="Einstellungen"></v-list-item>
+        </v-list>
+      </v-navigation-drawer>
+
+      <!-- Main Content -->
+      <v-main>
+        <v-container class="pa-4 pa-md-6" max-width="1200">
+
+          <v-row>
+            <!-- Left Column: Hero & Stats -->
+            <v-col cols="12" md="6">
+
+              <!-- Hero Card (Current Balance) -->
+              <v-card color="cyan-darken-1" theme="dark" elevation="2" class="rounded-xl mb-6 pa-6 text-center" @click="() => {}">
+                <div class="text-subtitle-1 font-weight-medium text-white text-opacity-80 text-uppercase mb-2">Aktueller Kassenstand</div>
+                <div class="hero-amount mb-2">4.250,00 €</div>
+                <div class="text-caption text-white text-opacity-70">Tippen für Details</div>
+              </v-card>
+
+              <!-- Stats Grid -->
+              <v-row>
+                <!-- Income -->
+                <v-col cols="6">
+                  <v-card elevation="1" class="rounded-lg h-100 pa-4 d-flex align-center">
+                    <v-avatar color="green-lighten-4" size="48" class="mr-4">
+                      <v-icon color="green-darken-2">mdi-arrow-top-right</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-caption text-grey-darken-1 font-weight-bold text-uppercase">Einnahmen</div>
+                      <div class="stat-value text-green-darken-2">1.200,00 €</div>
+                    </div>
+                  </v-card>
+                </v-col>
+
+                <!-- Expenses -->
+                <v-col cols="6">
+                  <v-card elevation="1" class="rounded-lg h-100 pa-4 d-flex align-center">
+                    <v-avatar color="red-lighten-4" size="48" class="mr-4">
+                      <v-icon color="red-darken-2">mdi-arrow-bottom-left</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-caption text-grey-darken-1 font-weight-bold text-uppercase">Ausgaben</div>
+                      <div class="stat-value text-red-darken-2">350,00 €</div>
+                    </div>
+                  </v-card>
+                </v-col>
+
+                <!-- Members -->
+                <v-col cols="6">
+                  <v-card elevation="1" class="rounded-lg h-100 pa-4 d-flex align-center">
+                    <v-avatar color="blue-lighten-4" size="48" class="mr-4">
+                      <v-icon color="blue-darken-2">mdi-account-group</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-caption text-grey-darken-1 font-weight-bold text-uppercase">Mitglieder</div>
+                      <div class="stat-value text-blue-darken-2">42</div>
+                    </div>
+                  </v-card>
+                </v-col>
+
+                <!-- Overdue -->
+                <v-col cols="6">
+                  <v-card elevation="1" class="rounded-lg h-100 pa-4 d-flex align-center">
+                    <v-avatar color="orange-lighten-4" size="48" class="mr-4">
+                      <v-icon color="orange-darken-2">mdi-alert-circle-outline</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-caption text-grey-darken-1 font-weight-bold text-uppercase">Überfällig</div>
+                      <div class="stat-value text-orange-darken-2">150,00 €</div>
+                    </div>
+                  </v-card>
+                </v-col>
+              </v-row>
+
+            </v-col>
+
+            <!-- Right Column: Chart Placeholder -->
+            <v-col cols="12" md="6">
+              <v-card elevation="1" class="rounded-xl h-100 d-flex flex-column pa-6">
+                <div class="text-subtitle-2 text-uppercase text-grey-darken-1 font-weight-bold mb-4">Verlauf (90 Tage)</div>
+                <div class="flex-grow-1 d-flex align-center justify-center bg-grey-lighten-4 rounded-lg" style="min-height: 250px;">
+                  <div class="text-center text-grey">
+                    <v-icon size="48" class="mb-2">mdi-chart-line</v-icon>
+                    <div>Chart Component Preview</div>
+                  </div>
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <!-- Action Buttons / Recent Requests -->
+          <v-row class="mt-6">
+             <v-col cols="12">
+               <v-card elevation="1" class="rounded-xl pa-4">
+                 <v-card-title class="text-subtitle-2 text-uppercase text-grey-darken-1 font-weight-bold px-2">Offene Anfragen (1)</v-card-title>
+                 <v-list lines="two">
+                    <v-list-item>
+                      <template v-slot:prepend>
+                        <v-avatar color="cyan-lighten-4">
+                          <v-icon color="cyan-darken-2">mdi-cash-plus</v-icon>
+                        </v-avatar>
+                      </template>
+                      <v-list-item-title class="font-weight-bold">Max Mustermann</v-list-item-title>
+                      <v-list-item-subtitle>Zahlung: 50,00 € am 12.10.2023</v-list-item-subtitle>
+                      <template v-slot:append>
+                        <div class="d-flex ga-2">
+                           <v-btn color="success" variant="flat" size="small" prepend-icon="mdi-check">Genehmigen</v-btn>
+                           <v-btn color="error" variant="outlined" size="small" prepend-icon="mdi-close">Ablehnen</v-btn>
+                        </div>
+                      </template>
+                    </v-list-item>
+                 </v-list>
+               </v-card>
+             </v-col>
+          </v-row>
+
+        </v-container>
+      </v-main>
+
+      <!-- Floating Action Button -->
+      <v-btn icon color="cyan-darken-1" size="x-large" elevation="4" class="position-fixed" style="bottom: 24px; right: 24px;">
+        <v-icon>mdi-plus</v-icon>
+      </v-btn>
+
+    </v-app>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.7.10/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp, ref } = Vue
+    const { createVuetify } = Vuetify
+
+    const vuetify = createVuetify()
+
+    const app = createApp({
+      setup() {
+        const drawer = ref(false)
+        return { drawer }
+      }
+    })
+
+    app.use(vuetify).mount('#app')
+  </script>
+</body>
+</html>
