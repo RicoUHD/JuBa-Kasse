@@ -3227,12 +3227,12 @@ window.openExportReportModal = async function() {
             if (allReportTransactions.length === 0) {
                 checklistContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-secondary);">${t('no_transactions', 'Keine Buchungen vorhanden.')}</div>`;
             } else {
-                checklistContainer.innerHTML = allReportTransactions.map(tData => {
+                checklistContainer.innerHTML = allReportTransactions.map((tData, idx) => {
                     const tDateFormatted = tData.date ? formatDateFast(tData.date) : '';
                     const isExp = tData.type === 'exp';
                     const color = isExp ? 'text-danger' : 'text-success';
                     const sign = isExp ? '-' : '+';
-                    const key = tData.id || tData.paymentId;
+                    const key = String(tData.id || tData.paymentId || `tx_${idx}`);
                     return `
                         <div class="report-checklist-item" onclick="window.toggleManualTransactionSelection('${key}')">
                             <input type="checkbox" id="chk-report-${key}" value="${key}" onclick="event.stopPropagation(); window.toggleManualTransactionSelection('${key}')">
@@ -3264,12 +3264,13 @@ window.openExportReportModal = async function() {
 };
 
 window.toggleManualTransactionSelection = function(id) {
-    const chk = document.getElementById(`chk-report-${id}`);
-    if (selectedManualTransactionIds.has(id)) {
-        selectedManualTransactionIds.delete(id);
+    const key = String(id);
+    const chk = document.getElementById(`chk-report-${key}`);
+    if (selectedManualTransactionIds.has(key)) {
+        selectedManualTransactionIds.delete(key);
         if (chk) chk.checked = false;
     } else {
-        selectedManualTransactionIds.add(id);
+        selectedManualTransactionIds.add(key);
         if (chk) chk.checked = true;
     }
     window.updateReportPreview();
@@ -3297,18 +3298,26 @@ window.updateReportPreview = function() {
     let selectedPerson = null;
     
     if (type === 'annual') {
-        const year = document.getElementById('report-year-select').value;
-        filtered = allReportTransactions.filter(tData => tData.date && tData.date.startsWith(year));
+        const year = String(document.getElementById('report-year-select').value);
+        filtered = allReportTransactions.filter(tData => (tData.date || '').slice(0, 4) === year);
         filterDesc = `${t('report_year_filter', 'Year:')} ${year}`;
     } else if (type === 'custom') {
         const from = document.getElementById('report-date-from').value;
         const to = document.getElementById('report-date-to').value;
-        filtered = allReportTransactions.filter(tData => tData.date && tData.date >= from && tData.date <= to);
+        filtered = allReportTransactions.filter(tData => {
+            const d = (tData.date || '').slice(0, 10);
+            if (from && d < from) return false;
+            if (to && d > to) return false;
+            return true;
+        });
         const fromFormatted = from ? formatDateFast(from) : '';
         const toFormatted = to ? formatDateFast(to) : '';
-        filterDesc = `${fromFormatted} - ${toFormatted}`;
+        filterDesc = (fromFormatted && toFormatted) ? `${fromFormatted} - ${toFormatted}` : (fromFormatted ? `Ab ${fromFormatted}` : (toFormatted ? `Bis ${toFormatted}` : 'Alle Buchungen'));
     } else if (type === 'manual') {
-        filtered = allReportTransactions.filter(tData => selectedManualTransactionIds.has(tData.id || tData.paymentId));
+        filtered = allReportTransactions.filter((tData, idx) => {
+            const key = String(tData.id || tData.paymentId || `tx_${idx}`);
+            return selectedManualTransactionIds.has(key);
+        });
         filterDesc = t('report_manual_selection', 'Manual Selection');
     } else if (type === 'person') {
         const selectedPersonId = document.getElementById('report-person-select').value;
@@ -3324,12 +3333,10 @@ window.updateReportPreview = function() {
             const matchesPersonFallback = !matchesPersonId && (tData.who && personName && tData.who.trim().toLowerCase() === personName.trim().toLowerCase());
 
             if (!matchesPersonId && !matchesPersonFallback) return false;
-            if (matchesPersonFallback) {
-                console.warn(`Fallback string match used for person "${personName}" on transaction: `, tData);
-            }
             
-            if (from && tData.date && tData.date < from) return false;
-            if (to && tData.date && tData.date > to) return false;
+            const d = (tData.date || '').slice(0, 10);
+            if (from && d < from) return false;
+            if (to && d > to) return false;
             return true;
         });
         
@@ -3535,20 +3542,43 @@ window.downloadReportPdf = function() {
     const appName = config.appName || "Nova";
     const safeAppName = appName.replace(/[^a-zA-Z0-9]/g, '_');
     
+    // Create an unscaled off-screen clone with normalized dimensions to prevent blank 1st page
+    const printContainer = document.createElement('div');
+    printContainer.style.position = 'fixed';
+    printContainer.style.left = '-99999px';
+    printContainer.style.top = '0';
+    printContainer.style.width = '794px';
+    printContainer.style.zIndex = '-9999';
+    printContainer.style.background = '#ffffff';
+
+    const clone = element.cloneNode(true);
+    clone.style.transform = 'none';
+    clone.style.minHeight = 'auto';
+    clone.style.width = '794px';
+    clone.style.padding = '20px 25px';
+    clone.style.margin = '0';
+    clone.style.boxSizing = 'border-box';
+    clone.style.background = '#ffffff';
+
+    printContainer.appendChild(clone);
+    document.body.appendChild(printContainer);
+
     const opt = {
-        margin: 15,
+        margin: [10, 10, 10, 10],
         filename: `${safeAppName}_Finanzbericht_${getTodayStr()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, scrollX: 0, windowWidth: 794 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['.preview-stat-card', '.preview-header', '.preview-title-block', 'tr'] }
     };
     
-    html2pdf().set(opt).from(element).save().then(() => {
+    html2pdf().set(opt).from(clone).save().then(() => {
         setButtonLoading('btn-download-pdf', false);
+        if (printContainer.parentNode) printContainer.parentNode.removeChild(printContainer);
     }).catch(err => {
         console.error('PDF generation failed:', err);
         setButtonLoading('btn-download-pdf', false);
+        if (printContainer.parentNode) printContainer.parentNode.removeChild(printContainer);
         alert(t('report_pdf_error', 'Failed to generate PDF.'));
     });
 };
