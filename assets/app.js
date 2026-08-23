@@ -3545,9 +3545,10 @@ window.downloadReportPdf = function() {
     // Create an unscaled off-screen clone with normalized dimensions to prevent blank 1st page
     const printContainer = document.createElement('div');
     printContainer.style.position = 'fixed';
-    printContainer.style.left = '-99999px';
+    printContainer.style.left = '0';
     printContainer.style.top = '0';
     printContainer.style.width = '794px';
+    printContainer.style.pointerEvents = 'none';
     printContainer.style.zIndex = '-9999';
     printContainer.style.background = '#ffffff';
 
@@ -3567,7 +3568,7 @@ window.downloadReportPdf = function() {
         margin: [10, 10, 10, 10],
         filename: `${safeAppName}_Finanzbericht_${getTodayStr()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, scrollX: 0, windowWidth: 794 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, scrollX: 0, windowWidth: 794, x: 0, y: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['.preview-stat-card', '.preview-header', '.preview-title-block', 'tr'] }
     };
