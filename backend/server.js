@@ -345,12 +345,15 @@ function extractBearerToken(req) {
 }
 
 function setAuthCookie(req, res, token) {
+  const maxAgeSeconds = 315360000; // 10 years
+  const expiresDate = new Date(Date.now() + maxAgeSeconds * 1000).toUTCString();
   const attributes = [
     `${authCookieName}=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
-    'Max-Age=7948800'
+    `Max-Age=${maxAgeSeconds}`,
+    `Expires=${expiresDate}`
   ];
   if (req.secure) {
     attributes.push('Secure');
@@ -565,6 +568,7 @@ app.post('/api/auth/register', authRateLimit, async (req, res) => {
 });
 
 app.get('/api/auth/me', authRateLimit, verifyToken, (req, res) => {
+  setAuthCookie(req, res, req.authToken);
   res.json({ user: req.user, token: req.authToken });
 });
 
@@ -587,7 +591,8 @@ app.post('/api/auth/password', authRateLimit, verifyToken, async (req, res) => {
 
   try {
     await updateOwnPassword(req.authToken, req.user.uid, oldPassword, password);
-    res.json({ success: true });
+    clearAuthCookie(req, res);
+    res.json({ success: true, loggedOut: true });
   } catch (error) {
     res.status(error.status || 400).json({ error: error.message || 'Failed to update password.' });
   }
