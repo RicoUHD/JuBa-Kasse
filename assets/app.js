@@ -4241,35 +4241,311 @@ function finalizeAssistantBubble(bubble, rawContent, reasoningContent) {
 }
 
 /**
+ * Sanitizes and normalizes user input text before sending to AI providers.
+ * - Normalizes Unicode (NFC)
+ * - Removes lone/unpaired UTF-16 surrogates to prevent UTF-8 encoding/JSON errors
+ * - Strips null bytes and unprintable control characters (preserving \n, \r, \t)
+ * - Normalizes CRLF to LF
+ */
+function sanitizeAiText(input) {
+    if (typeof input !== 'string') {
+        input = String(input || '');
+    }
+    try {
+        input = input.normalize('NFC');
+    } catch { /* ignore */ }
+
+    input = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+
+    if (typeof input.toWellFormed === 'function') {
+        input = input.toWellFormed();
+    } else {
+        input = input.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+    }
+
+    return input.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+/**
+ * Validates, sanitizes and trims chat history payload for AI providers.
+ */
+function sanitizeAiMessages(rawMessages, maxMessages = 50, maxCharPerMsg = 12000) {
+    if (!Array.isArray(rawMessages)) return [];
+
+    const sanitized = [];
+    for (const msg of rawMessages) {
+        if (!msg || typeof msg !== 'object') continue;
+        const role = msg.role === 'assistant' ? 'assistant' : (msg.role === 'user' ? 'user' : null);
+        if (!role) continue;
+
+        let content = sanitizeAiText(msg.content).trim();
+        if (!content) continue;
+
+        if (content.length > maxCharPerMsg) {
+            content = content.slice(0, maxCharPerMsg);
+        }
+
+        sanitized.push({ role, content });
+    }
+
+    return sanitized.slice(-maxMessages);
+}
+
+function extractBalancedBraces(str, startIndex) {
+    if (!str || startIndex >= str.length || str[startIndex] !== '{') return null;
+    let depth = 0;
+    for (let i = startIndex; i < str.length; i++) {
+        if (str[i] === '{') depth++;
+        else if (str[i] === '}') {
+            depth--;
+            if (depth === 0) {
+                return {
+                    content: str.slice(startIndex + 1, i),
+                    endIndex: i
+                };
+            }
+        }
+    }
+    return null;
+}
+
+function buildMathNodes(str) {
+    const frag = document.createDocumentFragment();
+    if (!str) return frag;
+
+    let i = 0;
+    while (i < str.length) {
+        // Fractions \frac{num}{den} or \dfrac or \tfrac
+        const fracMatch = str.slice(i).match(/^\\(?:frac|dfrac|tfrac)/);
+        if (fracMatch) {
+            const fracStart = i + fracMatch[0].length;
+            let firstBrace = fracStart;
+            while (firstBrace < str.length && /\s/.test(str[firstBrace])) firstBrace++;
+            const num = extractBalancedBraces(str, firstBrace);
+            if (num) {
+                let secondBrace = num.endIndex + 1;
+                while (secondBrace < str.length && /\s/.test(str[secondBrace])) secondBrace++;
+                const den = extractBalancedBraces(str, secondBrace);
+                if (den) {
+                    const fracSpan = document.createElement('span');
+                    fracSpan.className = 'ai-math-frac';
+                    const numSpan = document.createElement('span');
+                    numSpan.className = 'ai-math-num';
+                    numSpan.appendChild(buildMathNodes(num.content));
+                    const denSpan = document.createElement('span');
+                    denSpan.className = 'ai-math-den';
+                    denSpan.appendChild(buildMathNodes(den.content));
+                    fracSpan.appendChild(numSpan);
+                    fracSpan.appendChild(denSpan);
+                    frag.appendChild(fracSpan);
+                    i = den.endIndex + 1;
+                    continue;
+                }
+            }
+        }
+
+        // Square roots \sqrt{...} or \sqrt[n]{...}
+        const sqrtMatch = str.slice(i).match(/^\\sqrt(?:\[([^\]]+)\])?/);
+        if (sqrtMatch) {
+            const sqrtStart = i + sqrtMatch[0].length;
+            let bracePos = sqrtStart;
+            while (bracePos < str.length && /\s/.test(str[bracePos])) bracePos++;
+            const rad = extractBalancedBraces(str, bracePos);
+            if (rad) {
+                const sqrtSpan = document.createElement('span');
+                sqrtSpan.className = 'ai-math-sqrt';
+                if (sqrtMatch[1]) {
+                    const rootDeg = document.createElement('sup');
+                    rootDeg.className = 'ai-math-root-deg';
+                    rootDeg.textContent = sqrtMatch[1];
+                    sqrtSpan.appendChild(rootDeg);
+                }
+                const radSymbol = document.createElement('span');
+                radSymbol.className = 'ai-math-sqrt-rad';
+                radSymbol.textContent = '√';
+                const stem = document.createElement('span');
+                stem.className = 'ai-math-sqrt-stem';
+                stem.appendChild(buildMathNodes(rad.content));
+                sqrtSpan.appendChild(radSymbol);
+                sqrtSpan.appendChild(stem);
+                frag.appendChild(sqrtSpan);
+                i = rad.endIndex + 1;
+                continue;
+            }
+        }
+
+        // Text blocks \text{...} or \mathrm{...}
+        const textMatch = str.slice(i).match(/^\\(?:text|mathrm|mathbf|mathit|operatorname)/);
+        if (textMatch) {
+            const textStart = i + textMatch[0].length;
+            let bracePos = textStart;
+            while (bracePos < str.length && /\s/.test(str[bracePos])) bracePos++;
+            const textBlock = extractBalancedBraces(str, bracePos);
+            if (textBlock) {
+                const textSpan = document.createElement('span');
+                textSpan.className = 'ai-math-text';
+                textSpan.textContent = textBlock.content;
+                frag.appendChild(textSpan);
+                i = textBlock.endIndex + 1;
+                continue;
+            }
+        }
+
+        // Superscripts & Subscripts (^ and _)
+        if (str[i] === '^' || str[i] === '_') {
+            const isSup = str[i] === '^';
+            i++;
+            let scriptContent = '';
+            if (i < str.length && str[i] === '{') {
+                const scriptBlock = extractBalancedBraces(str, i);
+                if (scriptBlock) {
+                    scriptContent = scriptBlock.content;
+                    i = scriptBlock.endIndex + 1;
+                } else {
+                    scriptContent = str[i];
+                    i++;
+                }
+            } else if (i < str.length) {
+                scriptContent = str[i];
+                i++;
+            }
+            const scriptEl = document.createElement(isSup ? 'sup' : 'sub');
+            scriptEl.className = isSup ? 'ai-math-sup' : 'ai-math-sub';
+            scriptEl.appendChild(buildMathNodes(scriptContent));
+            frag.appendChild(scriptEl);
+            continue;
+        }
+
+        // Standard characters
+        frag.appendChild(document.createTextNode(str[i]));
+        i++;
+    }
+
+    return frag;
+}
+
+function parseMathToFragment(mathStr) {
+    const frag = document.createDocumentFragment();
+    if (!mathStr) return frag;
+
+    // Clean up \left and \right
+    let s = mathStr.replace(/\\left([(\[{|.\\])/g, '$1').replace(/\\right([)\]}|.\\])/g, '$1');
+
+    const symbolMap = {
+        '\\pm': '±', '\\mp': '∓', '\\times': '×', '\\cdot': '·', '\\div': '÷',
+        '\\le': '≤', '\\leq': '≤', '\\ge': '≥', '\\geq': '≥', '\\neq': '≠', '\\ne': '≠',
+        '\\approx': '≈', '\\equiv': '≡', '\\sim': '∼', '\\propto': '∝',
+        '\\sum': '∑', '\\prod': '∏', '\\int': '∫', '\\iint': '∬', '\\iiint': '∭', '\\oint': '∮',
+        '\\partial': '∂', '\\nabla': '∇', '\\infty': '∞',
+        '\\in': '∈', '\\notin': '∉', '\\subset': '⊂', '\\subseteq': '⊆', '\\cup': '∪', '\\cap': '∩', '\\emptyset': '∅',
+        '\\forall': '∀', '\\exists': '∃', '\\nexists': '∄',
+        '\\to': '→', '\\rightarrow': '→', '\\leftarrow': '←', '\\Rightarrow': '⇒', '\\Leftarrow': '⇐', '\\leftrightarrow': '↔', '\\Leftrightarrow': '⇔',
+        '\\dots': '…', '\\ldots': '…', '\\cdots': '⋯', '\\vdots': '⋮', '\\ddots': '⋱',
+        '\\circ': '∘', '\\degree': '°', '\\deg': '°',
+        '\\quad': '\u2003', '\\qquad': '\u2003\u2003', '\\,': '\u2009', '\\;': '\u2004', '\\:': '\u2005', '\\ ': ' ',
+        // Greek letters
+        '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ', '\\epsilon': 'ε', '\\varepsilon': 'ε',
+        '\\zeta': 'ζ', '\\eta': 'η', '\\theta': 'θ', '\\vartheta': 'ϑ', '\\iota': 'ι', '\\kappa': 'κ',
+        '\\lambda': 'λ', '\\mu': 'μ', '\\nu': 'ν', '\\xi': 'ξ', '\\pi': 'π', '\\varpi': 'ϖ',
+        '\\rho': 'ρ', '\\varrho': 'ϱ', '\\sigma': 'σ', '\\varsigma': 'ς', '\\tau': 'τ', '\\upsilon': 'υ',
+        '\\phi': 'φ', '\\varphi': 'ϕ', '\\chi': 'χ', '\\psi': 'ψ', '\\omega': 'ω',
+        '\\Gamma': 'Γ', '\\Delta': 'Δ', '\\Theta': 'Θ', '\\Lambda': 'Λ', '\\Xi': 'Ξ', '\\Pi': 'Π',
+        '\\Sigma': 'Σ', '\\Upsilon': 'Υ', '\\Phi': 'Φ', '\\Psi': 'Ψ', '\\Omega': 'Ω'
+    };
+
+    s = s.replace(/\\(sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|ln|log|exp|lim|min|max|sup|inf|det|gcd|deg)\b/g, '$1');
+
+    for (const [cmd, sym] of Object.entries(symbolMap)) {
+        const pattern = new RegExp(cmd.replace(/\\/g, '\\\\') + '(?![a-zA-Z])', 'g');
+        s = s.replace(pattern, sym);
+    }
+
+    return buildMathNodes(s);
+}
+
+/**
  * Lightweight Markdown → DOM fragment renderer for AI chat messages.
  * Uses DOM APIs exclusively (no innerHTML) to prevent XSS.
- * Handles: fenced code blocks, inline code, bold, italic, headers, lists, line breaks.
+ * Handles: fenced code blocks, display math, inline math, blockquotes, lists, bold, italic, headers, tables, line breaks.
  */
 function renderMarkdown(text) {
     const frag = document.createDocumentFragment();
     if (!text) return frag;
 
-    // 1. Extract fenced code blocks to protect them from inline transforms
+    // 1. Extract fenced code blocks
     const codeBlocks = [];
-    const processed = text.replace(/```(\w*)\n?([\s\S]*?)(?:```|$)/g, (_, lang, code) => {
+    let processed = text.replace(/```(\w*)\n?([\s\S]*?)(?:```|$)/g, (_, lang, code) => {
         const idx = codeBlocks.length;
         codeBlocks.push({ lang: lang || '', code: code.replace(/\n$/, '') });
         return `\x00CODE${idx}\x00`;
     });
 
-    // 2. Process lines for block-level elements
+    // 2. Extract display math blocks ($$...$$ and \[...\])
+    const mathBlocks = [];
+    processed = processed.replace(/\$\$([\s\S]*?)(?:\$\$|$)/g, (_, math) => {
+        const idx = mathBlocks.length;
+        mathBlocks.push(math.trim());
+        return `\x00MATH${idx}\x00`;
+    });
+    processed = processed.replace(/\\\[([\s\S]*?)(?:\\\]|$)/g, (_, math) => {
+        const idx = mathBlocks.length;
+        mathBlocks.push(math.trim());
+        return `\x00MATH${idx}\x00`;
+    });
+
+    // 3. Process lines for block-level elements
     const lines = processed.split('\n');
     let i = 0;
 
     while (i < lines.length) {
         const line = lines[i];
 
-        // Unordered list
-        if (/^[ \t]*[-*] /.test(line)) {
+        // Display math placeholder
+        const mathMatch = line.match(/^\x00MATH(\d+)\x00$/);
+        if (mathMatch) {
+            const mathCode = mathBlocks[parseInt(mathMatch[1], 10)];
+            const div = document.createElement('div');
+            div.className = 'ai-math-display';
+            div.appendChild(parseMathToFragment(mathCode));
+            frag.appendChild(div);
+            i++;
+            continue;
+        }
+
+        // Fenced code block placeholder
+        const codeMatch = line.match(/^\x00CODE(\d+)\x00$/);
+        if (codeMatch) {
+            const { lang, code } = codeBlocks[parseInt(codeMatch[1], 10)];
+            const pre = document.createElement('pre');
+            pre.className = 'ai-code-block';
+            const codeEl = document.createElement('code');
+            if (lang) codeEl.className = `language-${lang}`;
+            codeEl.textContent = code;
+            pre.appendChild(codeEl);
+            frag.appendChild(pre);
+            i++;
+            continue;
+        }
+
+        // Blockquotes (> ...)
+        if (/^[ \t]*>/.test(line)) {
+            const blockquote = document.createElement('blockquote');
+            const quoteLines = [];
+            while (i < lines.length && /^[ \t]*>/.test(lines[i])) {
+                quoteLines.push(lines[i].replace(/^[ \t]*>[ \t]?/, ''));
+                i++;
+            }
+            blockquote.appendChild(renderMarkdown(quoteLines.join('\n')));
+            frag.appendChild(blockquote);
+            continue;
+        }
+
+        // Unordered list (- or * or +)
+        if (/^[ \t]*[-*+] /.test(line)) {
             const ul = document.createElement('ul');
-            while (i < lines.length && /^[ \t]*[-*] /.test(lines[i])) {
+            while (i < lines.length && /^[ \t]*[-*+] /.test(lines[i])) {
                 const li = document.createElement('li');
-                appendInlineNodes(li, lines[i].replace(/^[ \t]*[-*] /, ''));
+                appendInlineNodes(li, lines[i].replace(/^[ \t]*[-*+] /, ''));
                 ul.appendChild(li);
                 i++;
             }
@@ -4277,7 +4553,7 @@ function renderMarkdown(text) {
             continue;
         }
 
-        // Ordered list
+        // Ordered list (1. 2. etc.)
         if (/^[ \t]*\d+\. /.test(line)) {
             const ol = document.createElement('ol');
             while (i < lines.length && /^[ \t]*\d+\. /.test(lines[i])) {
@@ -4290,8 +4566,8 @@ function renderMarkdown(text) {
             continue;
         }
 
-        // Headers (# ## ###)
-        const headingMatch = line.match(/^(#{1,3}) (.+)/);
+        // Headers (# to ######)
+        const headingMatch = line.match(/^(#{1,6}) (.+)/);
         if (headingMatch) {
             const level = headingMatch[1].length;
             const el = document.createElement(`h${level}`);
@@ -4323,7 +4599,6 @@ function renderMarkdown(text) {
                 const tr = document.createElement('tr');
                 const cells = rowLine.split('|');
 
-                // Remove empty first and last elements if the line starts/ends with |
                 if (cells.length > 0 && cells[0].trim() === '') cells.shift();
                 if (cells.length > 0 && cells[cells.length - 1].trim() === '') cells.pop();
 
@@ -4349,23 +4624,8 @@ function renderMarkdown(text) {
         }
 
         // Horizontal rule
-        if (/^---+$/.test(line.trim())) {
+        if (/^(?:---+|\*\*\*+|___+)$/.test(line.trim())) {
             frag.appendChild(document.createElement('hr'));
-            i++;
-            continue;
-        }
-
-        // Fenced code block placeholder
-        const codeMatch = line.match(/^\x00CODE(\d+)\x00$/);
-        if (codeMatch) {
-            const { lang, code } = codeBlocks[parseInt(codeMatch[1], 10)];
-            const pre = document.createElement('pre');
-            pre.className = 'ai-code-block';
-            const codeEl = document.createElement('code');
-            if (lang) codeEl.className = `language-${lang}`;
-            codeEl.textContent = code;
-            pre.appendChild(codeEl);
-            frag.appendChild(pre);
             i++;
             continue;
         }
@@ -4388,29 +4648,94 @@ function renderMarkdown(text) {
 }
 
 /**
- * Parses inline markdown (bold, italic, inline code) and appends DOM nodes to parent.
+ * Parses inline markdown (math, inline code, bold, italic, strikethrough, links) and appends DOM nodes.
  * Text nodes are created with createTextNode — no innerHTML, no XSS risk.
  */
 function appendInlineNodes(parent, text) {
-    // Split on inline patterns (backtick code, bold **, italic *)
-    const parts = text.split(/(`[^`]+`|\*\*(?:.+?)\*\*|\*(?:[^*]+)\*)/);
-    for (const part of parts) {
-        if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+    if (!text) return;
+
+    // Pattern to match markdown and math inline tokens
+    const regex = /(\\\([\s\S]+?\\\)|(?<!\\)\$(?!\s)(?!\d+(?:[.,]\d+)?(?:\s|[.,;!?]|$))([^\$\n]+?)(?<!\s)\$|`[^`]+`|\*\*\*(?:.+?)\*\*\*|\*\*(?:.+?)\*\*|__(?:.+?)__|\*(?:[^*]+)\*|_(?:[^_]+)_|~~(?:.+?)~~|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\))/g;
+
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            parent.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+        }
+
+        const fullMatch = match[0];
+
+        // 1. Explicit inline math \( ... \)
+        if (fullMatch.startsWith('\\(') && fullMatch.endsWith('\\)')) {
+            const mathContent = fullMatch.slice(2, -2);
+            const mathSpan = document.createElement('span');
+            mathSpan.className = 'ai-math-inline';
+            mathSpan.appendChild(parseMathToFragment(mathContent));
+            parent.appendChild(mathSpan);
+        }
+        // 2. Dollar inline math $ ... $
+        else if (fullMatch.startsWith('$') && fullMatch.endsWith('$') && fullMatch.length > 2) {
+            const mathContent = fullMatch.slice(1, -1);
+            const mathSpan = document.createElement('span');
+            mathSpan.className = 'ai-math-inline';
+            mathSpan.appendChild(parseMathToFragment(mathContent));
+            parent.appendChild(mathSpan);
+        }
+        // 3. Inline code `...`
+        else if (fullMatch.startsWith('`') && fullMatch.endsWith('`') && fullMatch.length > 2) {
             const code = document.createElement('code');
             code.className = 'ai-inline-code';
-            code.textContent = part.slice(1, -1);
+            code.textContent = fullMatch.slice(1, -1);
             parent.appendChild(code);
-        } else if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-            const strong = document.createElement('strong');
-            strong.textContent = part.slice(2, -2);
-            parent.appendChild(strong);
-        } else if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-            const em = document.createElement('em');
-            em.textContent = part.slice(1, -1);
-            parent.appendChild(em);
-        } else {
-            parent.appendChild(document.createTextNode(part));
         }
+        // 4. Bold + Italic ***...***
+        else if (fullMatch.startsWith('***') && fullMatch.endsWith('***') && fullMatch.length > 6) {
+            const strong = document.createElement('strong');
+            const em = document.createElement('em');
+            em.textContent = fullMatch.slice(3, -3);
+            strong.appendChild(em);
+            parent.appendChild(strong);
+        }
+        // 5. Bold **...** or __...__
+        else if ((fullMatch.startsWith('**') && fullMatch.endsWith('**') && fullMatch.length > 4) ||
+                 (fullMatch.startsWith('__') && fullMatch.endsWith('__') && fullMatch.length > 4)) {
+            const strong = document.createElement('strong');
+            strong.textContent = fullMatch.slice(2, -2);
+            parent.appendChild(strong);
+        }
+        // 6. Italic *...* or _..._
+        else if ((fullMatch.startsWith('*') && fullMatch.endsWith('*') && fullMatch.length > 2) ||
+                 (fullMatch.startsWith('_') && fullMatch.endsWith('_') && fullMatch.length > 2)) {
+            const em = document.createElement('em');
+            em.textContent = fullMatch.slice(1, -1);
+            parent.appendChild(em);
+        }
+        // 7. Strikethrough ~~...~~
+        else if (fullMatch.startsWith('~~') && fullMatch.endsWith('~~') && fullMatch.length > 4) {
+            const del = document.createElement('del');
+            del.textContent = fullMatch.slice(2, -2);
+            parent.appendChild(del);
+        }
+        // 8. Markdown link [text](url)
+        else if (match[3] && match[4]) {
+            const a = document.createElement('a');
+            a.href = match[4];
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = match[3];
+            parent.appendChild(a);
+        }
+        else {
+            parent.appendChild(document.createTextNode(fullMatch));
+        }
+
+        lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        parent.appendChild(document.createTextNode(text.slice(lastIndex)));
     }
 }
 
@@ -4420,7 +4745,8 @@ window.sendAiMessage = async () => {
     const sendBtn = document.getElementById('ai-chat-send-btn');
     if (!inputEl) return;
 
-    const text = inputEl.value.trim();
+    const rawText = inputEl.value;
+    const text = sanitizeAiText(rawText).trim();
     if (!text) return;
 
     inputEl.value = '';
@@ -4454,20 +4780,26 @@ window.sendAiMessage = async () => {
             throw new Error('Authentifizierung fehlgeschlagen');
         }
 
+        const validMessages = sanitizeAiMessages(aiMessages);
+        if (validMessages.length === 0) {
+            throw new Error('Keine gültige Nachricht vorhanden');
+        }
+
         const response = await fetch(`${config.apiBaseUrl}/ai/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ messages: aiMessages })
+            body: JSON.stringify({ messages: validMessages })
         });
 
         if (typingEl.parentNode) typingEl.remove();
 
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || `HTTP ${response.status}`);
+            const errMsg = errData.detail || errData.error || `HTTP ${response.status}`;
+            throw new Error(errMsg);
         }
 
         assistantBubble = appendAiMessage('assistant', '');
@@ -4506,7 +4838,10 @@ window.sendAiMessage = async () => {
         finalizeAssistantBubble(assistantBubble, assistantContent, reasoningContent);
         if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
 
-        aiMessages.push({ role: 'assistant', content: assistantContent });
+        const cleanAssistantContent = sanitizeAiText(assistantContent).trim();
+        if (cleanAssistantContent) {
+            aiMessages.push({ role: 'assistant', content: cleanAssistantContent });
+        }
     } catch (err) {
         if (typingEl.parentNode) typingEl.remove();
         console.error('KI-Chat Fehler:', err);

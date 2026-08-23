@@ -14,7 +14,7 @@ const cron = require('node-cron');
 const { runAutomatedStandingOrders } = require('./standingOrders');
 const { aggregateStats } = require('./stats');
 const { getPaginatedTransactions } = require('./transactions');
-const { getAiSettings, setAiSettings, buildDatabaseSnapshot, buildSystemPrompt } = require('./ai');
+const { getAiSettings, setAiSettings, buildDatabaseSnapshot, buildSystemPrompt, sanitizeAiMessages } = require('./ai');
 
 const sseClients = new Set();
 function broadcastDataUpdate() {
@@ -1391,16 +1391,10 @@ app.post('/api/ai/chat', aiChatRateLimit, verifyToken, verifyAdmin, async (req, 
       return res.status(400).json({ error: 'messages array is required' });
     }
 
-    const ALLOWED_ROLES = new Set(['user', 'assistant']);
-    if (rawMessages.some((m) => !ALLOWED_ROLES.has(m.role))) {
-      return res.status(400).json({ error: 'Invalid message role. Only "user" and "assistant" are allowed.' });
+    const messages = sanitizeAiMessages(rawMessages, 50, 12000);
+    if (messages.length === 0) {
+      return res.status(400).json({ error: 'No valid non-empty messages found in payload' });
     }
-
-    const MAX_MESSAGES = 50;
-    const messages = rawMessages.slice(-MAX_MESSAGES).map((m) => ({
-      role: m.role,
-      content: String(m.content || '').slice(0, 8000)
-    }));
 
     const baseUrl = (aiSettings.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
     const apiKey = aiSettings.apiKey || '';
@@ -1425,7 +1419,14 @@ app.post('/api/ai/chat', aiChatRateLimit, verifyToken, verifyAdmin, async (req, 
     if (!aiRes.ok) {
       const errText = await aiRes.text().catch(() => '');
       console.error('AI provider error:', aiRes.status, errText);
-      return res.status(502).json({ error: 'AI provider returned an error', detail: errText.slice(0, 200) });
+      let detailMsg = errText;
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.error?.message) {
+          detailMsg = parsed.error.message;
+        }
+      } catch {}
+      return res.status(502).json({ error: 'AI provider returned an error', detail: String(detailMsg || '').slice(0, 300) });
     }
 
     res.setHeader('Content-Type', 'text/event-stream');
