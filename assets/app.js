@@ -3544,7 +3544,7 @@ window.downloadReportPdf = function() {
     
     // Create an unscaled off-screen clone with normalized dimensions to prevent blank 1st page
     const printContainer = document.createElement('div');
-    printContainer.style.position = 'fixed';
+    printContainer.style.position = 'absolute';
     printContainer.style.left = '0';
     printContainer.style.top = '0';
     printContainer.style.width = '794px';
@@ -3556,7 +3556,7 @@ window.downloadReportPdf = function() {
     clone.style.transform = 'none';
     clone.style.minHeight = 'auto';
     clone.style.width = '794px';
-    clone.style.padding = '20px 25px';
+    clone.style.setProperty('padding', '30px 35px', 'important');
     clone.style.margin = '0';
     clone.style.boxSizing = 'border-box';
     clone.style.background = '#ffffff';
@@ -3565,10 +3565,10 @@ window.downloadReportPdf = function() {
     document.body.appendChild(printContainer);
 
     const opt = {
-        margin: [10, 10, 10, 10],
+        margin: 0,
         filename: `${safeAppName}_Finanzbericht_${getTodayStr()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, scrollX: 0, windowWidth: 794, x: 0, y: 0 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, scrollX: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['.preview-stat-card', '.preview-header', '.preview-title-block', 'tr'] }
     };
