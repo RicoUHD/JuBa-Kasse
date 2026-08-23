@@ -1385,19 +1385,34 @@ input:checked + .slider:before { transform: translateX(22px); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px 10px;
+    padding: 18px 10px;
     gap: 8px;
     height: 100%;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+}
+.user-action-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+}
+.user-action-btn:active {
+    transform: scale(0.96);
 }
 .user-action-icon svg {
-    width: 32px;
-    height: 32px;
-    stroke: var(--text-secondary);
+    width: 30px;
+    height: 30px;
+    stroke: var(--primary);
     transition: 0.2s;
 }
 
 .user-action-label {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .user-info-grid {

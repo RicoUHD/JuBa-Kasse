@@ -594,8 +594,17 @@ app.post('/api/auth/password', authRateLimit, verifyToken, async (req, res) => {
 });
 
 function isOwnFullNameMatch(user, name) {
-  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
-  return !!fullName && fullName === String(name || '').trim().toLowerCase();
+  if (!user) return false;
+  const userFull = (user.name || `${user.firstName || ''} ${user.lastName || ''}`).trim().toLowerCase();
+  const targetName = String(name || '').trim().toLowerCase();
+  if (userFull && userFull === targetName) return true;
+
+  const userParts = [user.firstName, user.lastName].filter(Boolean).map((s) => String(s).trim().toLowerCase());
+  const targetParts = targetName.split(/\s+/).filter(Boolean);
+  if (userParts.length > 0 && userParts.length === targetParts.length) {
+    if (userParts.every((part) => targetParts.includes(part))) return true;
+  }
+  return false;
 }
 
 // ⚡ Bolt: Replaced Array.reduce with a for loop to minimize callback overhead on large dataset hydration
@@ -690,7 +699,7 @@ async function readLogicalPath(targetPath, query, user) {
     if (id) {
       const record = await getPeopleRecord(appConfig, id);
       const value = record?.data || null;
-      if (value && !user.admin && value.uid !== user.uid) {
+      if (value && !user.admin && value.uid !== user.uid && !isOwnFullNameMatch(user, value.name || record?.name)) {
         const error = new Error('Forbidden');
         error.status = 403;
         throw error;
@@ -700,7 +709,7 @@ async function readLogicalPath(targetPath, query, user) {
 
     let people = await listPeopleRecords(appConfig, query);
     if (!user.admin) {
-      people = people.filter((record) => record.uid === user.uid || isOwnFullNameMatch(user, record.name));
+      people = people.filter((record) => record.uid === user.uid || (record.data && record.data.uid === user.uid) || isOwnFullNameMatch(user, record.name || record.data?.name));
     }
     return {
       value: objectFromRecords(people, 'personKey', (record) => record.data),
@@ -712,7 +721,7 @@ async function readLogicalPath(targetPath, query, user) {
     if (id) {
       const record = await getRequestRecord(appConfig, id);
       const value = record?.data || null;
-      if (value && !user.admin && value.userId !== user.uid) {
+      if (value && !user.admin && value.userId !== user.uid && record?.userId !== user.uid) {
         const error = new Error('Forbidden');
         error.status = 403;
         throw error;
@@ -722,7 +731,7 @@ async function readLogicalPath(targetPath, query, user) {
 
     let requests = await listRequestRecords(appConfig, query);
     if (!user.admin) {
-      requests = requests.filter((record) => record.userId === user.uid);
+      requests = requests.filter((record) => record.userId === user.uid || record.data?.userId === user.uid);
     }
     return {
       value: objectFromRecords(requests, 'requestKey', (record) => record.data),
@@ -830,7 +839,7 @@ async function writeLogicalPath(targetPath, value, user, method = 'set') {
     if (!user.admin) {
       const requestedUid = value && typeof value === 'object' ? value.uid : undefined;
       const onlyUidUpdate = value && typeof value === 'object' && Object.keys(value).every((key) => key === 'uid');
-      const isAllowedLink = existingValue && onlyUidUpdate && requestedUid === user.uid && (!existingValue.uid || existingValue.uid === user.uid) && isOwnFullNameMatch(user, existingValue.name);
+      const isAllowedLink = existingValue && onlyUidUpdate && requestedUid === user.uid && (!existingValue.uid || existingValue.uid === user.uid) && isOwnFullNameMatch(user, existingValue.name || existing?.name);
       if (!isAllowedLink) {
         throw Object.assign(new Error('Admin access required'), { status: 403 });
       }
@@ -843,19 +852,28 @@ async function writeLogicalPath(targetPath, value, user, method = 'set') {
   }
 
   if (root === 'requests' && id) {
+    if (!value || typeof value !== 'object') {
+      throw Object.assign(new Error('Invalid request payload'), { status: 400 });
+    }
+    if (!value.userId) {
+      value.userId = user.uid;
+    }
     if (!user.admin) {
-      if (method !== 'set' || !value || value.userId !== user.uid) {
+      if (method !== 'set' || String(value.userId) !== String(user.uid)) {
         throw Object.assign(new Error('Forbidden'), { status: 403 });
       }
     }
     const existing = await getRequestRecord(appConfig, id);
-    if (existing && existing.data && !user.admin && existing.data.userId !== user.uid) {
+    if (existing && existing.data && !user.admin && String(existing.data.userId || existing.userId) !== String(user.uid)) {
       throw Object.assign(new Error('Forbidden'), { status: 403 });
     }
     const nextValue = method === 'patch' && existing?.data && value && typeof value === 'object'
       ? { ...existing.data, ...value }
       : value;
-    if (!user.admin && nextValue.userId !== user.uid) {
+    if (!nextValue.userId) {
+      nextValue.userId = user.uid;
+    }
+    if (!user.admin && String(nextValue.userId) !== String(user.uid)) {
       throw Object.assign(new Error('Forbidden'), { status: 403 });
     }
     await upsertRequestRecord(appConfig, id, nextValue);
@@ -1237,7 +1255,7 @@ app.get('/api/profile/picture/:uid', protectedActionRateLimit, verifyToken, (req
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(filePath);
   } else {
-    res.status(404).send('Not found');
+    res.status(204).end();
   }
 });
 
@@ -1300,7 +1318,7 @@ app.post('/api/notify-admins', protectedActionRateLimit, verifyToken, async (req
     }
 
     if (!transporter || !appConfig?.smtp?.user) {
-      return res.status(500).json({ error: 'SMTP not configured' });
+      return res.status(200).json({ skipped: true, message: 'SMTP not configured' });
     }
 
     const info = await transporter.sendMail({
