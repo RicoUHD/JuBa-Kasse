@@ -917,8 +917,9 @@ body { background-color: var(--bg); color: var(--text); height: 100dvh; overflow
 .trans-item:active {
     transform: scale(0.97);
 }
-.trans-left { display: flex; flex-direction: column; }
-.trans-meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; }
+.trans-left { display: flex; flex-direction: column; min-width: 0; }
+.trans-meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; min-width: 0; }
+.trans-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .trans-amount { font-weight: 700; }
 
 .trans-icon-wrapper {

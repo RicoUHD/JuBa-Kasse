@@ -2980,24 +2980,25 @@ window.renderHistoryTab = async function(resetLimit = true) {
                 iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>';
             }
 
-            const hasReceipt = tData.receipt ? `<span class="receipt-badge-inline" title="${escapeHtml(t('modal_expense_receipt', 'Beleg vorhanden'))}" style="display:inline-flex; align-items:center; vertical-align:-2px; margin-left:6px; color:var(--primary); opacity:0.85;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></span>` : '';
+            const hasReceipt = tData.receipt ? `<span class="receipt-badge-inline" title="${escapeHtml(t('modal_expense_receipt', 'Beleg vorhanden'))}" style="display:inline-flex; align-items:center; vertical-align:-2px; margin-left:6px; color:var(--primary); opacity:0.85; flex-shrink: 0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></span>` : '';
 
             const uidAttr = (tData.type === 'pay' && tData.personUid) ? ` data-uid="${tData.personUid}"` : '';
 
             const hasDesc = !!(tData.description && tData.description.trim());
-            const metaHtml = (hasDesc || hasReceipt) ? `<div class="trans-meta">${hasDesc ? escapeHtml(tData.description) : ''}${hasReceipt}</div>` : '';
+            const descHtml = hasDesc ? `<span class="trans-desc">${escapeHtml(tData.description)}</span>` : '';
+            const metaHtml = (hasDesc || hasReceipt) ? `<div class="trans-meta">${descHtml}${hasReceipt}</div>` : '';
             html += `
                 <div class="trans-item" role="button" tabindex="0" data-id="${escapeHtml(tData.id)}" data-type="${escapeHtml(tData.type)}" onclick="showTransactionDetails(this.dataset.id, this.dataset.type)" onkeydown="if(event.key==='Enter'||event.key===' '){showTransactionDetails(this.dataset.id, this.dataset.type)}" style="cursor:pointer;">
-                    <div style="display: flex; align-items: center; flex: 1;">
+                    <div style="display: flex; align-items: center; flex: 1; min-width: 0;">
                         <div class="trans-icon-wrapper ${iconClass}"${uidAttr}>
                             ${iconSvg}
                         </div>
-                        <div class="trans-left" style="flex: 1;">
-                            <span style="font-weight:600;">${escapeHtml(tData.who)}</span>
+                        <div class="trans-left" style="flex: 1; min-width: 0;">
+                            <span style="font-weight:600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(tData.who)}</span>
                             ${metaHtml}
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center;">
+                    <div style="display: flex; align-items: center; margin-left: 12px; flex-shrink: 0;">
                         <div class="trans-amount ${color}" style="font-size: 1.1rem;">${sign}${formatCurrency(tData.amount)}€</div>
                     </div>
                 </div>
@@ -5693,7 +5694,7 @@ window.showTransactionDetails = async function(id, type) {
                 ${(item.description || item.note) ? `
                 <div style="display:flex; flex-direction:column; gap:4px; padding-top:2px;">
                     <span style="color:var(--text-secondary); font-size:0.82rem; font-weight:500;">📝 ${escapeHtml(t('details_description', 'Beschreibung'))}</span>
-                    <span style="font-weight:500; color:var(--text); background:var(--surface); padding:8px 12px; border-radius:10px; border:1px solid var(--border);">${escapeHtml(item.description || item.note)}</span>
+                    <span style="font-weight:500; color:var(--text); background:var(--surface); padding:8px 12px; border-radius:10px; border:1px solid var(--border); word-break:break-word; white-space:pre-wrap;">${escapeHtml(item.description || item.note)}</span>
                 </div>` : ''}
             </div>
         </div>
