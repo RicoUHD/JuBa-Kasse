@@ -1,3 +1,0 @@
-## 2026-08-24 - Avoid Duplicate Financial Calculations in Server-Side Preprocessing
-**Learning:** `preprocessPersonServerSide` calculates `currentBalance` via month-by-month financial loops (`calculateTotalCostUntil`), and then `calculateOverdueAmount` was re-invoking `calculateCurrentBalance` from scratch for overdue members. Passing `currentBalance` into `calculateOverdueAmount` eliminated duplicate calculations.
-**Action:** When calculating derived member properties, check if expensive aggregates (like account balance or total cost) have already been computed before triggering secondary balance helpers.
