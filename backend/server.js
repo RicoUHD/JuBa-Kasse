@@ -830,7 +830,7 @@ async function readLogicalPath(targetPath, query, user) {
 function toUserValue(record) {
   const isOwner = record.owner === true || record.superAdmin === true;
   const isPlaceholder = isPlaceholderEmail(record.email);
-  const isClaimed = record.isClaimed !== false && !isPlaceholder;
+  const isClaimed = !isPlaceholder;
   return {
     firstName: record.firstName || '',
     lastName: record.lastName || '',
@@ -1234,7 +1234,7 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
     const formatted = users.map((u) => {
       const isOwner = u.id === ownerUid || u.owner === true || u.superAdmin === true;
       const isPlaceholder = isPlaceholderEmail(u.email);
-      const isClaimed = u.isClaimed !== false && !isPlaceholder;
+      const isClaimed = !isPlaceholder;
       const linkedPerson = people.find(p => p.uid === u.id || (p.data && p.data.uid === u.id));
       const memberSince = linkedPerson?.memberSince || linkedPerson?.data?.memberSince || '';
       const status = linkedPerson?.status || linkedPerson?.data?.status || '';
@@ -1470,11 +1470,19 @@ app.delete('/api/admin/users/:uid', verifyToken, verifyAdmin, async (req, res) =
       return res.status(400).json({ error: 'Der Eigentümer-Account kann nicht gelöscht werden.' });
     }
 
-    if (uid === req.user.uid) {
-      return res.status(400).json({ error: 'Sie können Ihren eigenen Account hier nicht löschen.' });
+    await deleteUserRecord(appConfig, uid);
+
+    // Also remove from people/paylist
+    try {
+      const people = await listPeopleRecords(appConfig);
+      const matchingPeople = people.filter(p => p.uid === uid || (p.data && p.data.uid === uid) || p.personKey === uid);
+      for (const p of matchingPeople) {
+        await removePeopleRecord(appConfig, p.personKey);
+      }
+    } catch (err) {
+      console.warn(`[PocketBase] Failed to clean up linked person for deleted user ${uid}:`, err.message);
     }
 
-    await deleteUserRecord(appConfig, uid);
     broadcastDataUpdate();
     res.json({ success: true });
   } catch (error) {

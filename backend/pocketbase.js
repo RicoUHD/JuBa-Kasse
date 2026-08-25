@@ -209,14 +209,14 @@ function decodeTokenPayload(token) {
 function isPlaceholderEmail(email) {
   if (!email) return true;
   const str = String(email).toLowerCase().trim();
-  return str.endsWith('@agora.local') || str.endsWith('@local.invalid') || str.startsWith('unclaimed_');
+  return str.endsWith('@agora.local') || str.endsWith('@nova.local') || str.endsWith('@local.invalid') || str.startsWith('unclaimed_');
 }
 
 function toPublicUser(record) {
   if (!record) return null;
   const isOwner = record.owner === true || record.superAdmin === true;
   const isPlaceholder = isPlaceholderEmail(record.email);
-  const isClaimed = record.isClaimed !== false && !isPlaceholder;
+  const isClaimed = !isPlaceholder;
   return {
     uid: record.id,
     id: record.id,
@@ -908,6 +908,19 @@ async function migrateUserAndOwnerSchema(appConfig) {
       needsPatch = true;
     }
 
+    const isPlaceholder = isPlaceholderEmail(userRecord.email);
+    if (!isPlaceholder) {
+      if (userRecord.isClaimed !== true) {
+        updates.isClaimed = true;
+        needsPatch = true;
+      }
+    } else {
+      if (userRecord.isClaimed !== false) {
+        updates.isClaimed = false;
+        needsPatch = true;
+      }
+    }
+
     if (needsPatch) {
       try {
         await updateUserRecord(appConfig, userRecord.id, updates);
@@ -917,26 +930,57 @@ async function migrateUserAndOwnerSchema(appConfig) {
     }
   });
 
-  // Link any legacy people records that were created without uid
+  // Ensure every person record has a corresponding user record in the users collection
   try {
     const people = await listPeopleRecords(appConfig);
+    const freshUsers = await listAllRecords('users', '', appConfig);
+
     for (const p of people) {
-      if (!p.uid && p.name) {
-        const normPersonName = p.name.trim().toLowerCase();
-        const match = users.find(u => {
+      const personName = (p.name || p.data?.name || '').trim();
+      const existingUid = p.uid || p.data?.uid;
+      let linkedUser = existingUid ? freshUsers.find(u => u.id === existingUid) : null;
+
+      if (!linkedUser && personName) {
+        const normPersonName = personName.toLowerCase();
+        linkedUser = freshUsers.find(u => {
           const uFull = `${u.firstName || ''} ${u.lastName || ''}`.trim().toLowerCase();
           const uName = String(u.name || '').trim().toLowerCase();
           return uFull === normPersonName || uName === normPersonName;
         });
-        if (match) {
+      }
+
+      if (linkedUser) {
+        if (p.uid !== linkedUser.id || p.data?.uid !== linkedUser.id) {
           const existingData = p.data || {};
-          existingData.uid = match.id;
+          existingData.uid = linkedUser.id;
           await upsertPeopleRecord(appConfig, p.personKey, existingData);
         }
+      } else if (personName) {
+        const nameParts = personName.split(/\s+/);
+        const firstName = nameParts[0] || personName;
+        const lastName = nameParts.slice(1).join(' ');
+
+        const createdAuth = await registerUser({
+          email: '',
+          password: '',
+          firstName,
+          lastName,
+          admin: false,
+          owner: false,
+          pays: p.data?.pays !== false && p.pays !== false,
+          groups: [],
+          isClaimed: false
+        }, appConfig);
+
+        const newUid = createdAuth.user.id || createdAuth.user.uid;
+        const existingData = p.data || {};
+        existingData.uid = newUid;
+        await upsertPeopleRecord(appConfig, p.personKey, existingData);
+        freshUsers.push(createdAuth.created || { id: newUid, firstName, lastName, name: personName });
       }
     }
   } catch (err) {
-    console.warn('[PocketBase Migration] Could not link legacy people records:', err.message);
+    console.warn('[PocketBase Migration] Could not link or create user records for legacy people:', err.message);
   }
 }
 
