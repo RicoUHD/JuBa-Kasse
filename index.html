@@ -11,14 +11,23 @@
     <link rel="modulepreload" href="assets/app.js">
     <link rel="modulepreload" href="assets/pocketbase-compat.js">
     <link rel="stylesheet" href="assets/style.css">
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('agora-theme') || localStorage.getItem('nova-theme') || 'system';
+                var theme = stored === 'system' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : stored;
+                if (theme) document.documentElement.setAttribute('data-theme', theme);
+            } catch(e) {}
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
-<div id="loading-overlay">
+<div id="loading-overlay" style="display: flex;">
     <div class="spinner"></div>
-    <div id="loading-message" style="font-weight:600; color:#333; margin-top: 20px;" data-i18n="loading">Lade Daten...</div>
+    <div id="loading-message" style="font-weight:600; color:var(--text); margin-top: 20px;" data-i18n="loading">Lade Daten...</div>
     <div class="loading-footer"><span id="app-name-footer">Agora</span> &copy; 2026</div>
 </div>
 
@@ -1346,7 +1355,7 @@
     </div>
 </div>
 
-<div id="login-modal" class="modal show" style="z-index:2000;" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+<div id="login-modal" class="modal" style="z-index:2000;" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <div class="modal-content" style="max-width: 400px;">
         <div class="login-header">
             <div class="login-brand">

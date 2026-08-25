@@ -157,6 +157,22 @@ const DEFAULT_COLLECTION_SPECS = [
       { name: 'key', type: 'text', required: true },
       { name: 'value', type: 'json' }
     ]
+  },
+  {
+    name: 'groups',
+    type: 'base',
+    listRule: '@request.auth.admin = true || @request.auth.owner = true',
+    viewRule: '@request.auth.admin = true || @request.auth.owner = true',
+    createRule: '@request.auth.admin = true || @request.auth.owner = true',
+    updateRule: '@request.auth.admin = true || @request.auth.owner = true',
+    deleteRule: '@request.auth.admin = true || @request.auth.owner = true',
+    indexes: [
+      'CREATE UNIQUE INDEX idx_groups_name ON groups (name)'
+    ],
+    fields: [
+      { name: 'name', type: 'text', required: true },
+      { name: 'permissions', type: 'json' }
+    ]
   }
 ];
 
@@ -1324,6 +1340,94 @@ async function upsertRequestRecord(appConfig, requestKey, value) {
   return createRecord('requests', buildRequestRecordPayload(requestKey, value), appConfig);
 }
 
+function resolveUserPermissions(userGroups = [], allGroups = []) {
+  const groupIds = Array.isArray(userGroups) ? userGroups : (userGroups ? [String(userGroups)] : []);
+  const matchingGroups = (Array.isArray(allGroups) ? allGroups : []).filter((g) => groupIds.includes(g.id) || groupIds.includes(g.name));
+  const permSet = new Set();
+  for (const g of matchingGroups) {
+    const perms = Array.isArray(g.permissions) ? g.permissions : [];
+    for (const p of perms) {
+      if (typeof p === 'string' && p.trim()) {
+        permSet.add(p.trim());
+      }
+    }
+  }
+  const permissions = Array.from(permSet);
+  const canManageFinances = permissions.includes('manage_finances');
+  const canViewFinances = canManageFinances || permissions.includes('view_finances');
+  return {
+    permissions,
+    canManageFinances,
+    canViewFinances
+  };
+}
+
+async function listGroupRecords(appConfig = null) {
+  try {
+    const records = await listAllRecords('groups', 'name ASC', appConfig);
+    return records.map((r) => ({
+      id: r.id,
+      name: r.name || '',
+      permissions: Array.isArray(r.permissions) ? r.permissions : []
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function getGroupRecord(appConfig, id) {
+  const token = await authenticateSuperuser(appConfig);
+  const record = await pocketBaseRequest(`/api/collections/groups/records/${id}`, { token });
+  return {
+    id: record.id,
+    name: record.name || '',
+    permissions: Array.isArray(record.permissions) ? record.permissions : []
+  };
+}
+
+async function createGroupRecord(appConfig, { name, permissions = [] }) {
+  const token = await authenticateSuperuser(appConfig);
+  const record = await pocketBaseRequest('/api/collections/groups/records', {
+    method: 'POST',
+    token,
+    body: {
+      name: String(name || '').trim(),
+      permissions: Array.isArray(permissions) ? permissions : []
+    }
+  });
+  return {
+    id: record.id,
+    name: record.name || '',
+    permissions: Array.isArray(record.permissions) ? record.permissions : []
+  };
+}
+
+async function updateGroupRecord(appConfig, id, { name, permissions }) {
+  const token = await authenticateSuperuser(appConfig);
+  const body = {};
+  if (name !== undefined) body.name = String(name).trim();
+  if (permissions !== undefined) body.permissions = Array.isArray(permissions) ? permissions : [];
+  const record = await pocketBaseRequest(`/api/collections/groups/records/${id}`, {
+    method: 'PATCH',
+    token,
+    body
+  });
+  return {
+    id: record.id,
+    name: record.name || '',
+    permissions: Array.isArray(record.permissions) ? record.permissions : []
+  };
+}
+
+async function deleteGroupRecord(appConfig, id) {
+  const token = await authenticateSuperuser(appConfig);
+  await pocketBaseRequest(`/api/collections/groups/records/${id}`, {
+    method: 'DELETE',
+    token
+  });
+  return true;
+}
+
 module.exports = {
   DEFAULT_SETTINGS,
   DEFAULT_SYSTEM_STATE,
@@ -1360,6 +1464,12 @@ module.exports = {
   adminResetUserPassword,
   claimUserAccount,
   isPlaceholderEmail,
+  listGroupRecords,
+  getGroupRecord,
+  createGroupRecord,
+  updateGroupRecord,
+  deleteGroupRecord,
+  resolveUserPermissions,
   listPeopleRecords,
   getPeopleRecord,
   upsertPeopleRecord,
