@@ -9,19 +9,19 @@ test('resolveDataDirectory defaults to the persistent /app/data-compatible path'
 });
 
 test('resolveDataDirectory honors DATA_DIR overrides', () => {
-  assert.equal(resolveDataDirectory({ env: { DATA_DIR: '/tmp/nova-data' } }), '/tmp/nova-data');
+  assert.equal(resolveDataDirectory({ env: { DATA_DIR: '/tmp/nova-data' } }), path.resolve('/tmp/nova-data'));
 });
 
 test('resolvePocketBaseDirectory honors POCKETBASE_DIR overrides', () => {
   assert.equal(resolvePocketBaseDirectory({
     env: { POCKETBASE_DIR: '/tmp/nova-db' }
-  }), '/tmp/nova-db');
+  }), path.resolve('/tmp/nova-db'));
 });
 
 test('resolvePocketBaseDirectory honors DB_DIR overrides', () => {
   assert.equal(resolvePocketBaseDirectory({
     env: { DB_DIR: '/tmp/nova-db' }
-  }), '/tmp/nova-db');
+  }), path.resolve('/tmp/nova-db'));
 });
 
 test('resolvePocketBaseDirectory uses bundled /app/db when available', () => {
@@ -41,7 +41,7 @@ test('resolvePocketBaseDirectory falls back to the data directory for local deve
 test('resolveFrontendDirectory prefers FRONTEND_DIR overrides', () => {
   assert.equal(resolveFrontendDirectory({
     env: { FRONTEND_DIR: '/tmp/nova-html' }
-  }), '/tmp/nova-html');
+  }), path.resolve('/tmp/nova-html'));
 });
 
 test('resolveFrontendDirectory uses bundled /app/html when available', () => {

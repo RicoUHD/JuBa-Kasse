@@ -143,8 +143,11 @@ async function buildDatabaseSnapshot(appConfig) {
         firstName: u.firstName || '',
         lastName: u.lastName || '',
         email: u.email || '',
-        admin: u.admin,
-        superAdmin: u.superAdmin
+        admin: u.admin === true,
+        owner: u.owner === true || u.superAdmin === true,
+        superAdmin: u.owner === true || u.superAdmin === true,
+        pays: u.pays !== false,
+        groups: Array.isArray(u.groups) ? u.groups : []
     }));
 
     const snapshot = {
