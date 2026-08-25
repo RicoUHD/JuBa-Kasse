@@ -141,7 +141,7 @@ test('buildPocketBaseError prefers detailed field validation messages', () => {
 test('generatePocketBaseCredentials returns docker-local defaults', () => {
   const credentials = generatePocketBaseCredentials();
   assert.equal(credentials.url, 'http://127.0.0.1:8090');
-  assert.match(credentials.adminEmail, /^nova-.*@local\.invalid$/);
+  assert.match(credentials.adminEmail, /^agora-.*@local\.invalid$/);
   assert.ok(credentials.adminPassword.length >= 20);
 });
 

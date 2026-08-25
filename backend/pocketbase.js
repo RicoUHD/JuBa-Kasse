@@ -176,7 +176,7 @@ function generatePocketBaseCredentials() {
   return {
     url: getPocketBaseBaseUrl(),
     // Internal-only superuser used by the bundled backend to provision PocketBase.
-    adminEmail: `nova-${crypto.randomUUID()}@local.invalid`,
+    adminEmail: `agora-${crypto.randomUUID()}@local.invalid`,
     adminPassword: crypto.randomBytes(24).toString('base64url')
   };
 }

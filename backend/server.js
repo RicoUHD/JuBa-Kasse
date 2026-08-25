@@ -81,7 +81,8 @@ let appConfig = null;
 let setupMode = true;
 let transporter = null;
 let runtimeReady = Promise.resolve();
-const authCookieName = 'nova_auth';
+const authCookieName = 'agora_auth';
+const legacyAuthCookieName = 'nova_auth';
 
 function buildSmtpTransport(smtp) {
   if (!smtp) return null;
@@ -344,12 +345,16 @@ function extractBearerToken(req) {
   }
 
   const cookieHeader = req.headers.cookie || '';
-  const cookie = cookieHeader
+  const entries = cookieHeader
     .split(';')
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith(`${authCookieName}=`));
+    .map((entry) => entry.trim());
 
-  return cookie ? decodeURIComponent(cookie.slice(authCookieName.length + 1)) : null;
+  const cookie = entries.find((entry) => entry.startsWith(`${authCookieName}=`))
+    || entries.find((entry) => entry.startsWith(`${legacyAuthCookieName}=`));
+
+  if (!cookie) return null;
+  const name = cookie.startsWith(`${authCookieName}=`) ? authCookieName : legacyAuthCookieName;
+  return decodeURIComponent(cookie.slice(name.length + 1));
 }
 
 function setAuthCookie(req, res, token) {
@@ -370,11 +375,13 @@ function setAuthCookie(req, res, token) {
 }
 
 function clearAuthCookie(req, res) {
-  const attributes = [`${authCookieName}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
-  if (req.secure) {
-    attributes.push('Secure');
-  }
-  res.setHeader('Set-Cookie', attributes.join('; '));
+  const cookiesToClear = [authCookieName, legacyAuthCookieName];
+  const setCookies = cookiesToClear.map(name => {
+    const attributes = [`${name}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
+    if (req.secure) attributes.push('Secure');
+    return attributes.join('; ');
+  });
+  res.setHeader('Set-Cookie', setCookies);
 }
 
 async function verifyToken(req, res, next) {

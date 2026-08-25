@@ -239,7 +239,7 @@ function sanitizeAiMessages(rawMessages, maxMessages = 50, maxCharPerMsg = 12000
  * @param {string} dbSnapshot - JSON string from buildDatabaseSnapshot.
  */
 function buildSystemPrompt(appName, dbSnapshot) {
-  return `You are a helpful support assistant for the ${appName || 'Nova'} church management application. Answer admin questions about the application data, members, finances, and settings. Be concise and helpful.\n\nCurrent database context:\n${dbSnapshot}`;
+  return `You are a helpful support assistant for the ${appName || 'Agora'} management application. Answer admin questions about the application data, members, finances, and settings. Be concise and helpful.\n\nCurrent database context:\n${dbSnapshot}`;
 }
 
 module.exports = {

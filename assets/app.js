@@ -311,7 +311,7 @@ function formatDateFast(dateInput) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const appName = config.appName || "Nova";
+    const appName = config.appName || "Agora";
 
     // Update visual elements
     const headerEl = document.getElementById('app-name-header');
@@ -3176,13 +3176,6 @@ function generatePersonHTML(p, preCalcData = null) {
                     <div id="timeline-${p.id}">
                         <div style="padding:10px; color:var(--text-secondary); font-size:0.8rem; font-style:italic;">${t('loading_history', 'Lade Verlauf...')}</div>
                     </div>
-
-                    <div style="display: ${!(currentUser && currentUser.admin) ? 'none' : 'flex'}; justify-content: flex-end; margin-top: 20px;">
-                        <button class="btn btn-secondary btn-small" style="border-color: var(--danger); color: var(--danger); font-size: 0.85rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;" data-id="${escapeHtml(p.id)}" onclick="deletePersonClick(this.dataset.id)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            ${t('delete_member_btn', 'Mitglied löschen')}
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -3683,7 +3676,7 @@ window.updateReportPreview = function() {
     });
     const netBalance = totalIncome - totalExpenses;
     
-    const appName = config.appName || "Nova";
+    const appName = config.appName || "Agora";
     
     // Header HTML
     const headerHtml = `
@@ -3850,7 +3843,7 @@ window.downloadReportPdf = function() {
 
     setButtonLoading('btn-download-pdf', true, t('report_generating', 'Generating...'));
     
-    const appName = config.appName || "Nova";
+    const appName = config.appName || "Agora";
     const safeAppName = appName.replace(/[^a-zA-Z0-9]/g, '_');
     
     // Create an unscaled off-screen clone with normalized dimensions to prevent blank 1st page
@@ -4126,29 +4119,6 @@ window.pendingExpenseFiles = [];
     }
 };
 
-window.deletePersonClick = (id) => {
-    editingPersonId = id;
-    openModal('confirm-delete-person-modal');
-};
-
-window.confirmDeletePerson = async () => {
-    if (!editingPersonId) return;
-
-    closeModal('confirm-delete-person-modal');
-
-    try {
-        await remove(ref(db, 'people/' + editingPersonId));
-        people = people.filter(p => String(p.id) !== String(editingPersonId));
-        await renderAll();
-        showToast('Mitglied erfolgreich gelöscht');
-    } catch (err) {
-        console.error('Fehler beim Löschen der Person:', err);
-        showToast('Mitglied konnte nicht gelöscht werden', 'error');
-    } finally {
-        editingPersonId = null;
-    }
-};
-
 let editingSoId = null;
 let editingPersonId = null;
 
@@ -4289,9 +4259,73 @@ window.openPaymentModal = (id) => {
     openModal('add-payment-modal');
 };
 
+function applyStatusChangeToHistory(person, newStatus, changeDateStr) {
+    const memberSinceStr = person.originalMemberSince || person.memberSince || changeDateStr;
+    const changeDateObj = new Date(changeDateStr);
+    const memberSinceObj = new Date(memberSinceStr);
+
+    if (changeDateObj < memberSinceObj) {
+        throw new Error('Änderungsdatum liegt vor Beginn der Mitgliedschaft.');
+    }
+
+    const oldHistory = safeList(person.statusHistory);
+    const newHistory = [];
+
+    if (changeDateStr <= memberSinceStr) {
+        newHistory.push({
+            status: newStatus,
+            startDate: memberSinceStr
+        });
+    } else {
+        for (const entry of oldHistory) {
+            const entryStart = entry.startDate ? new Date(entry.startDate) : memberSinceObj;
+            if (entryStart < changeDateObj) {
+                if (entry.endDate && new Date(entry.endDate) <= changeDateObj) {
+                    newHistory.push({ ...entry });
+                } else {
+                    newHistory.push({
+                        ...entry,
+                        endDate: changeDateStr
+                    });
+                }
+            }
+        }
+
+        if (newHistory.length === 0 || (newHistory[newHistory.length - 1].endDate && newHistory[newHistory.length - 1].endDate < changeDateStr)) {
+            const priorStart = newHistory.length > 0 && newHistory[newHistory.length - 1].endDate
+                ? newHistory[newHistory.length - 1].endDate
+                : memberSinceStr;
+            if (priorStart < changeDateStr) {
+                newHistory.push({
+                    status: person.status || 'vollverdiener',
+                    startDate: priorStart,
+                    endDate: changeDateStr
+                });
+            }
+        }
+
+        newHistory.push({
+            status: newStatus,
+            startDate: changeDateStr
+        });
+    }
+
+    return {
+        ...person,
+        status: newStatus,
+        statusHistory: newHistory
+    };
+}
+
 window.openChangeStatusModal = (id) => {
     currentPersonId = id;
-    document.getElementById('change-status-date').value = new Date().toISOString().split('T')[0];
+    const person = people.find(p => String(p.id) === String(id));
+    if (person) {
+        const select = document.getElementById('change-status-select');
+        if (select) select.value = person.status || 'vollverdiener';
+    }
+    const dateInput = document.getElementById('change-status-date');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
     openModal('change-status-modal');
 };
 
@@ -4323,7 +4357,7 @@ window.sendStatusEmail = async (personId) => {
 
     const statusLabels = getStatusLabels(false);
     const readableStatus = statusLabels[currentStatus] || currentStatus;
-    const appName = config.appName || "Nova";
+    const appName = config.appName || "Agora";
 
     const paidUntilDate = person._paidUntil ? new Date(person._paidUntil) : calculatePaidUntil(person);
     const paidUntilText = paidUntilDate ? monthYearFormatter.format(paidUntilDate) : 'Nie';
@@ -4417,40 +4451,7 @@ window.saveStatusChange = async () => {
 
     try {
         const updated = await mutatePerson(currentPersonId, (person) => {
-            const changeDateObj = new Date(changeDate);
-            const memberSinceDate = new Date(person.originalMemberSince || person.memberSince);
-
-            if (changeDateObj < memberSinceDate) {
-                throw new Error('Änderungsdatum liegt vor Mitgliedschaft.');
-            }
-
-            let history = safeList(person.statusHistory)
-                .filter(entry => new Date(entry.startDate) < changeDateObj)
-                .map(entry => {
-                    if (entry.endDate) {
-                        const entryEnd = new Date(entry.endDate);
-                        if (entryEnd > changeDateObj) {
-                            return { ...entry, endDate: changeDate };
-                        }
-                    }
-                    return entry;
-                });
-
-            let currentStatusStartDate = person.originalMemberSince || person.memberSince;
-            const sortedHistory = history.slice().sort((a, b) => new Date(b.endDate || 0) - new Date(a.endDate || 0));
-            if (sortedHistory.length > 0 && sortedHistory[0].endDate) {
-                currentStatusStartDate = sortedHistory[0].endDate;
-            }
-
-            if (new Date(currentStatusStartDate) < changeDateObj) {
-                history.push({
-                    status: person.status,
-                    startDate: currentStatusStartDate,
-                    endDate: changeDate
-                });
-            }
-
-            return { ...person, status: newStatus, statusHistory: history };
+            return applyStatusChangeToHistory(person, newStatus, changeDate);
         });
 
         if (!updated) {
@@ -5468,12 +5469,13 @@ async function saveNewPerson(person) {
 }
 
 function initTheme() {
-    const t = localStorage.getItem('nova-theme') || 'system';
+    const t = localStorage.getItem('agora-theme') || localStorage.getItem('nova-theme') || 'system';
     window.setTheme(t);
 
     // Listen for OS theme changes if 'system' is active
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-        if (localStorage.getItem('nova-theme') === 'system') {
+        const activeT = localStorage.getItem('agora-theme') || localStorage.getItem('nova-theme') || 'system';
+        if (activeT === 'system') {
             applyActualTheme('system');
         }
     });
@@ -5489,7 +5491,7 @@ function applyActualTheme(t) {
 }
 
 window.setTheme = (t) => {
-    localStorage.setItem('nova-theme', t);
+    localStorage.setItem('agora-theme', t);
     applyActualTheme(t);
 
     // Update active button state
@@ -5547,7 +5549,7 @@ onAuthStateChanged(auth, async (user) => {
         if(loader) loader.style.display = 'flex';
         setLoadingMessage('Profil wird geladen...');
 
-        localStorage.setItem('nova-is-logged-in', 'true');
+        localStorage.setItem('agora-is-logged-in', 'true');
         const profile = await fetchUserProfile(user.uid, 2);
         if(profile) {
             currentUser = profile;
@@ -5567,6 +5569,7 @@ onAuthStateChanged(auth, async (user) => {
         const loader = document.getElementById('loading-overlay');
         if(loader) loader.style.display = 'none';
 
+        localStorage.removeItem('agora-is-logged-in');
         localStorage.removeItem('nova-is-logged-in');
         isAuthenticated = false;
         advancedConfigLoaded = false;

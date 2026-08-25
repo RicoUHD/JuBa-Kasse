@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06b6d4">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="assets/church-logo.svg">
-    <title>Nova</title>
+    <title>Agora</title>
     <link rel="modulepreload" href="assets/config.js">
     <link rel="modulepreload" href="assets/app.js">
     <link rel="modulepreload" href="assets/pocketbase-compat.js">
@@ -19,7 +19,7 @@
 <div id="loading-overlay">
     <div class="spinner"></div>
     <div id="loading-message" style="font-weight:600; color:#333; margin-top: 20px;" data-i18n="loading">Lade Daten...</div>
-    <div class="loading-footer"><span id="app-name-footer">Nova</span> &copy; 2026</div>
+    <div class="loading-footer"><span id="app-name-footer">Agora</span> &copy; 2026</div>
 </div>
 
 <div class="container">
@@ -32,8 +32,8 @@
         <header class="header">
             <div class="header-left">
                 <div class="header-brand">
-                    <img src="assets/church-logo.svg" alt="Nova Logo">
-                    <h1 id="app-name-header">Nova</h1>
+                    <img src="assets/church-logo.svg" alt="Agora Logo">
+                    <h1 id="app-name-header">Agora</h1>
                 </div>
                 <nav id="admin-desktop-nav" class="desktop-nav">
                     <button class="nav-btn active" data-tab="overview" onclick="switchTab('overview', this)">
@@ -421,7 +421,7 @@
                     <div class="super-admin-group-title" data-i18n="superadmin_config_title">System-Konfiguration</div>
                     <div class="form-group">
                         <label class="form-label" for="super-admin-app-name" style="color: var(--text-secondary);" data-i18n="app_name_label">Name der Anwendung</label>
-                        <input type="text" id="super-admin-app-name" class="form-input super-admin-input" placeholder="Nova">
+                        <input type="text" id="super-admin-app-name" class="form-input super-admin-input" placeholder="Agora">
                         <div class="help-text" style="color: var(--text-secondary); margin-top: 6px; font-size: 0.8rem;" data-i18n="app_name_desc">PocketBase wird automatisch im Docker-Container verwaltet. Hier können Sie nur den Anzeigenamen und optionale SMTP-Daten ändern.</div>
                     </div>
 
@@ -944,17 +944,7 @@
     </div>
 </div>
 
-<div id="confirm-delete-person-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-confirm-delete-person" style="z-index: 3000;">
-    <div class="modal-content" style="max-width: 400px; text-align: center; padding: 25px;">
-        <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--danger);">⚠️</div>
-        <h3 id="title-confirm-delete-person" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 10px; color: var(--text);" data-i18n="modal_delete_person_title">Mitglied löschen?</h3>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 25px;" data-i18n="modal_delete_person_desc">Sind Sie sicher, dass Sie dieses Mitglied deaktivieren und den Login-Account löschen möchten? Die Zahlungen und das Profilbild bleiben in der Historie erhalten.</p>
-        <div style="display: flex; gap: 12px;">
-            <button class="btn btn-secondary" style="flex: 1;" onclick="closeModal('confirm-delete-person-modal')" data-i18n="btn_cancel">Abbrechen</button>
-            <button class="btn btn-danger" style="flex: 1; background-color: var(--danger); color: white;" onclick="confirmDeletePerson()" data-i18n="btn_delete">Löschen</button>
-        </div>
-    </div>
-</div>
+
 
 <div id="add-donation-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="title-add-donation">
     <div class="modal-content modal-content-enhanced">
@@ -1361,7 +1351,7 @@
         <div class="login-header">
             <div class="login-brand">
                 <img src="assets/church-logo.svg" alt="App Logo" id="login-app-logo">
-                <h2 id="login-app-name">Nova</h2>
+                <h2 id="login-app-name">Agora</h2>
             </div>
             <p id="auth-subtitle" class="login-subtitle" data-i18n="login_subtitle">Melden Sie sich an, um fortzufahren</p>
         </div>
@@ -1455,7 +1445,7 @@
 
 <script>
     // Optimistic UI: Check if we expect to be logged in to avoid flash of login screen
-    if (localStorage.getItem('nova-is-logged-in') === 'true') {
+    if (localStorage.getItem('agora-is-logged-in') === 'true' || localStorage.getItem('nova-is-logged-in') === 'true') {
         document.getElementById('login-modal').classList.remove('show');
         const loader = document.getElementById('loading-overlay');
         if(loader) loader.style.display = 'flex';
