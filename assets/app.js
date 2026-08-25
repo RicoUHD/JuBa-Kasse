@@ -610,25 +610,35 @@ async function refreshCurrentUser() {
 }
 
 function updateNavVisibility() {
-    const hasFinances = canViewFinances();
+    const hasFinances = canViewFinances() || canManageFinances();
     const isSysAdmin = isSystemAdmin();
     const canManage = canManageFinances();
 
-    // Financial tabs in desktop nav
-    const overviewNav = document.querySelector('#admin-desktop-nav [data-tab="overview"]');
-    const peopleNav = document.querySelector('#admin-desktop-nav [data-tab="people-view"]');
-    const historyNav = document.querySelector('#admin-desktop-nav [data-tab="payment-history"]');
-    if (overviewNav) overviewNav.style.display = hasFinances ? '' : 'none';
-    if (peopleNav) peopleNav.style.display = hasFinances ? '' : 'none';
-    if (historyNav) historyNav.style.display = hasFinances ? '' : 'none';
+    // Finances tab
+    const financesDesktop = document.getElementById('admin-finances-nav-btn-desktop');
+    const financesBottom = document.getElementById('admin-finances-nav-btn-bottom');
+    if (financesDesktop) financesDesktop.style.display = hasFinances ? '' : 'none';
+    if (financesBottom) financesBottom.style.display = hasFinances ? '' : 'none';
 
-    // Financial tabs in bottom nav
-    const bOverview = document.querySelector('#admin-bottom-nav [data-tab="overview"]');
-    const bPeople = document.querySelector('#admin-bottom-nav [data-tab="people-view"]');
-    const bHistory = document.querySelector('#admin-bottom-nav [data-tab="payment-history"]');
-    if (bOverview) bOverview.style.display = hasFinances ? '' : 'none';
-    if (bPeople) bPeople.style.display = hasFinances ? '' : 'none';
-    if (bHistory) bHistory.style.display = hasFinances ? '' : 'none';
+    // Personal user history & requests tabs
+    const userHistoryDesktop = document.getElementById('user-history-nav-btn-desktop');
+    const userHistoryBottom = document.getElementById('user-history-nav-btn-bottom');
+    const userRequestsDesktop = document.getElementById('user-requests-nav-btn-desktop');
+    const userRequestsBottom = document.getElementById('user-requests-nav-btn-bottom');
+
+    if (userHistoryDesktop) userHistoryDesktop.style.display = hasFinances ? 'none' : '';
+    if (userHistoryBottom) userHistoryBottom.style.display = hasFinances ? 'none' : '';
+    if (userRequestsDesktop) userRequestsDesktop.style.display = '';
+    if (userRequestsBottom) userRequestsBottom.style.display = '';
+
+    // AI tab
+    if (typeof updateAiNavVisibility === 'function') updateAiNavVisibility();
+
+    // Settings tab in nav
+    const settingsDesktop = document.getElementById('admin-settings-nav-btn-desktop');
+    const settingsBottom = document.getElementById('admin-settings-nav-btn-bottom');
+    if (settingsDesktop) settingsDesktop.style.display = (isSysAdmin || hasFinances) ? '' : 'none';
+    if (settingsBottom) settingsBottom.style.display = (isSysAdmin || hasFinances) ? '' : 'none';
 
     // System Settings button
     const sysSettingsBtn = document.getElementById('profile-sys-settings-btn');
@@ -637,6 +647,8 @@ function updateNavVisibility() {
     // FAB / quick actions
     const desktopFab = document.getElementById('desktop-fab');
     if (desktopFab) desktopFab.style.display = canManage ? '' : 'none';
+    const mobileFabItem = document.getElementById('mobile-fab-nav-item');
+    if (mobileFabItem) mobileFabItem.style.display = canManage ? '' : 'none';
     const fabMenu = document.getElementById('fabMenu');
     if (fabMenu) fabMenu.style.display = canManage ? '' : 'none';
 }
@@ -790,16 +802,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-window.switchTab = function(tabName, btn) {
-    // Some buttons might not pass `btn` or it might not be in a nav, determine scope by string
-    const isUserNav = (btn && !!btn.closest('#user-desktop-nav')) || tabName.startsWith('user-');
-    const scope = isUserNav ? document.getElementById('user-view') : document.getElementById('admin-view');
-    if (!scope) return;
+window.switchFinanceSubpage = function(subpage, btn) {
+    const historySubpage = document.getElementById('finances-subpage-history');
+    const membersSubpage = document.getElementById('finances-subpage-members');
+    const historyBtn = document.getElementById('finances-sub-btn-history');
+    const membersBtn = document.getElementById('finances-sub-btn-members');
 
-    const navSelector = isUserNav
-        ? '#user-desktop-nav [data-tab]'
-        : '#admin-desktop-nav [data-tab]';
-    const navButtonsDesktop = Array.from(document.querySelectorAll(navSelector));
+    if (subpage === 'members') {
+        if (historySubpage) historySubpage.classList.remove('active');
+        if (membersSubpage) membersSubpage.classList.add('active');
+        if (historyBtn) historyBtn.classList.remove('active');
+        if (membersBtn) membersBtn.classList.add('active');
+        if (typeof window.renderPeople === 'function') window.renderPeople();
+    } else {
+        if (membersSubpage) membersSubpage.classList.remove('active');
+        if (historySubpage) historySubpage.classList.add('active');
+        if (membersBtn) membersBtn.classList.remove('active');
+        if (historyBtn) historyBtn.classList.add('active');
+        if (typeof window.renderHistoryTab === 'function') window.renderHistoryTab(true);
+        if (typeof renderStats === 'function') renderStats();
+    }
+};
+
+window.switchTab = function(tabName, btn) {
+    // Handle alias redirects for backward compatibility
+    if (tabName === 'overview' || tabName === 'payment-history') {
+        tabName = 'finances';
+        window.switchFinanceSubpage('history');
+    } else if (tabName === 'people-view') {
+        tabName = 'finances';
+        window.switchFinanceSubpage('members');
+    }
+
+    const allTabs = Array.from(document.querySelectorAll('.tab-content'));
+    const navButtonsDesktop = Array.from(document.querySelectorAll('#desktop-nav [data-tab], .desktop-nav [data-tab]'));
 
     let currentIndex = -1;
     let targetIndex = -1;
@@ -810,15 +846,15 @@ window.switchTab = function(tabName, btn) {
         if (el.dataset.tab === tabName) targetIndex = index;
     });
 
-    // Hide only the tab contents inside the current scope (admin vs user)
-    scope.querySelectorAll('.tab-content').forEach(el => {
+    // Hide all tab contents
+    allTabs.forEach(el => {
         el.classList.remove('active', 'slide-in-right', 'slide-in-left');
-        if (el.id === 'payment-history' || el.id === 'user-history' || el.id === 'user-requests') el.style.display = 'none';
+        if (el.id === 'user-history' || el.id === 'user-requests') el.style.display = 'none';
     });
 
-    // Show the selected tab content only if it belongs to the same scope
+    // Show target tab content
     const targetContent = document.getElementById(tabName);
-    if (targetContent && scope.contains(targetContent)) {
+    if (targetContent) {
         targetContent.classList.add('active');
 
         if (currentIndex !== -1 && targetIndex !== -1 && currentIndex !== targetIndex) {
@@ -828,15 +864,17 @@ window.switchTab = function(tabName, btn) {
                 targetContent.classList.add('slide-in-right');
             }
         } else {
-            targetContent.classList.add('slide-in-right'); // fallback
+            targetContent.classList.add('slide-in-right');
         }
 
-        if (tabName === 'payment-history' || tabName === 'user-history' || tabName === 'user-requests') targetContent.style.display = 'block';
+        if (tabName === 'user-history' || tabName === 'user-requests') {
+            targetContent.style.display = 'block';
+        }
     }
 
     const appContainer = document.querySelector('.container');
     if (appContainer) {
-        const isAiChatActive = !isUserNav && tabName === 'ai-chat';
+        const isAiChatActive = tabName === 'ai-chat';
         appContainer.classList.toggle('ai-chat-active', isAiChatActive);
         if (isAiChatActive) {
             requestAnimationFrame(() => {
@@ -848,10 +886,7 @@ window.switchTab = function(tabName, btn) {
         }
     }
 
-    const allNavSelector = isUserNav
-        ? '#user-desktop-nav [data-tab], #user-bottom-nav [data-tab]'
-        : '#admin-desktop-nav [data-tab], #admin-bottom-nav [data-tab]';
-    const allNavButtons = document.querySelectorAll(allNavSelector);
+    const allNavButtons = document.querySelectorAll('#desktop-nav [data-tab], #bottom-nav [data-tab], .desktop-nav [data-tab], .bottom-nav [data-tab]');
     allNavButtons.forEach(el => {
         const isActive = el.dataset.tab === tabName;
         if (isActive) {
@@ -863,8 +898,16 @@ window.switchTab = function(tabName, btn) {
         }
     });
 
-    if (tabName === 'payment-history') {
-        window.renderHistoryTab(true);
+    if (tabName === 'finances') {
+        const membersActive = document.getElementById('finances-subpage-members')?.classList.contains('active');
+        if (membersActive) {
+            if (typeof window.renderPeople === 'function') window.renderPeople();
+        } else {
+            if (typeof window.renderHistoryTab === 'function') window.renderHistoryTab(true);
+            if (typeof renderStats === 'function') renderStats();
+        }
+    } else if (tabName === 'user-overview') {
+        if (typeof renderUserView === 'function') renderUserView();
     }
 };
 
@@ -928,7 +971,6 @@ window.openSystemSettingsTab = function() {
 };
 
 window.openSettingsTab = function() {
-    // Close the profile menu
     const menu = document.getElementById('profileDropdown');
     if (menu) {
         menu.classList.remove('show');
@@ -936,35 +978,20 @@ window.openSettingsTab = function() {
     }
 
     const isAdminView = canViewFinances() || isSystemAdmin();
-    let btn;
     if (isAdminView) {
-        btn = document.querySelector('#admin-desktop-nav [data-tab="settings"]') ||
-              document.querySelector('#admin-bottom-nav [data-tab="settings"]');
-        if(btn) switchTab('settings', btn);
+        switchTab('settings');
     } else {
-        btn = document.querySelector('#user-desktop-nav [data-tab="user-settings"]');
-        if(btn) switchTab('user-settings', btn);
+        switchTab('user-settings');
     }
 };
 
 window.openHomeTab = function() {
-    // Close the profile menu
     const menu = document.getElementById('profileDropdown');
     if (menu) {
         menu.classList.remove('show');
         document.querySelector('.profile-btn')?.setAttribute('aria-expanded', 'false');
     }
-
-    if (canViewFinances()) {
-        const btn = document.querySelector('#admin-desktop-nav [data-tab="overview"]') ||
-                    document.querySelector('#admin-bottom-nav [data-tab="overview"]');
-        if(btn) switchTab('overview', btn);
-    } else if (isSystemAdmin()) {
-        switchTab('super-admin-settings');
-    } else {
-        const btn = document.querySelector('#user-desktop-nav [data-tab="user-overview"]');
-        if(btn) switchTab('user-overview', btn);
-    }
+    switchTab('user-overview');
 };
 
 // Close profile menu when clicking outside
@@ -1911,32 +1938,6 @@ async function loadData(silent = false) {
 
             const allRequests = rSnap && rSnap.exists() ? safeList(rSnap.val()) : [];
             requests = allRequests.filter(r => r.userId === currentUser.uid);
-
-            // UI toggles
-            document.getElementById('admin-view').style.display = 'none';
-            document.getElementById('user-view').style.display = 'block';
-            const adminDesktopNav = document.getElementById('admin-desktop-nav');
-            const userDesktopNav = document.getElementById('user-desktop-nav');
-            if (adminDesktopNav) adminDesktopNav.style.display = 'none';
-            if (userDesktopNav) userDesktopNav.style.display = '';
-
-            const desktopFab = document.getElementById('desktop-fab');
-            if(desktopFab) desktopFab.style.display = 'none';
-
-            const adminBottomNav = document.getElementById('admin-bottom-nav');
-            if(adminBottomNav) adminBottomNav.style.display = 'none';
-            const userBottomNav = document.getElementById('user-bottom-nav');
-            if(userBottomNav) userBottomNav.style.display = 'flex';
-
-            document.getElementById('settings').style.display = 'none';
-
-            const sysSettingsBtn = document.getElementById('profile-sys-settings-btn');
-            if (sysSettingsBtn) sysSettingsBtn.style.display = 'none';
-
-            // Populate User View basic info
-            document.getElementById('user-name-display').innerText = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || '';
-            document.getElementById('user-email-display').innerText = currentUser.email || '';
-
         } else if (!hasFinances && isSysAdmin) {
             // Pure System Admin (no finance permissions assigned)
             advancedConfigLoaded = false;
@@ -1965,30 +1966,6 @@ async function loadData(silent = false) {
             if(codeInput) codeInput.value = code;
             const codeDisplay = document.getElementById('admin-invite-code-display');
             if(codeDisplay) codeDisplay.textContent = code;
-
-            // UI toggles
-            document.getElementById('admin-view').style.display = 'block';
-            document.getElementById('user-view').style.display = 'none';
-            const adminDesktopNav = document.getElementById('admin-desktop-nav');
-            const userDesktopNav = document.getElementById('user-desktop-nav');
-            if (adminDesktopNav) adminDesktopNav.style.display = '';
-            if (userDesktopNav) userDesktopNav.style.display = 'none';
-
-            const desktopFab = document.getElementById('desktop-fab');
-            if(desktopFab) desktopFab.style.display = 'none';
-
-            const adminBottomNav = document.getElementById('admin-bottom-nav');
-            if(adminBottomNav) adminBottomNav.style.display = 'flex';
-            const userBottomNav = document.getElementById('user-bottom-nav');
-            if(userBottomNav) userBottomNav.style.display = 'none';
-
-            document.getElementById('settings').style.display = '';
-
-            // Switch to super-admin-settings tab by default for pure admins
-            const activeTab = document.querySelector('#admin-view .tab-content.active');
-            if (!activeTab || activeTab.id === 'overview') {
-                switchTab('super-admin-settings');
-            }
         } else {
             advancedConfigLoaded = false;
             advancedConfigAppName = null;
@@ -2029,24 +2006,6 @@ async function loadData(silent = false) {
             const codeDisplay = document.getElementById('admin-invite-code-display');
             if(codeDisplay) codeDisplay.textContent = code;
 
-            // UI toggles
-            document.getElementById('admin-view').style.display = 'block';
-            document.getElementById('user-view').style.display = 'none';
-            const adminDesktopNav = document.getElementById('admin-desktop-nav');
-            const userDesktopNav = document.getElementById('user-desktop-nav');
-            if (adminDesktopNav) adminDesktopNav.style.display = '';
-            if (userDesktopNav) userDesktopNav.style.display = 'none';
-
-            const desktopFab = document.getElementById('desktop-fab');
-            if(desktopFab) desktopFab.style.display = canManage ? '' : 'none';
-
-            const adminBottomNav = document.getElementById('admin-bottom-nav');
-            if(adminBottomNav) adminBottomNav.style.display = 'flex';
-            const userBottomNav = document.getElementById('user-bottom-nav');
-            if(userBottomNav) userBottomNav.style.display = 'none';
-
-            document.getElementById('settings').style.display = '';
-
             // Fetch AI enabled state
             fetchWithAuth(`${config.apiBaseUrl}/admin/ai-status`).then(r => {
                 if (r.ok) return r.json();
@@ -2057,6 +2016,22 @@ async function loadData(silent = false) {
                 }
             }).catch(() => {});
         }
+
+        // Populate User View basic info for all users
+        const userNameDisplay = document.getElementById('user-name-display');
+        if (userNameDisplay) {
+            userNameDisplay.innerText = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || '';
+        }
+        const userEmailDisplay = document.getElementById('user-email-display');
+        if (userEmailDisplay) {
+            userEmailDisplay.innerText = currentUser.email || '';
+        }
+
+        // Update nav bar visibility based on user privileges
+        updateNavVisibility();
+
+        // Default to Home page (user-overview)
+        switchTab('user-overview');
 
         // Normalize people data
         people.forEach(person => preprocessPerson(person));
@@ -2477,7 +2452,7 @@ function renderSuperAdminUserManagement() {
 }
 
 async function renderSuperAdminPaymentEditor() {
-    if (document.getElementById('payment-history')?.classList.contains('active')) {
+    if (document.getElementById('finances')?.classList.contains('active') || document.getElementById('payment-history')?.classList.contains('active')) {
         renderHistoryTab(true);
     }
 }
@@ -3530,10 +3505,14 @@ async function renderStats() {
         if (!response.ok) throw new Error('Stats fetch failed');
         const data = await response.json();
 
-        // ⚡ Bolt: Using persistent currencyFormatter
-        document.getElementById('heroAmount').textContent = currencyFormatter.format(data.totalBalance || 0);
-        document.getElementById('totalIncome').textContent = currencyFormatter.format(data.totalIncome || 0);
-        document.getElementById('totalExpenses').textContent = currencyFormatter.format(data.totalExpenses || 0);
+        const heroEl = document.getElementById('heroAmount');
+        if (heroEl) heroEl.textContent = currencyFormatter.format(data.totalBalance || 0);
+
+        const incEl = document.getElementById('totalIncome');
+        if (incEl) incEl.textContent = currencyFormatter.format(data.totalIncome || 0);
+
+        const expEl = document.getElementById('totalExpenses');
+        if (expEl) expEl.textContent = currencyFormatter.format(data.totalExpenses || 0);
 
         const totalMembers = people.length;
         let totalOverdue = 0;
@@ -3541,8 +3520,11 @@ async function renderStats() {
             totalOverdue += (p._overdueAmount || 0);
         });
 
-        document.getElementById('totalMembers').textContent = totalMembers;
-        document.getElementById('totalOverdue').textContent = currencyFormatter.format(totalOverdue);
+        const memEl = document.getElementById('totalMembers');
+        if (memEl) memEl.textContent = totalMembers;
+
+        const dueEl = document.getElementById('totalOverdue');
+        if (dueEl) dueEl.textContent = currencyFormatter.format(totalOverdue);
 
         if (data.chartData && Array.isArray(data.chartData.dataPoints)) {
             chartDataCache = {

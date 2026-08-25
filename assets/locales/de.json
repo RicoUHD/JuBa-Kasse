@@ -1,6 +1,9 @@
 {
   "app_title": "Agora",
   "nav_overview": "Übersicht",
+  "nav_finances": "Finanzen",
+  "finances_sub_history": "Übersicht & Historie",
+  "finances_sub_members": "Beitragsliste",
   "nav_people": "Personen",
   "nav_history": "Historie",
   "nav_ai": "KI-Support",
