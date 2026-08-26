@@ -6146,147 +6146,197 @@ window.attemptRegister = async () => {
 let currentRequestType = null;
 
 window.openUserRequestModal = (type) => {
-    currentRequestType = type;
+    currentRequestType = type || null;
     const container = document.getElementById('req-form-content');
     const title = document.getElementById('req-modal-title');
     const subtitle = document.getElementById('req-modal-subtitle');
     const badge = document.getElementById('req-modal-badge');
+    const submitBtn = document.getElementById('btn-submit-request');
+    const backBtn = document.getElementById('req-modal-back-btn');
 
     if(window.pendingReqExpenseFiles) {
         window.pendingReqExpenseFiles.forEach(f => { if(f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
     }
     window.pendingReqExpenseFiles = [];
 
-    if(type === 'payment') {
+    if (!type) {
+        if (backBtn) backBtn.style.display = 'none';
+        if (submitBtn) submitBtn.style.display = 'none';
         if (badge) {
             badge.className = 'modal-icon-badge badge-donation';
-            badge.textContent = '💳';
+            badge.textContent = '📝';
         }
-        if (title) title.innerText = t('user_req_payment_title', "Zahlung melden");
-        if (subtitle) subtitle.innerText = t('user_req_payment_subtitle', "Beitrag & Einzahlung an Admin melden");
+        if (title) title.innerText = t('user_request_modal_title', "Anfrage");
+        if (subtitle) subtitle.innerText = t('user_req_select_subtitle', "Wähle die Art der Anfrage");
 
         container.innerHTML = `
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>💶</span> <span>${t('modal_section_amount', 'Zahlungsbetrag')}</span>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" for="req-amount">${t('req_amount_label', 'Betrag (€)')}</label>
-                    <div class="hero-amount-wrapper">
-                        <span class="hero-amount-prefix">€</span>
-                        <input type="text" inputmode="decimal" id="req-amount" class="form-input hero-amount-input" placeholder="0,00">
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 4px;">
+                <button type="button" onclick="openUserRequestModal('payment')" style="display: flex; align-items: center; text-align: left; width: 100%; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer;">
+                    <div class="fab-menu-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--primary); font-size: 1.25rem;">
+                        💳
                     </div>
-                </div>
-            </div>
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>⚙️</span> <span>${t('modal_section_payment_type', 'Zahlungsart & Datum')}</span>
-                </div>
-                <div class="form-group" style="display:flex; align-items:center; gap:10px; margin:0 0 10px 0;">
-                    <label class="switch">
-                        <input type="checkbox" id="req-is-standing-order" onchange="document.getElementById('req-date-label').innerText = this.checked ? t('modal_date_start', 'Startdatum') : t('modal_date', 'Datum')">
-                        <span class="slider"></span>
-                    </label>
-                    <label for="req-is-standing-order" style="margin:0; font-weight:600; cursor:pointer; font-size:0.9rem;">${t('modal_standing_order', 'Dauerauftrag')}</label>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" id="req-date-label" for="req-date">${t('modal_date', 'Datum')}</label>
-                    <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
-                </div>
-            </div>
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>📝</span> <span>${t('modal_note', 'Notiz / Verwendungszweck')}</span>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" for="req-note">${t('req_note_label', 'Notiz (Optional)')}</label>
-                    <input type="text" id="req-note" class="form-input" placeholder="${t('modal_note_placeholder', 'z.B. Beitrag Mai')}">
-                </div>
-            </div>
-        `;
-    } else if(type === 'status') {
-        if (badge) {
-            badge.className = 'modal-icon-badge badge-person';
-            badge.textContent = '⚡';
-        }
-        if (title) title.innerText = t('user_req_status_title', "Statusänderung beantragen");
-        if (subtitle) subtitle.innerText = t('user_req_status_subtitle', "Neuen Mitgliedsstatus anfragen");
+                    <div class="fab-menu-text">
+                        <div style="color: var(--text); font-weight: 700;">${t('user_req_type_payment', 'Einzahlung / Zahlung')}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">${t('user_req_type_payment_desc', 'Beitrag oder Einzahlung melden.')}</div>
+                    </div>
+                </button>
 
-        container.innerHTML = `
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>💼</span> <span>${t('modal_new_status', 'Neuer Status')}</span>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" for="req-status">${t('modal_new_status', 'Neuer Status')}</label>
-                    <select id="req-status" class="form-select">
-                        <option value="vollverdiener">${t('member_status_full', '💼 Vollverdiener')}</option>
-                        <option value="geringverdiener">${t('member_status_low', '📉 Geringverdiener')}</option>
-                        <option value="keinverdiener">${t('member_status_none', '🎓 Keinverdiener')}</option>
-                        <option value="pausiert">${t('member_status_paused', '⏸️ Pausiert')}</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>📅</span> <span>${t('modal_valid_from', 'Gültigkeitsdatum')}</span>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" for="req-date">${t('req_valid_from', 'Gültig ab')}</label>
-                    <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
-                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
-                        ${t('modal_status_desc', '<strong>Rückwirkend:</strong> Korrigiert die Berechnung ab dem angegebenen Datum.<br><strong>Zukünftig:</strong> Der neue Status gilt ab dem Datum (bisherige Berechnung bleibt).')}
+                <button type="button" onclick="openUserRequestModal('status')" style="display: flex; align-items: center; text-align: left; width: 100%; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer;">
+                    <div class="fab-menu-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 1.25rem;">
+                        ⚡
                     </div>
-                </div>
-            </div>
-        `;
-    } else if(type === 'expense') {
-        if (badge) {
-            badge.className = 'modal-icon-badge badge-expense';
-            badge.textContent = '🧾';
-        }
-        if (title) title.innerText = t('user_req_expense_title', "Ausgabe melden");
-        if (subtitle) subtitle.innerText = t('user_req_expense_subtitle', "Ausgabe zur Erstattung einreichen");
+                    <div class="fab-menu-text">
+                        <div style="color: var(--text); font-weight: 700;">${t('user_req_type_status', 'Statuswechsel')}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">${t('user_req_type_status_desc', 'Änderung des Mitgliedsstatus beantragen.')}</div>
+                    </div>
+                </button>
 
-        container.innerHTML = `
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>💶</span> <span>${t('modal_section_amount', 'Ausgabenbetrag')}</span>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" for="req-amount">${t('req_amount_label', 'Betrag (€)')}</label>
-                    <div class="hero-amount-wrapper">
-                        <span class="hero-amount-prefix">€</span>
-                        <input type="text" inputmode="decimal" id="req-amount" class="form-input hero-amount-input" placeholder="0,00">
+                <button type="button" onclick="openUserRequestModal('expense')" style="display: flex; align-items: center; text-align: left; width: 100%; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer;">
+                    <div class="fab-menu-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); font-size: 1.25rem;">
+                        🧾
                     </div>
-                </div>
-            </div>
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>ℹ️</span> <span>${t('modal_section_info', 'Angaben zur Ausgabe')}</span>
-                </div>
-                <div class="form-group" style="margin:0 0 10px 0;">
-                    <label class="form-label" for="req-desc">${t('req_desc_label', 'Beschreibung / Wofür?')}</label>
-                    <input type="text" id="req-desc" class="form-input" placeholder="${t('modal_expense_what_placeholder', 'Verwendungszweck')}">
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" for="req-date">${t('modal_date', 'Datum')}</label>
-                    <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
-                </div>
-            </div>
-            <div class="modal-section-card">
-                <div class="modal-section-header">
-                    <span>📎</span> <span>${t('modal_expense_receipt', 'Beleg anhängen')}</span>
-                </div>
-                <div class="file-upload-dropzone">
-                    <div class="file-upload-icon">📁</div>
-                    <div class="file-upload-text">${t('modal_expense_receipt_text', 'Beleg auswählen oder hierhin ziehen')}</div>
-                    <div class="file-upload-subtext">JPG, PNG, HEIC, PDF</div>
-                    <input type="file" id="req-receipt" accept="image/*,.heic,.heif,.pdf" multiple onchange="window.handleReqReceiptFiles(this.files)">
-                </div>
-                <div id="req-receipt-preview-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;"></div>
+                    <div class="fab-menu-text">
+                        <div style="color: var(--text); font-weight: 700;">${t('user_req_type_expense', 'Ausgabe')}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">${t('user_req_type_expense_desc', 'Ausgabe zur Erstattung einreichen (mit Beleg).')}</div>
+                    </div>
+                </button>
             </div>
         `;
+    } else {
+        if (backBtn) backBtn.style.display = 'inline-flex';
+        if (submitBtn) submitBtn.style.display = 'block';
+
+        if(type === 'payment') {
+            if (badge) {
+                badge.className = 'modal-icon-badge badge-donation';
+                badge.textContent = '💳';
+            }
+            if (title) title.innerText = t('user_req_payment_title', "Zahlung melden");
+            if (subtitle) subtitle.innerText = t('user_req_payment_subtitle', "Beitrag & Einzahlung an Admin melden");
+
+            container.innerHTML = `
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>💶</span> <span>${t('modal_section_amount', 'Zahlungsbetrag')}</span>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="req-amount">${t('req_amount_label', 'Betrag (€)')}</label>
+                        <div class="hero-amount-wrapper">
+                            <span class="hero-amount-prefix">€</span>
+                            <input type="text" inputmode="decimal" id="req-amount" class="form-input hero-amount-input" placeholder="0,00">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>⚙️</span> <span>${t('modal_section_payment_type', 'Zahlungsart & Datum')}</span>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:center; gap:10px; margin:0 0 10px 0;">
+                        <label class="switch">
+                            <input type="checkbox" id="req-is-standing-order" onchange="document.getElementById('req-date-label').innerText = this.checked ? t('modal_date_start', 'Startdatum') : t('modal_date', 'Datum')">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="req-is-standing-order" style="margin:0; font-weight:600; cursor:pointer; font-size:0.9rem;">${t('modal_standing_order', 'Dauerauftrag')}</label>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" id="req-date-label" for="req-date">${t('modal_date', 'Datum')}</label>
+                        <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                </div>
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>📝</span> <span>${t('modal_note', 'Notiz / Verwendungszweck')}</span>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="req-note">${t('req_note_label', 'Notiz (Optional)')}</label>
+                        <input type="text" id="req-note" class="form-input" placeholder="${t('modal_note_placeholder', 'z.B. Beitrag Mai')}">
+                    </div>
+                </div>
+            `;
+        } else if(type === 'status') {
+            if (badge) {
+                badge.className = 'modal-icon-badge badge-person';
+                badge.textContent = '⚡';
+            }
+            if (title) title.innerText = t('user_req_status_title', "Statusänderung beantragen");
+            if (subtitle) subtitle.innerText = t('user_req_status_subtitle', "Neuen Mitgliedsstatus anfragen");
+
+            container.innerHTML = `
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>💼</span> <span>${t('modal_new_status', 'Neuer Status')}</span>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="req-status">${t('modal_new_status', 'Neuer Status')}</label>
+                        <select id="req-status" class="form-select">
+                            <option value="vollverdiener">${t('member_status_full', '💼 Vollverdiener')}</option>
+                            <option value="geringverdiener">${t('member_status_low', '📉 Geringverdiener')}</option>
+                            <option value="keinverdiener">${t('member_status_none', '🎓 Keinverdiener')}</option>
+                            <option value="pausiert">${t('member_status_paused', '⏸️ Pausiert')}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>📅</span> <span>${t('modal_valid_from', 'Gültigkeitsdatum')}</span>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="req-date">${t('req_valid_from', 'Gültig ab')}</label>
+                        <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                            ${t('modal_status_desc', '<strong>Rückwirkend:</strong> Korrigiert die Berechnung ab dem angegebenen Datum.<br><strong>Zukünftig:</strong> Der neue Status gilt ab dem Datum (bisherige Berechnung bleibt).')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if(type === 'expense') {
+            if (badge) {
+                badge.className = 'modal-icon-badge badge-expense';
+                badge.textContent = '🧾';
+            }
+            if (title) title.innerText = t('user_req_expense_title', "Ausgabe melden");
+            if (subtitle) subtitle.innerText = t('user_req_expense_subtitle', "Ausgabe zur Erstattung einreichen");
+
+            container.innerHTML = `
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>💶</span> <span>${t('modal_section_amount', 'Ausgabenbetrag')}</span>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="req-amount">${t('req_amount_label', 'Betrag (€)')}</label>
+                        <div class="hero-amount-wrapper">
+                            <span class="hero-amount-prefix">€</span>
+                            <input type="text" inputmode="decimal" id="req-amount" class="form-input hero-amount-input" placeholder="0,00">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>ℹ️</span> <span>${t('modal_section_info', 'Angaben zur Ausgabe')}</span>
+                    </div>
+                    <div class="form-group" style="margin:0 0 10px 0;">
+                        <label class="form-label" for="req-desc">${t('req_desc_label', 'Beschreibung / Wofür?')}</label>
+                        <input type="text" id="req-desc" class="form-input" placeholder="${t('modal_expense_what_placeholder', 'Verwendungszweck')}">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="req-date">${t('modal_date', 'Datum')}</label>
+                        <input type="date" id="req-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                </div>
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <span>📎</span> <span>${t('modal_expense_receipt', 'Beleg anhängen')}</span>
+                    </div>
+                    <div class="file-upload-dropzone">
+                        <div class="file-upload-icon">📁</div>
+                        <div class="file-upload-text">${t('modal_expense_receipt_text', 'Beleg auswählen oder hierhin ziehen')}</div>
+                        <div class="file-upload-subtext">JPG, PNG, HEIC, PDF</div>
+                        <input type="file" id="req-receipt" accept="image/*,.heic,.heif,.pdf" multiple onchange="window.handleReqReceiptFiles(this.files)">
+                    </div>
+                    <div id="req-receipt-preview-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;"></div>
+                </div>
+            `;
+        }
     }
 
     openModal('user-request-modal');

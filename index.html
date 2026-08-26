@@ -614,7 +614,7 @@
             <div class="card" style="margin-bottom: 20px;">
                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                     <span data-i18n="user_requests_title">Meine Anfragen</span>
-                    <button class="btn btn-primary btn-small" onclick="openUserRequestModal('payment')">+ Neue Anfrage</button>
+                    <button class="btn btn-primary btn-small" onclick="openUserRequestModal()">+ Neue Anfrage</button>
                 </div>
                 <div class="card-body">
                     <div id="user-requests-list"></div>
@@ -1092,17 +1092,20 @@
     <div class="modal-content modal-content-enhanced">
         <div class="modal-header-enhanced">
             <div class="modal-header-title-group">
+                <button id="req-modal-back-btn" class="btn btn-secondary btn-small" style="display:none; padding:6px 10px; margin-right:6px;" onclick="openUserRequestModal(null)">
+                    &larr; <span data-i18n="btn_back">Zurück</span>
+                </button>
                 <div id="req-modal-badge" class="modal-icon-badge badge-donation">💳</div>
                 <div>
                     <div id="req-modal-title" class="modal-title-main" data-i18n="user_request_modal_title">Anfrage</div>
-                    <div id="req-modal-subtitle" class="modal-subtitle" data-i18n="user_req_payment_subtitle">Beitrag & Einzahlung an Admin melden</div>
+                    <div id="req-modal-subtitle" class="modal-subtitle" data-i18n="user_req_select_subtitle">Wähle die Art der Anfrage</div>
                 </div>
             </div>
             <button class="close-btn" onclick="closeModal('user-request-modal')" data-i18n-aria-label="btn_close" aria-label="Schließen">&times;</button>
         </div>
         <div class="modal-body-enhanced">
             <div id="req-form-content" style="display:flex; flex-direction:column; gap:12px;"></div>
-            <button id="btn-submit-request" class="btn btn-primary btn-block" style="height:48px; font-weight:700; border-radius:14px; margin-top:4px;" onclick="submitUserRequest()" data-i18n="btn_submit">Absenden</button>
+            <button id="btn-submit-request" class="btn btn-primary btn-block" style="height:48px; font-weight:700; border-radius:14px; margin-top:4px; display:none;" onclick="submitUserRequest()" data-i18n="btn_submit">Absenden</button>
         </div>
     </div>
 </div>
