@@ -384,14 +384,39 @@ function isSystemAdmin() {
 }
 
 let systemGroups = [];
+let systemPermissions = [];
+let activeGroupFilter = null;
+
+async function loadSystemPermissions() {
+    if (!isSuperAdminUser()) return;
+    try {
+        const res = await fetchWithAuth(`${config.apiBaseUrl}/admin/permissions`);
+        if (res.ok) {
+            systemPermissions = await res.json();
+        }
+    } catch (err) {
+        console.warn('Failed to load permissions list:', err);
+    }
+    if (!Array.isArray(systemPermissions) || systemPermissions.length === 0) {
+        systemPermissions = [
+            { id: 'view_finances', name: 'Finanzübersicht & Historie einsehen', description: 'Erlaubt die Einsicht in die Kassenstände, Historie und Berichte' },
+            { id: 'manage_finances', name: 'Finanzen verwalten & buchen', description: 'Erlaubt das Erfassen, Bearbeiten und Löschen von Zahlungen, Spenden und Ausgaben' },
+            { id: 'manage_members', name: 'Mitglieder verwalten', description: 'Erlaubt das Anlegen und Bearbeiten von Mitgliedern und deren Status' },
+            { id: 'manage_system', name: 'Systemeinstellungen verwalten', description: 'Erlaubt das Konfigurieren von Systemparametern, Logos und Mailserver' },
+            { id: 'access_ai', name: 'KI-Support nutzen', description: 'Erlaubt die Nutzung des integrierten KI-Assistenten' }
+        ];
+    }
+}
 
 async function loadSystemGroups() {
     if (!isSuperAdminUser()) return;
     try {
+        await loadSystemPermissions();
         const res = await fetchWithAuth(`${config.apiBaseUrl}/admin/groups`);
         if (res.ok) {
             systemGroups = await res.json();
             renderSystemGroups();
+            renderAccountsTab();
         }
     } catch (err) {
         console.error('Failed to load groups:', err);
@@ -399,81 +424,148 @@ async function loadSystemGroups() {
 }
 
 function renderSystemGroups() {
-    const container = document.getElementById('groups-list-container');
-    if (!container) return;
+    const listEl = document.getElementById('nc-groups-list');
+    if (!listEl) return;
 
-    if (!Array.isArray(systemGroups) || systemGroups.length === 0) {
-        container.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic; padding: 6px 0;">${t('no_groups_created', 'Noch keine Gruppen erstellt. Klicken Sie auf \'Neue Gruppe\', um eine Berechtigungsgruppe anzulegen.')}</div>`;
+    const totalUsersCount = Array.isArray(users) ? users.length : 0;
+    const isAllActive = activeGroupFilter === null;
+
+    let itemsHtml = `
+        <div class="nc-group-item ${isAllActive ? 'active' : ''}" onclick="window.filterByGroup(null)">
+            <div class="nc-group-item-name">
+                <span>👥</span>
+                <span data-i18n="group_all_users">${t('group_all_users', 'Alle Benutzer')}</span>
+            </div>
+            <div class="nc-group-item-actions">
+                <span class="nc-group-count">${totalUsersCount}</span>
+            </div>
+        </div>
+    `;
+
+    if (Array.isArray(systemGroups) && systemGroups.length > 0) {
+        systemGroups.forEach(g => {
+            const isGroupActive = activeGroupFilter === g.id || activeGroupFilter === g.name;
+            const count = g.memberCount !== undefined ? g.memberCount : 0;
+            itemsHtml += `
+                <div class="nc-group-item ${isGroupActive ? 'active' : ''}" onclick="window.filterByGroup('${escapeHtml(g.id)}')">
+                    <div class="nc-group-item-name">
+                        <span>🏷️</span>
+                        <span>${escapeHtml(g.name)}</span>
+                    </div>
+                    <div class="nc-group-item-actions">
+                        <span class="nc-group-count">${count}</span>
+                        <button type="button" class="nc-group-action-btn" title="${t('modal_manage_group_title', 'Gruppe verwalten')}" onclick="event.stopPropagation(); window.openManageGroupModal('${escapeHtml(g.id)}');">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    listEl.innerHTML = itemsHtml;
+}
+
+window.filterByGroup = function(groupId) {
+    activeGroupFilter = groupId;
+    renderSystemGroups();
+    renderAccountsTab();
+};
+
+window.clearGroupFilter = function() {
+    activeGroupFilter = null;
+    renderSystemGroups();
+    renderAccountsTab();
+};
+
+window.submitQuickAddGroup = async function() {
+    const input = document.getElementById('nc-new-group-name');
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) return;
+
+    try {
+        const res = await fetchWithAuth(`${config.apiBaseUrl}/admin/groups`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, permissions: [] })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Fehler beim Erstellen der Gruppe');
+        }
+        input.value = '';
+        showToast(t('toast_group_created', 'Gruppe erfolgreich erstellt'), 'success');
+        await loadSystemGroups();
+        await reloadUsersData();
+    } catch (err) {
+        alert(err.message || 'Fehler beim Erstellen der Gruppe');
+    }
+};
+
+window.openCreateGroupModal = function() {
+    document.getElementById('manage-group-id').value = '';
+    document.getElementById('manage-group-name').value = '';
+    document.getElementById('manage-group-modal-title').textContent = t('modal_create_group_title', 'Neue Gruppe erstellen');
+    const deleteBtn = document.getElementById('btn-delete-group');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+
+    renderGroupPermissionsChecklist([]);
+    openModal('manage-group-modal');
+};
+
+window.openCreateGroupFromAssignModal = function() {
+    closeModal('assign-group-modal');
+    window.openCreateGroupModal();
+};
+
+window.openManageGroupModal = function(groupId) {
+    const group = systemGroups.find(g => g.id === groupId);
+    if (!group) return;
+
+    document.getElementById('manage-group-id').value = group.id;
+    document.getElementById('manage-group-name').value = group.name;
+    document.getElementById('manage-group-modal-title').textContent = t('modal_manage_group_title', 'Gruppe verwalten');
+    const deleteBtn = document.getElementById('btn-delete-group');
+    if (deleteBtn) deleteBtn.style.display = 'inline-block';
+
+    renderGroupPermissionsChecklist(group.permissions || []);
+    openModal('manage-group-modal');
+};
+
+function renderGroupPermissionsChecklist(activePermissions = []) {
+    const list = document.getElementById('manage-group-permissions-list');
+    if (!list) return;
+
+    if (!Array.isArray(systemPermissions) || systemPermissions.length === 0) {
+        list.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.85rem;">Keine Berechtigungs-Definitionen gefunden.</div>`;
         return;
     }
 
-    container.innerHTML = systemGroups.map(g => {
-        const perms = Array.isArray(g.permissions) ? g.permissions : [];
-        const hasManage = perms.includes('manage_finances');
-        const hasView = perms.includes('view_finances');
-        
-        let permBadges = [];
-        if (hasManage) {
-            permBadges.push(`<span class="nc-badge-group" style="background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.3); font-size: 0.72rem; padding: 2px 6px;">🛠️ ${t('perm_manage_finances_title', 'Finanzen verwalten')}</span>`);
-        } else if (hasView) {
-            permBadges.push(`<span class="nc-badge-group" style="background: rgba(59, 130, 246, 0.12); color: #2563eb; border-color: rgba(59, 130, 246, 0.3); font-size: 0.72rem; padding: 2px 6px;">👁️ ${t('perm_view_finances_title', 'Finanzen einsehen')}</span>`);
-        } else {
-            permBadges.push(`<span class="nc-badge-group" style="font-size: 0.72rem; opacity: 0.7; padding: 2px 6px;">Keine Rechte</span>`);
-        }
-
+    list.innerHTML = systemPermissions.map(p => {
+        const isChecked = activePermissions.includes(p.id);
         return `
-            <div class="group-card" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px;">
-                <div style="font-weight: 700; font-size: 0.88rem; color: var(--text);">${escapeHtml(g.name)}</div>
-                <div>${permBadges.join(' ')}</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);">${g.memberCount || 0} ${t('label_members_count', 'Mitgl.')}</div>
-                <div style="display: flex; gap: 4px; margin-left: 4px;">
-                    <button class="nc-icon-btn" title="${t('modal_edit_group_title', 'Bearbeiten')}" onclick="window.openEditGroupModal('${escapeHtml(g.id)}')" style="width: 26px; height: 26px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                    </button>
-                    <button class="nc-icon-btn danger" title="${t('btn_delete', 'Löschen')}" onclick="window.deleteGroupRecord('${escapeHtml(g.id)}')" style="width: 26px; height: 26px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
+            <label class="nc-permission-item">
+                <input type="checkbox" class="group-permission-cb" value="${escapeHtml(p.id)}" ${isChecked ? 'checked' : ''}>
+                <div class="nc-permission-info">
+                    <span class="nc-permission-name">${escapeHtml(p.name)}</span>
+                    <span class="nc-permission-desc">${escapeHtml(p.description || '')}</span>
                 </div>
-            </div>
+            </label>
         `;
     }).join('');
 }
 
-window.openCreateGroupModal = () => {
-    document.getElementById('group-modal-id').value = '';
-    document.getElementById('group-modal-name').value = '';
-    document.getElementById('group-perm-manage-finances').checked = false;
-    document.getElementById('group-perm-view-finances').checked = false;
-    document.getElementById('create-group-modal-title').textContent = t('modal_create_group_title', 'Neue Gruppe erstellen');
-    openModal('create-group-modal');
-};
-
-window.openEditGroupModal = (groupId) => {
-    const group = systemGroups.find(g => g.id === groupId);
-    if (!group) return;
-    document.getElementById('group-modal-id').value = group.id;
-    document.getElementById('group-modal-name').value = group.name;
-    const perms = Array.isArray(group.permissions) ? group.permissions : [];
-    document.getElementById('group-perm-manage-finances').checked = perms.includes('manage_finances');
-    document.getElementById('group-perm-view-finances').checked = perms.includes('view_finances') || perms.includes('manage_finances');
-    document.getElementById('create-group-modal-title').textContent = t('modal_edit_group_title', 'Gruppe bearbeiten');
-    openModal('create-group-modal');
-};
-
-window.submitGroupForm = async () => {
-    const id = document.getElementById('group-modal-id').value;
-    const name = document.getElementById('group-modal-name').value.trim();
-    if (!name) return;
-
-    const manageFinances = document.getElementById('group-perm-manage-finances').checked;
-    const viewFinances = document.getElementById('group-perm-view-finances').checked;
-    const permissions = [];
-    if (manageFinances) {
-        permissions.push('manage_finances');
-        permissions.push('view_finances');
-    } else if (viewFinances) {
-        permissions.push('view_finances');
+window.submitSaveGroup = async function() {
+    const id = document.getElementById('manage-group-id').value;
+    const name = document.getElementById('manage-group-name').value.trim();
+    if (!name) {
+        alert(t('alert_fill_fields', 'Bitte Gruppennamen eingeben.'));
+        return;
     }
+
+    const checkboxes = document.querySelectorAll('#manage-group-permissions-list .group-permission-cb');
+    const permissions = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
     try {
         const url = id ? `${config.apiBaseUrl}/admin/groups/${id}` : `${config.apiBaseUrl}/admin/groups`;
@@ -483,64 +575,82 @@ window.submitGroupForm = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, permissions })
         });
+
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             throw new Error(err.error || 'Fehler beim Speichern der Gruppe');
         }
-        closeModal('create-group-modal');
-        showToast(t('saved_success', 'Gruppe gespeichert.'), 'success');
+
+        closeModal('manage-group-modal');
+        showToast(id ? t('toast_group_updated', 'Gruppe erfolgreich aktualisiert') : t('toast_group_created', 'Gruppe erfolgreich erstellt'), 'success');
         await loadSystemGroups();
         await reloadUsersData();
         await refreshCurrentUser();
     } catch (err) {
-        showToast(err.message, 'error');
+        console.error('Fehler beim Speichern der Gruppe:', err);
+        alert(err.message || 'Fehler beim Speichern der Gruppe');
     }
 };
 
-window.deleteGroupRecord = async (groupId) => {
-    if (!confirm(t('confirm_delete_group', 'Möchten Sie diese Gruppe wirklich löschen? Benutzer verlieren die zugewiesenen Rechte dieser Gruppe.'))) return;
+window.deleteCurrentGroup = async function() {
+    const id = document.getElementById('manage-group-id').value;
+    if (!id) return;
+
+    if (!confirm(t('confirm_delete_group', 'Möchten Sie die Gruppe wirklich löschen? Die Gruppe wird von allen Benutzern entfernt.'))) {
+        return;
+    }
+
     try {
-        const res = await fetchWithAuth(`${config.apiBaseUrl}/admin/groups/${groupId}`, {
+        const res = await fetchWithAuth(`${config.apiBaseUrl}/admin/groups/${id}`, {
             method: 'DELETE'
         });
+
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             throw new Error(err.error || 'Fehler beim Löschen der Gruppe');
         }
-        showToast(t('group_deleted', 'Gruppe gelöscht.'), 'success');
+
+        if (activeGroupFilter === id) {
+            activeGroupFilter = null;
+        }
+
+        closeModal('manage-group-modal');
+        showToast(t('toast_group_deleted', 'Gruppe erfolgreich gelöscht'), 'success');
         await loadSystemGroups();
         await reloadUsersData();
         await refreshCurrentUser();
     } catch (err) {
-        showToast(err.message, 'error');
+        console.error('Fehler beim Löschen der Gruppe:', err);
+        alert(err.message || 'Fehler beim Löschen der Gruppe');
     }
 };
 
-window.openAssignGroupModal = (uid) => {
+window.openAssignGroupModal = function(uid) {
     const user = users.find(u => u.uid === uid);
     if (!user) return;
-    document.getElementById('assign-group-user-uid').value = uid;
-    const displayName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-    document.getElementById('assign-group-user-display').textContent = `${t('label_user', 'Benutzer')}: ${displayName}`;
 
-    const container = document.getElementById('assign-group-checkboxes-container');
-    if (!container) return;
+    document.getElementById('assign-group-uid').value = uid;
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Benutzer';
+    document.getElementById('assign-group-user-display').textContent = `${fullName} (${user.email || 'Kein Login'})`;
+
+    const list = document.getElementById('assign-group-checklist');
+    if (!list) return;
 
     if (!Array.isArray(systemGroups) || systemGroups.length === 0) {
-        container.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic;">${t('no_groups_created', 'Noch keine Gruppen angelegt.')}</div>`;
+        list.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.85rem; padding: 10px 0;">Keine Gruppen vorhanden. Erstellen Sie zuerst eine Gruppe.</div>`;
     } else {
         const userGroupIds = Array.isArray(user.groups) ? user.groups : [];
-        container.innerHTML = systemGroups.map(g => {
+        list.innerHTML = systemGroups.map(g => {
             const isChecked = userGroupIds.includes(g.id) || userGroupIds.includes(g.name);
             const perms = Array.isArray(g.permissions) ? g.permissions : [];
-            const permText = perms.includes('manage_finances') ? '🛠️ Finanzen verwalten' : (perms.includes('view_finances') ? '👁️ Finanzen einsehen' : '');
+            const permSummary = perms.length > 0 ? `${perms.length} Berechtigungen` : 'Standard-Zugriff';
 
             return `
-                <label style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                    <input type="checkbox" class="user-group-checkbox" value="${escapeHtml(g.id)}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
-                    <div style="flex: 1;">
-                        <span style="font-weight: 600; color: var(--text);">${escapeHtml(g.name)}</span>
-                        ${permText ? `<span style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 8px;">${permText}</span>` : ''}
+                <label class="nc-group-check-item">
+                    <input type="checkbox" class="user-group-assign-cb" value="${escapeHtml(g.id)}" ${isChecked ? 'checked' : ''}>
+                    <div class="nc-group-check-info">
+                        <span class="nc-group-check-name">${escapeHtml(g.name)}</span>
+                        <span class="nc-group-check-desc">${permSummary}</span>
                     </div>
                 </label>
             `;
@@ -550,11 +660,11 @@ window.openAssignGroupModal = (uid) => {
     openModal('assign-group-modal');
 };
 
-window.submitUserGroups = async () => {
-    const uid = document.getElementById('assign-group-user-uid').value;
+window.submitAssignGroups = async function() {
+    const uid = document.getElementById('assign-group-uid').value;
     if (!uid) return;
 
-    const checkboxes = document.querySelectorAll('#assign-group-checkboxes-container .user-group-checkbox');
+    const checkboxes = document.querySelectorAll('#assign-group-checklist .user-group-assign-cb');
     const selectedGroupIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
     try {
@@ -563,19 +673,28 @@ window.submitUserGroups = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ groups: selectedGroupIds })
         });
+
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             throw new Error(err.error || 'Fehler beim Zuweisen der Gruppen');
         }
+
+        const localUser = users.find(u => u.uid === uid);
+        if (localUser) {
+            localUser.groups = selectedGroupIds;
+            localUser.groupObjects = selectedGroupIds.map(gid => systemGroups.find(g => g.id === gid || g.name === gid) || { id: gid, name: gid });
+        }
+
         closeModal('assign-group-modal');
-        showToast(t('saved_success', 'Gruppen aktualisiert.'), 'success');
-        await reloadUsersData();
+        showToast(t('toast_user_groups_updated', 'Benutzergruppen erfolgreich aktualisiert'), 'success');
         await loadSystemGroups();
+        await reloadUsersData();
         if (currentUser && currentUser.uid === uid) {
             await refreshCurrentUser();
         }
     } catch (err) {
-        showToast(err.message, 'error');
+        console.error('Fehler beim Zuweisen der Gruppen:', err);
+        alert(err.message || 'Fehler beim Zuweisen der Gruppen');
     }
 };
 
@@ -894,6 +1013,13 @@ window.switchTab = function(tabName, btn) {
         }
     } else if (tabName === 'user-overview') {
         if (typeof renderUserView === 'function') renderUserView();
+    } else if (tabName === 'super-admin-settings') {
+        if (typeof window.switchSysSettingsTab === 'function') {
+            window.switchSysSettingsTab(currentSysSettingsTab || 'accounts');
+        }
+        if (typeof loadSystemGroups === 'function') {
+            loadSystemGroups();
+        }
     }
 };
 
@@ -2319,6 +2445,7 @@ window.switchSysSettingsTab = function(tabName) {
     });
 
     if (tabName === 'accounts') {
+        loadSystemGroups();
         renderAccountsTab();
     } else if (tabName === 'config') {
         if (!advancedConfigLoaded) loadAdvancedSystemConfig();
@@ -2343,15 +2470,39 @@ function renderAccountsTab() {
         return;
     }
 
+    const banner = document.getElementById('nc-active-group-banner');
+    const bannerName = document.getElementById('nc-active-group-name');
+    const bannerCount = document.getElementById('nc-active-group-count');
+
+    let activeGroupObj = null;
+    if (activeGroupFilter) {
+        activeGroupObj = systemGroups.find(g => g.id === activeGroupFilter || g.name === activeGroupFilter);
+    }
+
     const filtered = users
         .slice()
         .filter(u => {
+            if (activeGroupFilter) {
+                const userGroups = Array.isArray(u.groups) ? u.groups : [];
+                const inGroup = userGroups.includes(activeGroupFilter) || (activeGroupObj && userGroups.includes(activeGroupObj.name)) || (activeGroupObj && userGroups.includes(activeGroupObj.id));
+                if (!inGroup) return false;
+            }
             if (!accountsSearchQuery) return true;
             const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
             const email = (u.email || '').toLowerCase();
             return fullName.includes(accountsSearchQuery) || email.includes(accountsSearchQuery);
         })
         .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(`${b.firstName || ''} ${b.lastName || ''}`));
+
+    if (banner && bannerName && bannerCount) {
+        if (activeGroupObj) {
+            banner.style.display = 'flex';
+            bannerName.textContent = activeGroupObj.name;
+            bannerCount.textContent = `(${filtered.length} ${filtered.length === 1 ? 'Benutzer' : 'Benutzer'})`;
+        } else {
+            banner.style.display = 'none';
+        }
+    }
 
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 30px;">Keine passenden Benutzer gefunden.</td></tr>`;
@@ -4917,7 +5068,7 @@ window.saveAiConfig = async () => {
 
 function updateAiNavVisibility() {
     const show = aiEnabled && (isSystemAdmin() || canViewFinances());
-    const bottomBtn = document.getElementById('admin-ai-nav-btn');
+    const bottomBtn = document.getElementById('admin-ai-nav-btn-bottom') || document.getElementById('admin-ai-nav-btn');
     const desktopBtn = document.getElementById('admin-ai-nav-btn-desktop');
     const spacer = document.getElementById('admin-nav-spacer');
     if (bottomBtn) bottomBtn.style.display = show ? '' : 'none';
