@@ -173,7 +173,7 @@
             <div class="finance-subnav" role="tablist">
                 <button type="button" class="finance-subnav-btn active" id="finances-sub-btn-history" onclick="switchFinanceSubpage('history', this)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
-                    <span data-i18n="finances_sub_history">Übersicht & Historie</span>
+                    <span data-i18n="finances_sub_history">Übersicht</span>
                 </button>
                 <button type="button" class="finance-subnav-btn" id="finances-sub-btn-members" onclick="switchFinanceSubpage('members', this)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -340,19 +340,6 @@
                     <div class="form-group">
                         <label class="form-label" for="rate-keinverdiener" data-i18n="rate_none">Keinverdiener (€)</label>
                 <input type="text" inputmode="decimal" id="rate-keinverdiener" class="form-input" value="10">
-                    </div>
-                </div>
-            </div>
-
-            <div class="card card-settings" id="card-report">
-                <div class="card-header" data-i18n="report_title">Berichtszeitraum</div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label class="form-label" for="report-start-date" data-i18n="report_start">Startdatum für Berechnung</label>
-                        <input type="date" id="report-start-date" class="form-input">
-                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;" data-i18n="report_desc">
-                            Einnahmen und Ausgaben werden erst ab diesem Datum in der Übersicht gezählt.
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1371,9 +1358,9 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 6px; align-items: center;">
+            <div class="nc-modal-actions">
                 <button type="button" id="btn-delete-group" class="btn btn-danger btn-small" onclick="window.deleteCurrentGroup()" style="display: none; background: rgba(239, 68, 68, 0.12); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 8px 14px; font-weight: 600;" data-i18n="btn_delete_group">Gruppe löschen</button>
-                <div style="margin-left: auto; display: flex; gap: 10px;">
+                <div class="nc-modal-actions-right">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('manage-group-modal')" data-i18n="btn_cancel">Abbrechen</button>
                     <button type="submit" id="btn-save-group" class="btn btn-primary" data-i18n="btn_save">Speichern</button>
                 </div>
@@ -1406,12 +1393,12 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px;">
+            <div class="nc-modal-actions">
                 <button type="button" class="btn btn-secondary btn-small" onclick="window.openCreateGroupFromAssignModal()" style="font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     <span>Neue Gruppe</span>
                 </button>
-                <div style="display: flex; gap: 10px;">
+                <div class="nc-modal-actions-right">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('assign-group-modal')" data-i18n="btn_cancel">Abbrechen</button>
                     <button type="submit" id="btn-save-assign-groups" class="btn btn-primary" data-i18n="btn_save">Speichern</button>
                 </div>

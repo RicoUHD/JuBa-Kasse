@@ -245,7 +245,7 @@ const dbRateLimit = rateLimit({
 });
 const protectedActionRateLimit = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -341,7 +341,7 @@ const profileUpload = multer({
 
 const adminRateLimit = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false
 });

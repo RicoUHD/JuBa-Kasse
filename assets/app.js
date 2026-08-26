@@ -516,7 +516,9 @@ window.openCreateGroupModal = function() {
 
 window.openCreateGroupFromAssignModal = function() {
     closeModal('assign-group-modal');
-    window.openCreateGroupModal();
+    setTimeout(() => {
+        window.openCreateGroupModal();
+    }, 60);
 };
 
 window.openManageGroupModal = function(groupId) {
@@ -1155,8 +1157,10 @@ window.pendingExpenseFiles = [];
     }
 
     // Web History API integration
-    window._modalStack.push(id);
-    history.pushState({ isModal: true, modalId: id }, "");
+    if (!window._modalStack.includes(id)) {
+        window._modalStack.push(id);
+        history.pushState({ isModal: true, modalId: id }, "");
+    }
 
     // Store current focus on the modal instance itself to handle nesting
     modal._returnFocusTo = document.activeElement;
@@ -1191,12 +1195,6 @@ window.closeModal = (id, fromPopstate = false) => {
         if (!fromPopstate) {
             window._programmaticBacks = (window._programmaticBacks || 0) + 1;
             history.back();
-            // Fallback if history.back() does not trigger popstate
-            setTimeout(() => {
-                if (window._programmaticBacks > 0) {
-                    window._programmaticBacks--;
-                }
-            }, 200);
         }
     }
 
@@ -1259,11 +1257,6 @@ window.closeMultipleModals = (ids) => {
     if (programmaticBacksCount > 0) {
         window._programmaticBacks = (window._programmaticBacks || 0) + programmaticBacksCount;
         history.go(-programmaticBacksCount);
-        setTimeout(() => {
-            if (window._programmaticBacks > 0) {
-                window._programmaticBacks = Math.max(0, window._programmaticBacks - programmaticBacksCount);
-            }
-        }, 200);
     }
 
     // Re-show the previous modal in the stack if one exists
@@ -2142,8 +2135,11 @@ async function loadData(silent = false) {
         // Update nav bar visibility based on user privileges
         updateNavVisibility();
 
-        // Default to Home page (user-overview)
-        switchTab('user-overview');
+        // Default to Home page (user-overview) only if no tab is currently active
+        const hasActiveTab = document.querySelector('.tab-content.active');
+        if (!hasActiveTab) {
+            switchTab('user-overview');
+        }
 
         // Normalize people data
         people.forEach(person => preprocessPerson(person));
@@ -2180,55 +2176,48 @@ async function loadData(silent = false) {
 }
 
 async function updateActiveViews() {
+    renderUserView();
     const hasFinances = canViewFinances();
     const isSysAdmin = isSystemAdmin();
 
-    if (!hasFinances && !isSysAdmin) {
-        renderUserView();
-    } else {
-        if (hasFinances) {
-            renderPeople();
-            await renderStats();
-            renderAdminRequests();
-            renderUnlinkedUsers();
-        }
-        if (isSysAdmin) {
-            await loadSystemGroups();
-            renderSuperAdminUserManagement();
-        }
-        updateNavVisibility();
+    if (hasFinances) {
+        renderPeople();
+        await renderStats();
+        renderAdminRequests();
+        renderUnlinkedUsers();
     }
+    if (isSysAdmin) {
+        await loadSystemGroups();
+        renderSuperAdminUserManagement();
+    }
+    updateNavVisibility();
 }
 
 async function renderAll() {
+    renderUserView();
     const hasFinances = canViewFinances();
     const isSysAdmin = isSystemAdmin();
 
-    if (!hasFinances && !isSysAdmin) {
-        renderUserView();
-    } else {
-        if (hasFinances) {
-            renderPeople();
-            await renderStats();
-            renderAdminRequests();
-            renderUnlinkedUsers();
-        }
-        if (settings) {
-            if (document.getElementById('rate-vollverdiener')) document.getElementById('rate-vollverdiener').value = settings.vollverdiener || 0;
-            if (document.getElementById('rate-geringverdiener')) document.getElementById('rate-geringverdiener').value = settings.geringverdiener || 0;
-            if (document.getElementById('rate-keinverdiener')) document.getElementById('rate-keinverdiener').value = settings.keinverdiener || 0;
-            if (document.getElementById('report-start-date')) document.getElementById('report-start-date').value = settings.reportStartDate || '';
-        }
-
-        if (currentUser && document.getElementById('admin-email-notifications')) {
-            document.getElementById('admin-email-notifications').checked = !!currentUser.emailNotifications;
-        }
-        if (isSysAdmin) {
-            await loadSystemGroups();
-            await renderSuperAdminTools();
-        }
-        updateNavVisibility();
+    if (hasFinances) {
+        renderPeople();
+        await renderStats();
+        renderAdminRequests();
+        renderUnlinkedUsers();
     }
+    if (settings) {
+        if (document.getElementById('rate-vollverdiener')) document.getElementById('rate-vollverdiener').value = settings.vollverdiener || 0;
+        if (document.getElementById('rate-geringverdiener')) document.getElementById('rate-geringverdiener').value = settings.geringverdiener || 0;
+        if (document.getElementById('rate-keinverdiener')) document.getElementById('rate-keinverdiener').value = settings.keinverdiener || 0;
+    }
+
+    if (currentUser && document.getElementById('admin-email-notifications')) {
+        document.getElementById('admin-email-notifications').checked = !!currentUser.emailNotifications;
+    }
+    if (isSysAdmin) {
+        await loadSystemGroups();
+        await renderSuperAdminTools();
+    }
+    updateNavVisibility();
 }
 
 async function renderSuperAdminTools() {
@@ -2528,8 +2517,8 @@ function renderAccountsTab() {
               }) : []);
 
         const groupBadges = userGroupObjs.length > 0
-            ? userGroupObjs.map(g => `<span class="nc-badge-group" style="cursor:pointer; margin: 2px;" onclick="window.openAssignGroupModal('${escapeHtml(u.uid)}')">${escapeHtml(g.name)}</span>`).join(' ')
-            : `<span class="nc-badge-group" style="cursor:pointer; opacity:0.6; border-style:dashed; margin: 2px;" onclick="window.openAssignGroupModal('${escapeHtml(u.uid)}')">+ ${t('modal_assign_group_title', 'Zuweisen')}</span>`;
+            ? userGroupObjs.map(g => `<span class="nc-badge-group" style="margin: 2px;">${escapeHtml(g.name)}</span>`).join(' ')
+            : `<span class="nc-badge-group" style="opacity:0.6; border-style:dashed; margin: 2px;">+ ${t('modal_assign_group_title', 'Zuweisen')}</span>`;
 
         return `
             <tr data-uid="${escapeHtml(u.uid)}">
@@ -5855,7 +5844,6 @@ window.saveSettings = async () => {
     settings.vollverdiener = parseFloat(document.getElementById('rate-vollverdiener').value.replace(/\.(?=.*,)/g, '').replace(',', '.'));
     settings.geringverdiener = parseFloat(document.getElementById('rate-geringverdiener').value.replace(/\.(?=.*,)/g, '').replace(',', '.'));
     settings.keinverdiener = parseFloat(document.getElementById('rate-keinverdiener').value.replace(/\.(?=.*,)/g, '').replace(',', '.'));
-    settings.reportStartDate = document.getElementById('report-start-date').value || null;
     settingsVersion++;
 
     const emailNotifications = document.getElementById('admin-email-notifications').checked;

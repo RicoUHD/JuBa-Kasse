@@ -1159,7 +1159,7 @@ input:checked + .slider:before { transform: translateX(22px); }
         margin-bottom: 25px;
     }
 
-    #card-design, #card-rates, #card-report, #card-invite, #card-security {
+    #card-design, #card-rates, #card-invite, #card-security {
          max-width: 800px;
     }
 
@@ -3135,6 +3135,51 @@ details[open] .ai-thinking-summary::before {
     font-size: 0.78rem;
     color: var(--text-secondary);
     line-height: 1.35;
+}
+
+.nc-modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.nc-modal-actions-right {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+@media (max-width: 540px) {
+    .nc-modal-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .nc-modal-actions-right {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .nc-modal-actions-right .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .nc-modal-actions > .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .nc-permissions-checklist,
+    .nc-groups-checklist {
+        max-height: 200px;
+    }
 }
 
 /* --- Mobile Responsiveness for System Settings --- */
