@@ -614,31 +614,20 @@ function updateNavVisibility() {
     const isSysAdmin = isSystemAdmin();
     const canManage = canManageFinances();
 
-    // Finances tab
+    // Finances tab (Admin / Finance Managers)
     const financesDesktop = document.getElementById('admin-finances-nav-btn-desktop');
     const financesBottom = document.getElementById('admin-finances-nav-btn-bottom');
     if (financesDesktop) financesDesktop.style.display = hasFinances ? '' : 'none';
     if (financesBottom) financesBottom.style.display = hasFinances ? '' : 'none';
 
-    // Personal user history & requests tabs
-    const userHistoryDesktop = document.getElementById('user-history-nav-btn-desktop');
-    const userHistoryBottom = document.getElementById('user-history-nav-btn-bottom');
-    const userRequestsDesktop = document.getElementById('user-requests-nav-btn-desktop');
-    const userRequestsBottom = document.getElementById('user-requests-nav-btn-bottom');
-
-    if (userHistoryDesktop) userHistoryDesktop.style.display = hasFinances ? 'none' : '';
-    if (userHistoryBottom) userHistoryBottom.style.display = hasFinances ? 'none' : '';
-    if (userRequestsDesktop) userRequestsDesktop.style.display = '';
-    if (userRequestsBottom) userRequestsBottom.style.display = '';
+    // Personal user finances tab (Regular Members)
+    const userFinancesDesktop = document.getElementById('user-finances-nav-btn-desktop');
+    const userFinancesBottom = document.getElementById('user-finances-nav-btn-bottom');
+    if (userFinancesDesktop) userFinancesDesktop.style.display = hasFinances ? 'none' : '';
+    if (userFinancesBottom) userFinancesBottom.style.display = hasFinances ? 'none' : '';
 
     // AI tab
     if (typeof updateAiNavVisibility === 'function') updateAiNavVisibility();
-
-    // Settings tab in nav
-    const settingsDesktop = document.getElementById('admin-settings-nav-btn-desktop');
-    const settingsBottom = document.getElementById('admin-settings-nav-btn-bottom');
-    if (settingsDesktop) settingsDesktop.style.display = (isSysAdmin || hasFinances) ? '' : 'none';
-    if (settingsBottom) settingsBottom.style.display = (isSysAdmin || hasFinances) ? '' : 'none';
 
     // System Settings button
     const sysSettingsBtn = document.getElementById('profile-sys-settings-btn');
@@ -832,6 +821,8 @@ window.switchTab = function(tabName, btn) {
     } else if (tabName === 'people-view') {
         tabName = 'finances';
         window.switchFinanceSubpage('members');
+    } else if (tabName === 'user-history' || tabName === 'user-requests') {
+        tabName = 'user-finances';
     }
 
     const allTabs = Array.from(document.querySelectorAll('.tab-content'));
@@ -849,7 +840,6 @@ window.switchTab = function(tabName, btn) {
     // Hide all tab contents
     allTabs.forEach(el => {
         el.classList.remove('active', 'slide-in-right', 'slide-in-left');
-        if (el.id === 'user-history' || el.id === 'user-requests') el.style.display = 'none';
     });
 
     // Show target tab content
@@ -865,10 +855,6 @@ window.switchTab = function(tabName, btn) {
             }
         } else {
             targetContent.classList.add('slide-in-right');
-        }
-
-        if (tabName === 'user-history' || tabName === 'user-requests') {
-            targetContent.style.display = 'block';
         }
     }
 
@@ -3072,37 +3058,35 @@ window.rejectRequest = async (reqId) => {
 
 function renderUserView() {
     const statusCard = document.getElementById('user-status-card');
+    const financeStatusCard = document.getElementById('user-finances-status-card');
     const paymentHistory = document.getElementById('user-payment-history');
     const reqList = document.getElementById('user-requests-list');
 
     if (currentUser && currentUser.pays === false) {
-        if (statusCard) {
-            statusCard.innerHTML = `
-                <div class="user-hero-status user-status-ok" style="border-color: var(--border);">
-                    <div style="font-size: 2rem; margin-bottom: 8px;">👤</div>
-                    <h2 style="color: var(--text); font-size: 1.25rem; font-weight: 800; margin-bottom: 5px;">
-                        ${t('user_account_non_paying_title', 'Benutzerkonto')}
-                    </h2>
-                    <div style="font-size: 0.95rem; color: var(--text-secondary);">
-                        ${t('user_account_non_paying_desc', 'Aktives Benutzerkonto (Keine Beitragspflicht)')}
-                    </div>
+        const nonPayingHtml = `
+            <div class="user-hero-status user-status-ok" style="border-color: var(--border);">
+                <div style="font-size: 2rem; margin-bottom: 8px;">👤</div>
+                <h2 style="color: var(--text); font-size: 1.25rem; font-weight: 800; margin-bottom: 5px;">
+                    ${t('user_account_non_paying_title', 'Benutzerkonto')}
+                </h2>
+                <div style="font-size: 0.95rem; color: var(--text-secondary);">
+                    ${t('user_account_non_paying_desc', 'Aktives Benutzerkonto (Keine Beitragspflicht)')}
                 </div>
-            `;
-        }
-        if (paymentHistory) {
-            paymentHistory.innerHTML = '';
-        }
+            </div>
+        `;
+        if (statusCard) statusCard.innerHTML = nonPayingHtml;
+        if (financeStatusCard) financeStatusCard.innerHTML = nonPayingHtml;
+        if (paymentHistory) paymentHistory.innerHTML = '';
     } else if (people.length === 0) {
-        if (statusCard) {
-            statusCard.innerHTML = `
-                <div style="text-align:center; padding: 20px; color: var(--text-secondary); background: var(--surface); border-radius: 16px; border: 1px solid var(--border);">
-                    ${t('user_no_member_found', 'Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.')}
-                </div>
-            `;
-        }
+        const noMemberHtml = `
+            <div style="text-align:center; padding: 20px; color: var(--text-secondary); background: var(--surface); border-radius: 16px; border: 1px solid var(--border);">
+                ${t('user_no_member_found', 'Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.')}
+            </div>
+        `;
+        if (statusCard) statusCard.innerHTML = noMemberHtml;
+        if (financeStatusCard) financeStatusCard.innerHTML = noMemberHtml;
         if (paymentHistory) {
             paymentHistory.innerHTML = `
-                <div class="history-header">${t('user_history_title', 'Verlauf')}</div>
                 <div style="text-align:center; padding: 20px; color: var(--text-secondary); background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
                     ${t('user_no_history', 'Keine Einträge vorhanden')}
                 </div>
@@ -3112,13 +3096,13 @@ function renderUserView() {
         const p = people.find(person => person.uid === currentUser?.uid || (person.data && person.data.uid === currentUser?.uid));
 
         if (!p) {
-            if (statusCard) {
-                statusCard.innerHTML = `
-                    <div style="text-align:center; padding: 20px; color: var(--text-secondary); background: var(--surface); border-radius: 16px; border: 1px solid var(--border);">
-                        ${t('user_no_member_found', 'Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.')}
-                    </div>
-                `;
-            }
+            const noMemberHtml = `
+                <div style="text-align:center; padding: 20px; color: var(--text-secondary); background: var(--surface); border-radius: 16px; border: 1px solid var(--border);">
+                    ${t('user_no_member_found', 'Kein Mitgliedseintrag gefunden.<br>Bitte kontaktieren Sie einen Administrator.')}
+                </div>
+            `;
+            if (statusCard) statusCard.innerHTML = noMemberHtml;
+            if (financeStatusCard) financeStatusCard.innerHTML = noMemberHtml;
             return;
         }
 
@@ -3150,22 +3134,23 @@ function renderUserView() {
 
         const translatedStatusMetaText = translateStatusText(statusMeta.text);
 
-        if (statusCard) {
-            statusCard.innerHTML = `
-                <!-- Status Hero Card -->
-                <div class="user-hero-status ${statusClass}">
-                    <h2 style="color: ${statusColor}; font-size: 1.25rem; font-weight: 800; margin-bottom: 5px;">
-                        ${escapeHtml(translatedStatusMetaText)}
-                    </h2>
-                    ${(statusMeta.isActiveStandingOrder && !statusMeta.isOverdue) ? '' : `<div style="font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 5px;">${t('user_paid_until', 'Bezahlt bis')} <strong>${dateText}</strong></div>`}
-                    ${statusMeta.isOverdue ? `
-                        <div style="margin-top: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                            <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; color: var(--danger);">${t('user_open_amount', 'Offener Betrag')}</div>
-                            <div style="font-size: 1.5rem; font-weight: 800; color: var(--danger);">${formatCurrency(overdueAmount)} €</div>
-                        </div>
-                    ` : ''}
-                </div>
+        const statusHtml = `
+            <div class="user-hero-status ${statusClass}">
+                <h2 style="color: ${statusColor}; font-size: 1.25rem; font-weight: 800; margin-bottom: 5px;">
+                    ${escapeHtml(translatedStatusMetaText)}
+                </h2>
+                ${(statusMeta.isActiveStandingOrder && !statusMeta.isOverdue) ? '' : `<div style="font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 5px;">${t('user_paid_until', 'Bezahlt bis')} <strong>${dateText}</strong></div>`}
+                ${statusMeta.isOverdue ? `
+                    <div style="margin-top: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; color: var(--danger);">${t('user_open_amount', 'Offener Betrag')}</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--danger);">${formatCurrency(overdueAmount)} €</div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
 
+        if (statusCard) {
+            statusCard.innerHTML = statusHtml + `
                 <div class="user-info-boxes">
                     <div class="user-info-box">
                         <div class="user-info-box-label">${t('user_monthly_rate', 'Monatlicher Beitrag')}</div>
@@ -3179,12 +3164,13 @@ function renderUserView() {
             `;
         }
 
+        if (financeStatusCard) {
+            financeStatusCard.innerHTML = statusHtml;
+        }
+
         if (paymentHistory) {
             const timeline = generateTimelineHTML(p);
-            paymentHistory.innerHTML = `
-                <div class="history-header">${t('user_history_title', 'Verlauf')}</div>
-                ${timeline}
-            `;
+            paymentHistory.innerHTML = timeline;
         }
     }
 
