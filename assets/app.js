@@ -6045,7 +6045,8 @@ onAuthStateChanged(auth, async (user) => {
         advancedConfigAppName = null;
         currentUser = null;
 
-        document.getElementById('login-modal').classList.add('show');
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) loginModal.classList.add('show');
         const loader = document.getElementById('loading-overlay');
         if(loader) loader.style.display = 'none';
 
