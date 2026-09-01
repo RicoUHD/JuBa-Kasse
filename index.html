@@ -1513,6 +1513,10 @@
         document.getElementById('login-modal').classList.remove('show');
         const loader = document.getElementById('loading-overlay');
         if(loader) loader.style.display = 'flex';
+    } else {
+        document.getElementById('login-modal').classList.add('show');
+        const loader = document.getElementById('loading-overlay');
+        if(loader) loader.style.display = 'none';
     }
 </script>
 
