@@ -328,7 +328,11 @@ window.showLogin = () => {
     document.getElementById('register-form').style.display = 'none';
     document.getElementById('btn-show-login').classList.add('active');
     document.getElementById('btn-show-register').classList.remove('active');
-    document.getElementById('auth-subtitle').innerText = 'Melden Sie sich an, um fortzufahren';
+    const authSub = document.getElementById('auth-subtitle');
+    if (authSub) {
+        authSub.setAttribute('data-i18n', 'login_subtitle');
+        authSub.innerText = t('login_subtitle', 'Melden Sie sich an, um fortzufahren');
+    }
     document.getElementById('auth-error').style.display = 'none';
 };
 
@@ -337,7 +341,11 @@ window.showRegister = () => {
     document.getElementById('register-form').style.display = 'block';
     document.getElementById('btn-show-register').classList.add('active');
     document.getElementById('btn-show-login').classList.remove('active');
-    document.getElementById('auth-subtitle').innerText = 'Erstellen Sie ein neues Konto';
+    const authSub = document.getElementById('auth-subtitle');
+    if (authSub) {
+        authSub.setAttribute('data-i18n', 'register_subtitle');
+        authSub.innerText = t('register_subtitle', 'Erstellen Sie ein neues Konto');
+    }
     document.getElementById('auth-error').style.display = 'none';
     setButtonLoading('btn-login', false, null); // Reset login button state
 };
@@ -6030,17 +6038,18 @@ onAuthStateChanged(auth, async (user) => {
         loadData();
         loadCurrentProfilePicture();
     } else {
-        // Hide spinner if we are not logged in (e.g. session expired)
-        const loader = document.getElementById('loading-overlay');
-        if(loader) loader.style.display = 'none';
-
         localStorage.removeItem('agora-is-logged-in');
         localStorage.removeItem('nova-is-logged-in');
         isAuthenticated = false;
         advancedConfigLoaded = false;
         advancedConfigAppName = null;
         currentUser = null;
-        document.getElementById('login-modal').classList.add('show');
+
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) loginModal.classList.add('show');
+        const loader = document.getElementById('loading-overlay');
+        if(loader) loader.style.display = 'none';
+
         showLogin();
     }
 });
