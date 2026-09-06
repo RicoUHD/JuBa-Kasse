@@ -19,7 +19,7 @@ function checkAndExecuteStandingOrders(person) {
     const standingOrders = [...person.standingOrders];
 
     const now = new Date();
-    const limitDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999));
+    const limitDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
     const existingPaymentIds = new Set(payments.map(p => p.id));
     const updatedStandingOrders = [];
@@ -31,15 +31,13 @@ function checkAndExecuteStandingOrders(person) {
         const dayOfMonth = startDate.getUTCDate();
         let lastAuto = currentSO.lastAutoPayment ? parseUtcDate(currentSO.lastAutoPayment) : null;
 
-        let soLimitDate = new Date(limitDate.getTime());
+        let soEndDate = null;
         let isExpired = false;
 
         if (currentSO.endDate) {
             const end = parseUtcDate(currentSO.endDate);
             end.setUTCHours(23, 59, 59, 999);
-            if (end < soLimitDate) {
-                soLimitDate = end;
-            }
+            soEndDate = end;
             if (end < limitDate) {
                 isExpired = true;
             }
@@ -58,15 +56,25 @@ function checkAndExecuteStandingOrders(person) {
 
         let safety = 0;
         while (safety < 1200) {
-            let executionDate = new Date(nextDueDate);
-            const dayOfWeek = executionDate.getUTCDay();
-            if (dayOfWeek === 6) { // Saturday
-                executionDate.setUTCDate(executionDate.getUTCDate() + 2);
-            } else if (dayOfWeek === 0) { // Sunday
-                executionDate.setUTCDate(executionDate.getUTCDate() + 1);
+            if (soEndDate && nextDueDate > soEndDate) {
+                break;
             }
 
-            if (executionDate > soLimitDate) {
+            let executionDate = new Date(nextDueDate);
+            const dayOfWeek = executionDate.getUTCDay();
+            if (dayOfWeek === 6 || dayOfWeek === 0) {
+                let shifted = new Date(executionDate);
+                if (dayOfWeek === 6) { // Saturday -> Monday
+                    shifted.setUTCDate(shifted.getUTCDate() + 2);
+                } else if (dayOfWeek === 0) { // Sunday -> Monday
+                    shifted.setUTCDate(shifted.getUTCDate() + 1);
+                }
+                if (!soEndDate || shifted <= soEndDate) {
+                    executionDate = shifted;
+                }
+            }
+
+            if (executionDate > limitDate) {
                 break;
             }
 
