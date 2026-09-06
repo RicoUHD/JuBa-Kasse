@@ -1834,14 +1834,26 @@ function generateStatusHistoryHTML(person) {
 
 // --- ENDE MATHEMATIK & LOGIK ---
 
+function parseUtcDate(str) {
+    if (!str) return new Date();
+    if (str instanceof Date) return new Date(str.getTime());
+    const s = String(str).trim().slice(0, 10);
+    const parts = s.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    }
+    return new Date(str);
+}
+
 function checkAndExecuteStandingOrders(person) {
     if (!person.standingOrders || !Array.isArray(person.standingOrders) || person.standingOrders.length === 0) return null;
 
     let modified = false;
     const payments = safeList(person.payments);
     const standingOrders = safeList(person.standingOrders);
-    const today = new Date();
-    today.setHours(23,59,59,999); // Use end of day to avoid timezone lag (UTC vs Local)
+
+    const now = new Date();
+    const limitDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999));
 
     // ⚡ Bolt: Build a Set for O(1) payment ID lookups, avoiding O(N) array scans inside the loop
     const existingPaymentIds = new Set(payments.map(p => p.id));
@@ -1850,53 +1862,61 @@ function checkAndExecuteStandingOrders(person) {
     for (const so of standingOrders) {
         let soModified = false;
         let currentSO = { ...so };
-        const startDate = new Date(currentSO.startDate);
-        const dayOfMonth = startDate.getDate();
-        let lastAuto = currentSO.lastAutoPayment ? new Date(currentSO.lastAutoPayment) : null;
+        const startDate = parseUtcDate(currentSO.startDate);
+        const dayOfMonth = startDate.getUTCDate();
+        let lastAuto = currentSO.lastAutoPayment ? parseUtcDate(currentSO.lastAutoPayment) : null;
 
-        // Determine limit date: min(today, endDate)
-        let limitDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+        let soLimitDate = new Date(limitDate.getTime());
         let isExpired = false;
 
         if (currentSO.endDate) {
-            const end = new Date(currentSO.endDate);
-            end.setHours(23, 59, 59, 999);
+            const end = parseUtcDate(currentSO.endDate);
+            end.setUTCHours(23, 59, 59, 999);
 
-            // Constraint 1: Still respect currentSO.endDate.
-            if (end < limitDate) {
-                limitDate = end;
+            if (end < soLimitDate) {
+                soLimitDate = end;
             }
 
-            if (end < today) {
+            if (end < limitDate) {
                 isExpired = true;
             }
         }
 
-        // Determine where to start checking
         let nextDueDate;
         if (!lastAuto) {
             nextDueDate = new Date(startDate);
         } else {
             nextDueDate = new Date(lastAuto);
-            nextDueDate.setDate(1);
-            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-            const maxDays = new Date(nextDueDate.getFullYear(), nextDueDate.getMonth() + 1, 0).getDate();
-            nextDueDate.setDate(Math.min(dayOfMonth, maxDays));
+            nextDueDate.setUTCDate(1);
+            nextDueDate.setUTCMonth(nextDueDate.getUTCMonth() + 1);
+            const maxDays = new Date(Date.UTC(nextDueDate.getUTCFullYear(), nextDueDate.getUTCMonth() + 1, 0)).getUTCDate();
+            nextDueDate.setUTCDate(Math.min(dayOfMonth, maxDays));
         }
 
-        // Loop until limitDate
-        // Safety break to prevent infinite loops if dates are messed up
         let safety = 0;
-        while (nextDueDate <= limitDate && safety < 1200) {
-            const dateStr = nextDueDate.toISOString().split('T')[0];
-            const paymentId = `auto_${currentSO.id}_${dateStr}`;
+        while (safety < 1200) {
+            let executionDate = new Date(nextDueDate);
+            const dayOfWeek = executionDate.getUTCDay();
+            if (dayOfWeek === 6) { // Saturday
+                executionDate.setUTCDate(executionDate.getUTCDate() + 2);
+            } else if (dayOfWeek === 0) { // Sunday
+                executionDate.setUTCDate(executionDate.getUTCDate() + 1);
+            }
+
+            if (executionDate > soLimitDate) {
+                break;
+            }
+
+            const baseDateStr = nextDueDate.toISOString().split('T')[0];
+            const executionDateStr = executionDate.toISOString().split('T')[0];
+            const paymentId = `auto_${currentSO.id}_${baseDateStr}`;
 
             // ⚡ Bolt: O(1) lookup instead of O(N) payments.some(...)
             if (!existingPaymentIds.has(paymentId)) {
                 payments.push({
                     id: paymentId,
                     amount: parseFloat(currentSO.amount),
-                    date: dateStr,
+                    date: executionDateStr,
                     description: (currentSO.note || 'Dauerauftrag') + ' (Auto)',
                     isAuto: true
                 });
@@ -1908,10 +1928,10 @@ function checkAndExecuteStandingOrders(person) {
             // Move pointer forward
             lastAuto = new Date(nextDueDate);
 
-            nextDueDate.setDate(1);
-            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-            const maxDays = new Date(nextDueDate.getFullYear(), nextDueDate.getMonth() + 1, 0).getDate();
-            nextDueDate.setDate(Math.min(dayOfMonth, maxDays));
+            nextDueDate.setUTCDate(1);
+            nextDueDate.setUTCMonth(nextDueDate.getUTCMonth() + 1);
+            const maxDays = new Date(Date.UTC(nextDueDate.getUTCFullYear(), nextDueDate.getUTCMonth() + 1, 0)).getUTCDate();
+            nextDueDate.setUTCDate(Math.min(dayOfMonth, maxDays));
             safety++;
         }
 
