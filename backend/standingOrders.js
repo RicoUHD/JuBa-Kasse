@@ -62,16 +62,10 @@ function checkAndExecuteStandingOrders(person) {
 
             let executionDate = new Date(nextDueDate);
             const dayOfWeek = executionDate.getUTCDay();
-            if (dayOfWeek === 6 || dayOfWeek === 0) {
-                let shifted = new Date(executionDate);
-                if (dayOfWeek === 6) { // Saturday -> Monday
-                    shifted.setUTCDate(shifted.getUTCDate() + 2);
-                } else if (dayOfWeek === 0) { // Sunday -> Monday
-                    shifted.setUTCDate(shifted.getUTCDate() + 1);
-                }
-                if (!soEndDate || shifted <= soEndDate) {
-                    executionDate = shifted;
-                }
+            if (dayOfWeek === 6) { // Saturday -> Monday
+                executionDate.setUTCDate(executionDate.getUTCDate() + 2);
+            } else if (dayOfWeek === 0) { // Sunday -> Monday
+                executionDate.setUTCDate(executionDate.getUTCDate() + 1);
             }
 
             if (executionDate > limitDate) {

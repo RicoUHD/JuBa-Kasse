@@ -58,7 +58,7 @@ test('standing order scheduled on Saturday delays execution to Monday when no en
     }
 });
 
-test('standing order scheduled on Saturday executes on Saturday if endDate is Saturday (no Monday shift)', () => {
+test('standing order scheduled on Saturday with endDate on Saturday executes on Monday (not on Saturday)', () => {
     // Saturday date: 2026-03-07, endDate: 2026-03-07
     const person = {
         id: 'p2',
@@ -88,16 +88,34 @@ test('standing order scheduled on Saturday executes on Saturday if endDate is Sa
 
     try {
         const resultSat = checkAndExecuteStandingOrders(person);
-        assert.notEqual(resultSat, null, 'Standing order should execute on Saturday because endDate is Saturday');
-        assert.equal(resultSat.payments.length, 1);
-        assert.equal(resultSat.payments[0].date, '2026-03-07');
-        assert.equal(resultSat.payments[0].id, 'auto_so2_2026-03-07');
+        assert.equal(resultSat, null, 'Standing order should not execute on Saturday');
+    } finally {
+        global.Date = OriginalDate;
+    }
+
+    class MockDateMonday extends OriginalDate {
+        constructor(...args) {
+            if (args.length === 0) {
+                super('2026-03-09T12:00:00Z');
+            } else {
+                super(...args);
+            }
+        }
+    }
+    global.Date = MockDateMonday;
+
+    try {
+        const resultMon = checkAndExecuteStandingOrders(person);
+        assert.notEqual(resultMon, null, 'Standing order scheduled on Saturday should execute on Monday');
+        assert.equal(resultMon.payments.length, 1);
+        assert.equal(resultMon.payments[0].date, '2026-03-09');
+        assert.equal(resultMon.payments[0].id, 'auto_so2_2026-03-07');
     } finally {
         global.Date = OriginalDate;
     }
 });
 
-test('standing order scheduled on Sunday executes on Sunday if endDate is Sunday', () => {
+test('standing order scheduled on Sunday with endDate on Sunday executes on Monday (not on Sunday)', () => {
     // Sunday date: 2026-03-08, endDate: 2026-03-08
     const person = {
         id: 'p3',
@@ -117,7 +135,7 @@ test('standing order scheduled on Sunday executes on Sunday if endDate is Sunday
     class MockDateSunday extends OriginalDate {
         constructor(...args) {
             if (args.length === 0) {
-                super('2026-03-08T12:00:00Z');
+                super('2026-03-08T12:00:00Z'); // Correct Sunday 2026-03-08 timestamp
             } else {
                 super(...args);
             }
@@ -127,10 +145,28 @@ test('standing order scheduled on Sunday executes on Sunday if endDate is Sunday
 
     try {
         const resultSun = checkAndExecuteStandingOrders(person);
-        assert.notEqual(resultSun, null, 'Standing order should execute on Sunday because endDate is Sunday');
-        assert.equal(resultSun.payments.length, 1);
-        assert.equal(resultSun.payments[0].date, '2026-03-08');
-        assert.equal(resultSun.payments[0].id, 'auto_so3_2026-03-08');
+        assert.equal(resultSun, null, 'Standing order should not execute on Sunday');
+    } finally {
+        global.Date = OriginalDate;
+    }
+
+    class MockDateMonday extends OriginalDate {
+        constructor(...args) {
+            if (args.length === 0) {
+                super('2026-03-09T12:00:00Z');
+            } else {
+                super(...args);
+            }
+        }
+    }
+    global.Date = MockDateMonday;
+
+    try {
+        const resultMon = checkAndExecuteStandingOrders(person);
+        assert.notEqual(resultMon, null, 'Standing order scheduled on Sunday should execute on Monday');
+        assert.equal(resultMon.payments.length, 1);
+        assert.equal(resultMon.payments[0].date, '2026-03-09');
+        assert.equal(resultMon.payments[0].id, 'auto_so3_2026-03-08');
     } finally {
         global.Date = OriginalDate;
     }
